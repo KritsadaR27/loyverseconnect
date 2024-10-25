@@ -7,15 +7,38 @@ import (
 	"io/ioutil"
 	"sort"
 	"strings"
+	"github.com/joho/godotenv"
+	"os"
+	"log"
 )
 
 const (
-	apiToken      = "f1019a5b04714a7ebe6a2b7154ab7dbc"
+
 	baseURL       = "https://api.loyverse.com/v1.0"
 	suppliersEP   = "/suppliers"
 	itemsEP       = "/items"
 )
 
+var (
+	apiToken string
+	headers  = map[string]string{
+		"Content-Type": "application/json",
+	}
+)
+// โหลดค่าจากไฟล์ .env
+func init() {
+	// โหลดตัวแปรจากไฟล์ .env
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// ดึงค่า apiToken จาก Environment Variables
+	apiToken = os.Getenv("LOYVERSE_API_TOKEN")
+
+	// ตั้งค่า headers ที่จำเป็น
+	headers["Authorization"] = "Bearer " + apiToken
+}
 func enableCORS(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
