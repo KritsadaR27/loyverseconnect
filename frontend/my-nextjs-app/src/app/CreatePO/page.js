@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchItemsFromSuppliers } from '../../utils/api';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/solid'; // Import ลูกศร
 
 const TABS = [
     { label: 'สั่งของลุงรวย', key: 'order-lung-ruay' },
@@ -11,29 +12,29 @@ const TABS = [
 const getNextOrderDateForSupplier = (supplier, baseDate) => {
     const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const base = new Date(baseDate);
-    
+
+    if (isNaN(base.getTime())) return ''; // ตรวจสอบว่าค่า base ไม่เป็น Invalid Date
+
     if (supplier === "จัมโบ้") {
-        // วันถัดไป
         base.setDate(base.getDate() + 1);
         return `${base.toISOString().split('T')[0]} (${days[base.getDay()]})`;
     }
     
     if (supplier === "หมูลุงรวย") {
-        // หาวันถัดไปที่เป็น อังคาร, พฤหัสบดี, หรือ เสาร์
-        const allowedDays = [2, 4, 6]; // 2 = อังคาร, 4 = พฤหัสบดี, 6 = เสาร์
+        const allowedDays = [2, 4, 6];
         while (!allowedDays.includes(base.getDay())) {
             base.setDate(base.getDate() + 1);
         }
         return `${base.toISOString().split('T')[0]} (${days[base.getDay()]})`;
     }
 
-    return ''; // สำหรับ supplier อื่นๆ ไม่ต้องคำนวณ
+    return ''; 
 };
 
 const CreatePO = () => {
     const [groupedItems, setGroupedItems] = useState({});
     const [activeTab, setActiveTab] = useState(TABS[0].key);
-    const [orderDate, setOrderDate] = useState({});
+    const [collapsed, setCollapsed] = useState({});
     const [defaultOrderDate, setDefaultOrderDate] = useState('');
 
     useEffect(() => {
@@ -45,7 +46,6 @@ const CreatePO = () => {
         };
         loadItems();
 
-        // Set default date as today or tomorrow
         const now = new Date();
         let defaultDate;
         if (now.getHours() < 18) {
@@ -54,102 +54,112 @@ const CreatePO = () => {
             defaultDate = new Date(now);
             defaultDate.setDate(now.getDate() + 1);
         }
-        setDefaultOrderDate(defaultDate.toISOString().split('T')[0]);
+
+        if (!isNaN(defaultDate.getTime())) {
+            setDefaultOrderDate(defaultDate.toISOString().split('T')[0]);
+        } else {
+            setDefaultOrderDate('');
+        }
     }, []);
 
     const handleTabChange = (tabKey) => {
         setActiveTab(tabKey);
     };
 
-    const handleOrderDateChange = (supplier, event) => {
-        setOrderDate({
-            ...orderDate,
-            [supplier]: event.target.value
-        });
-    };
-
-    const getDayName = (date) => {
-        const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-        const parsedDate = new Date(date);
-        return days[parsedDate.getDay()];
+    const toggleCollapse = (supplier) => {
+        setCollapsed((prev) => ({
+            ...prev,
+            [supplier]: !prev[supplier]
+        }));
     };
 
     const renderItems = (supplier, items) => (
-        <div style={{ marginBottom: '20px' }}>
-            <h2>{supplier}</h2>
-            <div style={{ marginBottom: '10px' }}>
-                จะสั่งครั้งหน้าวันที่: 
-                <span style={{ marginLeft: '10px' }}>
-                    {getNextOrderDateForSupplier(supplier, defaultOrderDate)}
-                </span>
+        <div className="mb-8 bg-white shadow-md rounded-lg p-6 w-full mx-auto">
+            <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleCollapse(supplier)}>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-800">{supplier}</h2>
+                <button className="bg-transparent text-gray-800">
+                    {collapsed[supplier] ? <ChevronUpIcon className="h-6 w-6" /> : <ChevronDownIcon className="h-6 w-6" />}
+                </button>
             </div>
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {items.map((item) => (
-                    <li key={item.id} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
-                        <span style={{ flex: '1' }}>{item.name}</span>
-                        <span style={{ marginLeft: '10px' }}>สต๊อก: [จำนวน]</span>
-                        <input 
-                            type="text" 
-                            placeholder="จำนวน" 
-                            style={{ width: '60px', marginLeft: '10px' }} 
-                        />
-                    </li>
-                ))}
-            </ul>
+            {!collapsed[supplier] && (
+                <>
+                    <div className="mb-4">
+                        <span className="text-gray-600 font-bold">จะสั่งครั้งหน้าวันที่:</span>
+                        <span className="ml-2 text-gray-700 font-bold">
+                            {getNextOrderDateForSupplier(supplier, defaultOrderDate)}
+                        </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full bg-white">
+                            <thead>
+                                <tr className="bg-gray-200">
+                                    <th className="py-2 text-left text-gray-600 font-medium">ชื่อสินค้า</th>
+                                    <th className="py-2 text-left text-gray-600 font-medium">สต๊อก</th>
+                                    <th className="py-2 text-left text-gray-600 font-medium">จำนวนที่ต้องการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map((item) => (
+                                    <tr key={item.id} className="border-b">
+                                        <td className="py-2 text-gray-900">{item.name}</td>
+                                        <td className="py-2 text-gray-600">[จำนวน]</td>
+                                        <td className="py-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder="จำนวน" 
+                                                className="w-20 p-1 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
         </div>
     );
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>สร้างใบสั่งซื้อ</h1>
-            <div style={{ marginBottom: '20px' }}>
-                สั่งเพื่อรับวันที่: 
+        <div className="min-h-screen bg-gradient-to-br from-green-400 to-green-200 flex flex-col items-stretch p-0 m-0">
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
+                สร้างใบสั่งซื้อ
+            </h1>
+            <div className="mb-5 w-full max-w-screen-lg text-center mx-auto">
+                <span className="text-gray-700 font-medium">สั่งเพื่อรับวันที่:</span>
                 <input 
                     type="date" 
                     value={defaultOrderDate} 
                     readOnly 
-                    style={{ marginLeft: '10px' }}
+                    className="ml-3 p-2 border rounded bg-white text-gray-700 mt-2 md:mt-0 shadow-md"
                 />
-                <span style={{ marginLeft: '10px' }}>
-                    ({getDayName(defaultOrderDate) === 'วันนี้' ? 'วันนี้' : 'พรุ่งนี้'})
-                </span>
             </div>
-            <div style={{ display: 'flex', marginBottom: '20px' }}>
+            <div className="flex mb-5 w-full max-w-screen-lg justify-center flex-wrap">
                 {TABS.map(tab => (
                     <button 
                         key={tab.key} 
                         onClick={() => handleTabChange(tab.key)}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: activeTab === tab.key ? '#28a745' : '#f1f1f1',
-                            color: activeTab === tab.key ? 'white' : 'black',
-                            border: 'none',
-                            borderBottom: activeTab === tab.key ? '3px solid #28a745' : 'none',
-                            cursor: 'pointer',
-                            marginRight: '10px',
-                            borderRadius: '5px 5px 0 0'
-                        }}
+                        className={`flex-1 px-3 py-2 text-center rounded-t-lg border-b-4 m-1 ${activeTab === tab.key ? 'bg-green-500 text-white border-green-600' : 'bg-gray-300 text-gray-700 border-transparent'} transition duration-200`}
                     >
                         {tab.label}
                     </button>
                 ))}
             </div>
 
-            <div>
+            <div className="w-full max-w-screen-lg mx-auto">
                 {activeTab === 'order-lung-ruay' && (
                     <div>
-                        {Object.entries(groupedItems).map(([supplier, items]) => 
-                            (supplier === "หมูลุงรวย" || supplier === "จัมโบ้" || supplier === "ลูกชิ้น") && 
-                            renderItems(supplier, items)
+                        {['จัมโบ้', 'หมูลุงรวย', 'ลูกชิ้น'].map((supplier) => 
+                            renderItems(supplier, groupedItems[supplier] || [])
                         )}
                     </div>
                 )}
 
                 {activeTab === 'order-others' && (
                     <div>
-                        <div style={{ marginBottom: '10px' }}>
-                            วันที่รับของ:
-                            <input type="date" style={{ marginLeft: '10px' }} />
+                        <div className="mb-4">
+                            <span className="text-gray-700 font-medium">วันที่รับของ:</span>
+                            <input type="date" className="ml-3 p-2 border rounded bg-white mt-2 md:mt-0 shadow-md" />
                         </div>
                         {["อั่ว", "โคขุน", "ริบอาย"].map((supplier) =>
                             renderItems(supplier, groupedItems[supplier] || [])
