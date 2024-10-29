@@ -1,0 +1,307 @@
+\d loycategories      
+
+\d loyitems           
+\d loypaymenttypes    
+            
+\d loystores          
+\d loysupplier     
+
+
+\d loyinventorylevels 
+\d loyreceiptlineitems
+\d loyreceiptpayments 
+\d loyreceipts     
+
+
+SELECT * FROM loycategories;    
+
+SELECT * FROM loyitems;         
+SELECT * FROM loypaymenttypes;  
+            
+SELECT * FROM loystores;        
+SELECT * FROM loysupplier; 
+
+
+SELECT * loyinventorylevels;
+SELECT * loyreceiptlineitems;
+SELECT * loyreceiptpayments;
+SELECT * loyreceipts;
+
+loycategories      
+
+loyitems           
+loypaymenttypes    
+            
+loystores          
+loysupplier     
+
+
+ // Fetch and Save Master Data
+ masterData, err := loyservices.FetchMasterData()
+ if err != nil {
+     log.Fatalf("Error fetching master data: %v", err)
+ }
+
+ if err := database.SaveMasterData(dbConn, masterData); err != nil {
+     log.Fatalf("Error saving master data to database: %v", err)
+ }
+
+ log.Println("Master data fetched and saved successfully.")
+}
+
+
+// fetch from db and Mapping
+
+func main() {
+	// โหลด environment variables จากไฟล์ .env
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+		return
+	}
+
+	// สร้างการเชื่อมต่อฐานข้อมูล
+	dbConn, err := database.ConnectDB()
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+		return
+	}
+	defer dbConn.Close()
+
+	// ดึงข้อมูล items, categories, suppliers, stores และ inventory levels
+	items, err := fetchItems(dbConn)
+	if err != nil {
+		log.Fatalf("Error fetching items: %v", err)
+	}
+
+	categories, err := fetchCategories(dbConn)
+	if err != nil {
+		log.Fatalf("Error fetching categories: %v", err)
+	}
+
+	suppliers, err := fetchSuppliers(dbConn)
+	if err != nil {
+		log.Fatalf("Error fetching suppliers: %v", err)
+	}
+
+	stores, err := fetchStores(dbConn)
+	if err != nil {
+		log.Fatalf("Error fetching stores: %v", err)
+	}
+
+	inventoryLevels, err := fetchInventoryLevels(dbConn)
+	if err != nil {
+		log.Fatalf("Error fetching inventory levels: %v", err)
+	}
+	// สร้างแผนที่สำหรับ category, supplier และ store
+	categoryMap := make(map[string]string)
+	for _, category := range categories {
+		categoryMap[category.CategoryID] = category.Name
+	}
+
+	supplierMap := make(map[string]string)
+	for _, supplier := range suppliers {
+		supplierMap[supplier.SupplierID] = supplier.SupplierName
+	}
+
+	storeMap := make(map[string]string)
+	for _, store := range stores {
+		storeMap[store.StoreID] = store.StoreName
+	}
+
+	// แสดงข้อมูล item_name, in_stock, store_name, category_name และ supplier_name
+	counter := 0 // ตัวนับ
+
+	// วนลูปที่ `inventoryLevels` เป็นตัวนำ
+	for _, level := range inventoryLevels {
+		// ดึงข้อมูล variant_id ที่ตรงกับ inventory level นี้
+		variantID := level.VariantID
+		inStock := level.InStock
+		storeID := level.StoreID
+
+		// หา item ที่ตรงกับ variantID นี้
+		for _, item := range items {
+			for _, variant := range item.Variants {
+				if variant.VariantID == variantID {
+					// ดึงข้อมูล store_name, category_name และ supplier_name
+					storeName, storeFound := storeMap[storeID]
+					categoryName := categoryMap[*item.CategoryID]
+					supplierName := supplierMap[item.PrimarySupplierID]
+
+					if storeFound {
+						fmt.Printf("Item Name: %s, In Stock: %.2f, Store Name: %s, Category Name: %s, Supplier Name: %s\n",
+							item.ItemName, inStock, storeName, categoryName, supplierName)
+						counter++
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Printf("Total Inventory Levels Matched: %d\n", counter)
+
+}
+
+// ฟังก์ชันสำหรับดึงข้อมูล inventory levels
+func fetchInventoryLevels(dbConn *sql.DB) ([]models.LoyInventoryLevel, error) {
+	rows, err := dbConn.Query("SELECT variant_id, store_id, in_stock FROM loyinventorylevels")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var inventoryLevels []models.LoyInventoryLevel
+	for rows.Next() {
+		var level models.LoyInventoryLevel
+		if err := rows.Scan(&level.VariantID, &level.StoreID, &level.InStock); err != nil {
+			return nil, err
+		}
+		inventoryLevels = append(inventoryLevels, level)
+	}
+
+	return inventoryLevels, nil
+}
+
+// ฟังก์ชันช่วยในการค้นหา in_stock และ store_id ที่ตรงกับ variant_id
+func getInventoryData(variantID string, inventoryLevels []models.LoyInventoryLevel) (float64, string) {
+	for _, level := range inventoryLevels {
+		if level.VariantID == variantID {
+			return level.InStock, level.StoreID
+		}
+	}
+	return 0, "" // หากไม่พบข้อมูล
+}
+
+// ฟังก์ชันสำหรับดึงข้อมูล stores
+func fetchStores(dbConn *sql.DB) ([]models.LoyStore, error) {
+	rows, err := dbConn.Query("SELECT store_id, store_name FROM loystores")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stores []models.LoyStore
+	for rows.Next() {
+		var store models.LoyStore
+		if err := rows.Scan(&store.StoreID, &store.StoreName); err != nil {
+			return nil, err
+		}
+		stores = append(stores, store)
+	}
+
+	return stores, nil
+}
+
+// ฟังก์ชันสำหรับดึงข้อมูลแต่ละประเภทจากฐานข้อมูล
+func fetchSuppliers(dbConn *sql.DB) ([]models.LoySupplier, error) {
+	rows, err := dbConn.Query("SELECT supplier_id, supplier_name FROM loysupplier")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suppliers []models.LoySupplier
+	for rows.Next() {
+		var supplier models.LoySupplier
+		if err := rows.Scan(&supplier.SupplierID, &supplier.SupplierName); err != nil {
+			return nil, err
+		}
+		suppliers = append(suppliers, supplier)
+
+	}
+
+	return suppliers, nil
+}
+
+func fetchItems(dbConn *sql.DB) ([]models.LoyItem, error) {
+	rows, err := dbConn.Query("SELECT item_id, item_name, category_id, primary_supplier_id, variants FROM loyitems")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.LoyItem
+	for rows.Next() {
+		var item models.LoyItem
+		var variantsJSON string // เก็บ JSON ของ variants
+
+		if err := rows.Scan(&item.ID, &item.ItemName, &item.CategoryID, &item.PrimarySupplierID, &variantsJSON); err != nil {
+			return nil, err
+		}
+
+		// แปลง JSON ของ variants เป็นโครงสร้าง Go
+		if err := json.Unmarshal([]byte(variantsJSON), &item.Variants); err != nil {
+			log.Printf("Error parsing variants JSON for item %s: %v", item.ItemName, err)
+			continue
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+func fetchCategories(dbConn *sql.DB) ([]models.LoyCategory, error) {
+	rows, err := dbConn.Query("SELECT category_id, name FROM loycategories")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []models.LoyCategory
+	for rows.Next() {
+		var category models.LoyCategory
+		if err := rows.Scan(&category.CategoryID, &category.Name); err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+
+//Webhook
+// WebhookHandler สำหรับจัดการข้อมูลที่ได้รับจาก Loyverse Webhook
+func WebhookHandler(dbConn *sql.DB, w http.ResponseWriter, r *http.Request) {
+	var webhookPayload struct {
+		Event string            `json:"event"`
+		Data  models.LoyReceipt `json:"data"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&webhookPayload); err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	switch webhookPayload.Event {
+	case "receipts.create":
+		// บันทึกใบเสร็จใหม่
+		if err := database.SaveReceipts(dbConn, []models.LoyReceipt{webhookPayload.Data}); err != nil {
+			log.Println("Error saving receipt:", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Receipt saved successfully.")
+
+	case "receipts.update":
+		// อัปเดตใบเสร็จที่มีอยู่แล้ว
+		if err := database.SaveReceipts(dbConn, []models.LoyReceipt{webhookPayload.Data}); err != nil {
+			log.Println("Error updating receipt:", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Receipt updated successfully.")
+
+	case "receipts.cancel":
+		// อัปเดตสถานะใบเสร็จให้เป็นยกเลิก
+		if err := database.CancelReceipt(dbConn, webhookPayload.Data.ReceiptNumber); err != nil {
+			log.Println("Error canceling receipt:", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Receipt canceled successfully.")
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

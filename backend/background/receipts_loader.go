@@ -1,0 +1,18 @@
+// background/receipts_loader.go
+package background
+
+import (
+	"backend/loyhandlers"
+	"database/sql"
+	"log"
+)
+
+// ReceiptsLoader syncs receipts.
+func ReceiptsLoader(dbConn *sql.DB) {
+	log.Println("Starting receipts sync...")
+	if err := loyhandlers.SyncReceipts(dbConn); err != nil {
+		log.Printf("Error syncing receipts: %v", err)
+	} else {
+		log.Println("Receipts sync completed successfully.")
+	}
+}
