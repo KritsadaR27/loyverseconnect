@@ -1,5 +1,7 @@
 package models
 
+import "database/sql"
+
 // LoyMasterData struct สำหรับเก็บข้อมูล master data ทั้งหมด
 type LoyMasterData struct {
 	Categories   []LoyCategory    `json:"categories"`
@@ -59,8 +61,18 @@ type LoyStoresResponse struct {
 }
 
 type LoySupplier struct {
-	SupplierID   string `json:"id"`
-	SupplierName string `json:"name"`
+	SupplierID   string         `json:"id" db:"supplier_id"`              // Loyverse API uses "id", database uses "supplier_id"
+	SupplierName string         `json:"name" db:"supplier_name"`          // Compatible with both JSON and database
+	OrderCycle   sql.NullString `json:"order_cycle" db:"order_cycle"`     // Order cycle, e.g., "daily", "alternate_days"
+	SelectedDays sql.NullString `json:"selected_days" db:"selected_days"` // Comma-separated list of selected days
+	SortOrder    int            `json:"sort_order" db:"sort_order"`       // Display or processing order
+}
+type SupplierInput struct {
+	SupplierID   string   `json:"id"`
+	SupplierName string   `json:"name"`
+	OrderCycle   string   `json:"order_cycle"` // เป็น string ธรรมดา
+	SortOrder    int      `json:"sort_order"`
+	SelectedDays []string `json:"selected_days"`
 }
 
 type LoySuppliersResponse struct {

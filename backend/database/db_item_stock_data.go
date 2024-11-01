@@ -57,7 +57,7 @@ func FetchItemStockData(db *sql.DB) ([]models.ItemStockData, error) {
 	LEFT JOIN 
 		loycategories lc ON li.category_id = lc.category_id
 	LEFT JOIN 
-		loysupplier lsup ON li.primary_supplier_id = lsup.supplier_id;
+		loysuppliers lsup ON li.primary_supplier_id = lsup.supplier_id;
 	`
 
 	rows, err := db.Query(query)

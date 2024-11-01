@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"backend/handlers"
 	"backend/loyhandlers"
 	"database/sql"
 	"net/http"
@@ -19,7 +20,22 @@ func RegisterRoutes(db *sql.DB) {
 		loyhandlers.LoyverseWebhookHandler(db, w, r)
 	})
 
+	http.HandleFunc("/api/export-to-google-sheet", loyhandlers.ExportToGoogleSheetHandler(db))
+
 	// ตั้งค่า settings endpoint
 	http.HandleFunc("/api/get-settings", loyhandlers.GetSettingsHandler(db))
 	http.HandleFunc("/api/update-settings", loyhandlers.UpdateSettingsHandler(db))
+
+	//PO
+	http.HandleFunc("/api/purchase_orders/list", handlers.MakeHandleListPurchaseOrders(db))
+	http.HandleFunc("/api/purchase_orders/create", handlers.MakeHandleCreatePurchaseOrder(db))
+	http.HandleFunc("/api/purchase_orders/edit", handlers.MakeHandleEditPurchaseOrder(db))
+	http.HandleFunc("/api/purchase_orders/update_sort_order", handlers.MakeHandleUpdateSortOrder(db))
+	http.HandleFunc("/api/saveOrder", handlers.MakeHandleSaveOrder(db))
+
+	// Suppliers
+	http.HandleFunc("/api/suppliers", handlers.GetSuppliersHandler(db))
+	http.HandleFunc("/api/suppliers/settings", handlers.SaveSupplierSettingsHandler(db))
+	http.HandleFunc("/api/supplierCycles", handlers.FetchSupplierCyclesHandler(db))
+
 }

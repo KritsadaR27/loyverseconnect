@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend  # ระบุ context สำหรับการ build
+    volumes:
+      - ./backend:/app  # แมพโฟลเดอร์ backend ไปยัง /app ใน container
+    ports:
+      - "8080:8080"  # เปิดพอร์ต 8080
+    environment:
+      - DATABASE_URL=${DATABASE_URL}  # ใช้ environment variable สำหรับ DATABASE_URL
+    depends_on:
+      - db  # รอให้ db พร้อมใช้งาน
+
+  frontend:
+    build:
+      context: ./frontend  # ระบุ context สำหรับการ build
+      dockerfile: Dockerfile  # ใช้ Dockerfile ที่กำหนด
+    volumes:
+      - ./frontend:/app  # Map โค้ด frontend เฉพาะในโฟลเดอร์ frontend ไปยัง container
+      - /app/node_modules  # ป้องกันไม่ให้ map `node_modules`
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # เปิด polling สำหรับ hot reload
+      - WATCHPACK_POLLING=true  # เพิ่ม polling สำหรับ Webpack
+    ports:
+      - "3000:3000"  # เปิดพอร์ต 3000
+    depends_on:
+      - backend  # รอให้ backend พร้อมใช้งาน
+
+  db:
+    image: postgres:13  # ใช้ image ของ PostgreSQL เวอร์ชัน 13
+    environment:
+      POSTGRES_USER: loyuser  # กำหนดผู้ใช้ฐานข้อมูล
+      POSTGRES_PASSWORD: password  # กำหนดรหัสผ่าน 
+      POSTGRES_DB: loyverse_cache  # กำหนดชื่อฐานข้อมูล
+    ports:
+      - "5432:5432"  # เปิดพอร์ต 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # กำหนด volume สำหรับข้อมูล
+
+volumes:
+  postgres_data: {}  # กำหนด volume สำหรับ PostgreSQL

@@ -1,0 +1,41 @@
+
+/* DateFilter.css */
+.custom-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    color: white;
+
+  }
+  .custom-checkbox:checked { 
+    background-color: green;
+    border-color: green;
+  }
+  .custom-checkbox.except-checkbox:checked {
+    background-color: #ff4d4d;
+    border-color: #ff4d4d;
+  }
+  .custom-checkbox:checked::before {
+    content: "✓";
+    color: white!important;
+    font-size: 16px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  .custom-checkbox.except-checkbox:checked::before {
+    content: "✕";
+    color: white;
+    font-size: 16px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  

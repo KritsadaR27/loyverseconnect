@@ -11,12 +11,14 @@
   "dependencies": {
     "@heroicons/react": "^1.0.6",
     "axios": "^1.7.7",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.13",
     "next": "15.0.1",
-    "react": "19.0.0-rc-69d4b800-20241021",
+    "react": "^19.0.0-rc-69d4b800-20241021",
     "react-beautiful-dnd": "^13.1.1",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
-    "react-dom": "19.0.0-rc-69d4b800-20241021",
+    "react-dom": "^19.0.0-rc-69d4b800-20241021",
     "react-select": "^5.8.1"
   },
   "devDependencies": {

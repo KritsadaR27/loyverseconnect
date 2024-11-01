@@ -18,7 +18,6 @@ func StartBackgroundTasks(dbConn *sql.DB) {
 	}
 
 	c := cron.New(cron.WithLocation(loc))
-	log.Printf("Cron timezone set to: %v", loc)
 
 	// Schedule InventoryLoader
 	inventoryTime, err := getSyncTime(dbConn, "inventory_sync_time", "03:00")
@@ -27,7 +26,7 @@ func StartBackgroundTasks(dbConn *sql.DB) {
 		inventoryTime = "03:00"
 	}
 	cronSpec := convertToCronFormat(inventoryTime)
-	log.Printf("Scheduling InventoryLoader with cron format: %s", cronSpec)
+	// log.Printf("Scheduling InventoryLoader with cron format: %s", cronSpec)
 	c.AddFunc(cronSpec, func() {
 		log.Println("Cron job: Running InventoryLoader...")
 		InventoryLoader(dbConn)
@@ -40,14 +39,14 @@ func StartBackgroundTasks(dbConn *sql.DB) {
 		receiptsTime = "04:30"
 	}
 	cronSpec = convertToCronFormat(receiptsTime)
-	log.Printf("Scheduling ReceiptsLoader with cron format: %s", cronSpec)
+	// log.Printf("Scheduling ReceiptsLoader with cron format: %s", cronSpec)
 	c.AddFunc(cronSpec, func() {
 		log.Println("Cron job: Running ReceiptsLoader...")
 		ReceiptsLoader(dbConn)
 	})
 
 	// Start cron scheduler
-	log.Println("Starting cron scheduler...")
+	// log.Println("Starting cron scheduler...")
 	c.Start()
 	defer c.Stop() // เพื่อหยุด cron เมื่อโปรแกรมปิด
 }
@@ -70,6 +69,6 @@ func convertToCronFormat(timeStr string) string {
 	minute := parts[1]
 	hour := parts[0]
 	cronFormat := minute + " " + hour + " * * *"
-	log.Printf("Setting cron format to: %s", cronFormat) // ตรวจสอบ cron ที่ตั้งไว้
+	// log.Printf("Setting cron format to: %s", cronFormat) // ตรวจสอบ cron ที่ตั้งไว้
 	return cronFormat
 }

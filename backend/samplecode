@@ -1,13 +1,15 @@
 \d loycategories      
+\d loyitems 
+ \d loystores          
+\d loysupplier  
+\d loyinventorylevels 
 
-\d loyitems           
 \d loypaymenttypes    
             
-\d loystores          
-\d loysupplier     
+    
 
 
-\d loyinventorylevels 
+
 \d loyreceiptlineitems
 \d loyreceiptpayments 
 \d loyreceipts     
@@ -22,10 +24,10 @@ SELECT * FROM loystores;
 SELECT * FROM loysupplier; 
 
 
-SELECT * loyinventorylevels;
-SELECT * loyreceiptlineitems;
-SELECT * loyreceiptpayments;
-SELECT * loyreceipts;
+SELECT * FROM loyinventorylevels;
+SELECT * FROM loyreceiptlineitems;
+SELECT * FROM loyreceiptpayments;
+SELECT * FROM loyreceipts;
 
 loycategories      
 
