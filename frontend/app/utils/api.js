@@ -63,7 +63,7 @@ export const saveItemOrderToAPI = async (supplier, newOrder, orderDate) => {
 
 export const fetchSuppliers = async () => {
     try {
-        const response = await fetch('http://localhost:8080/api/suppliers');
+        const response = await fetch('http://localhost:8083/api/suppliers');
         if (!response.ok) throw new Error("Failed to fetch suppliers");
 
         const data = await response.json();
@@ -80,20 +80,7 @@ export const fetchSuppliers = async () => {
         return [];
     }
 };
-// In src/utils/api.js
-export const fetchSupplierCycles = async () => {
-    try {
-        const response = await fetch('http://localhost:8080/api/supplierCycles'); // Adjust the endpoint as necessary
-        if (!response.ok) {
-            throw new Error('Failed to fetch supplier cycles');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching supplier cycles:', error);
-        return [];
-    }
-};
+
 
 
 
@@ -111,7 +98,7 @@ export const saveSupplierSettings = async (suppliers) => {
         }));
 
         console.log("Saving suppliers:", suppliersToSend); // Log ข้อมูลเพื่อตรวจสอบ
-        const response = await fetch('http://localhost:8080/api/suppliers/settings', {
+        const response = await fetch('http://localhost:8083/api/suppliers/settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

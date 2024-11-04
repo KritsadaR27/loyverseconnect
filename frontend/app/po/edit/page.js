@@ -159,9 +159,6 @@ const Page = () => {
         }));
     };
 
-    const saveOrder = async (supplier, newOrder) => {
-        await saveItemOrderToAPI(supplier, newOrder, selectedDate);
-    };
 
     const handleInputChange = (supplier, itemName, field, value) => {
         setItemOrder((prevOrder) => ({
@@ -229,7 +226,8 @@ const Page = () => {
                                                 className="border px-2 py-1"
                                             />
                                         ]}
-                                        expandedItems={expandedItems[supplier] || {}} 
+                                        expandedItems={expandedItems && expandedItems[supplier] ? expandedItems[supplier] : {}}
+
                                         toggleExpand={(itemName) => toggleExpandItem(supplier, itemName)}
                                     />
                                 )}

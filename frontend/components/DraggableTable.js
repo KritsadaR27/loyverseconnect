@@ -44,7 +44,8 @@ const DraggableTable = ({
                             columns={mapItemToColumns(item)}
                             isExpanded={expandedItems[item.item_name] || false}
                             toggleExpand={() => toggleExpand(item.item_name)}
-                            expandedContent={expandedContent}
+                            expandedContent={typeof expandedContent === 'function' ? expandedContent : () => null} // ตรวจสอบว่าเป็นฟังก์ชัน
+
                         />
                     ))}
                 </tbody>

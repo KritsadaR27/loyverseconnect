@@ -57,7 +57,19 @@ services:
       # db:
       #   condition: service_healthy
       - db
-
+  
+  supplier-management:
+    build:
+      context: .
+      dockerfile: backend/internal/SupplierManagement/Dockerfile
+    container_name: supplier-management
+    environment:
+      - PORT=8083
+      - DATABASE_URL=${DATABASE_URL}
+    ports:
+      - "8083:8083"
+    depends_on:
+      - db
   db:
     image: postgres:13  # ใช้ image ของ PostgreSQL เวอร์ชัน 13
     environment:

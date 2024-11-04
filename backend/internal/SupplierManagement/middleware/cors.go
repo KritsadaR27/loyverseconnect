@@ -1,3 +1,4 @@
+// backend/internal/InventoryManagement/middleware/cors.go
 package middleware
 
 import "net/http"
