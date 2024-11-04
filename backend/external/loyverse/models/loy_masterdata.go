@@ -49,9 +49,9 @@ type Variant struct {
 
 // LoyPaymentType struct สำหรับเก็บข้อมูลประเภทการชำระเงิน
 type LoyPaymentType struct {
-	PaymentTypeID string `json:"payment_type_id"` // payment_type_id
-	Name          string `json:"name"`            // name
-	Type          string `json:"type"`            // type
+	PaymentTypeID string `json:"id"`   // payment_type_id
+	Name          string `json:"name"` // name
+	Type          string `json:"type"` // type
 }
 type LoyPaymentTypesResponse struct {
 	PaymentTypes []LoyPaymentType `json:"payment_types"`
