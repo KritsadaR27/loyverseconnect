@@ -1,0 +1,32 @@
+// backend/internal/InventoryManagement/domain/services/Inventory/restock_service.go
+package inventory
+
+import (
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+)
+
+// RestockService manages the restocking of items in inventory.
+type RestockService struct {
+	itemRepo     repositories.ItemRepository
+	stockRepo    repositories.StockRepository
+	supplierRepo repositories.SupplierRepository
+}
+
+// NewRestockService initializes a new instance of RestockService.
+func NewRestockService(itemRepo repositories.ItemRepository, stockRepo repositories.StockRepository, supplierRepo repositories.SupplierRepository) *RestockService {
+	return &RestockService{itemRepo: itemRepo, stockRepo: stockRepo, supplierRepo: supplierRepo}
+}
+
+// RestockItem initiates a restock for the given item.
+func (s *RestockService) RestockItem(itemID string, quantity float64) error {
+	item, err := s.itemRepo.GetItemByID(itemID)
+	if err != nil {
+		return err
+	}
+	// Example: Verify supplier and create a restock order
+	supplier, err := s.supplierRepo.GetSupplierByID(item.PrimarySupplier)
+	if err != nil {
+		return err
+	}
+	return s.stockRepo.UpdateStock(itemID, supplier.StoreID, quantity)
+}

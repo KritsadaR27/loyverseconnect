@@ -1,0 +1,28 @@
+// backend/internal/InventoryManagement/domain/services/order_suggestion_service.go
+package services
+
+import (
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+)
+
+// OrderSuggestionService generates order recommendations based on analytics data.
+type OrderSuggestionService struct {
+	analyticsRepo repositories.AnalyticsRepository
+	itemRepo      repositories.ItemRepository
+}
+
+// NewOrderSuggestionService initializes a new instance of OrderSuggestionService.
+func NewOrderSuggestionService(analyticsRepo repositories.AnalyticsRepository, itemRepo repositories.ItemRepository) *OrderSuggestionService {
+	return &OrderSuggestionService{analyticsRepo: analyticsRepo, itemRepo: itemRepo}
+}
+
+// SuggestOrderQuantity provides an order suggestion for the given item.
+func (s *OrderSuggestionService) SuggestOrderQuantity(itemID string) (int, error) {
+	analytics, err := s.analyticsRepo.GetItemAnalytics(itemID)
+	if err != nil {
+		return 0, err
+	}
+	// Example calculation: based on average daily sales
+	suggestedOrder := int(analytics.AvgSales * 7) // Suggesting a week of stock
+	return suggestedOrder, nil
+}

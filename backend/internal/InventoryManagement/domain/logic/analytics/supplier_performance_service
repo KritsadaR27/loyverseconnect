@@ -1,0 +1,26 @@
+// backend/internal/InventoryManagement/domain/services/analytics/supplier_performance_service.go
+package analytics
+
+import (
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+)
+
+// SupplierPerformanceService evaluates and tracks supplier performance metrics.
+type SupplierPerformanceService struct {
+	supplierRepo repositories.SupplierRepository
+}
+
+// NewSupplierPerformanceService initializes a new instance of SupplierPerformanceService.
+func NewSupplierPerformanceService(supplierRepo repositories.SupplierRepository) *SupplierPerformanceService {
+	return &SupplierPerformanceService{supplierRepo: supplierRepo}
+}
+
+// CalculatePerformanceMetrics calculates and returns performance metrics for a supplier.
+func (s *SupplierPerformanceService) CalculatePerformanceMetrics(supplierID string) (items.SupplierPerformance, error) {
+	return s.supplierRepo.GetPerformanceMetrics(supplierID)
+}
+
+// RecordDelivery records a delivery and updates supplier performance metrics.
+func (s *SupplierPerformanceService) RecordDelivery(supplierID string, isOnTime bool, quantity int) error {
+	return s.supplierRepo.UpdateDeliveryMetrics(supplierID, isOnTime, quantity)
+}

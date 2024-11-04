@@ -1,0 +1,26 @@
+// backend/internal/InventoryManagement/domain/services/Inventory/transfer_service.go
+package inventory
+
+import (
+	"backend/internal/InventoryManagement/domain/models"
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+	"time"
+)
+
+// TransferService handles stock transfers.
+type TransferService struct {
+	repo repositories.TransactionRepository
+}
+
+// TransferStock transfers stock from one store to another.
+func (s *TransferService) TransferStock(itemID, fromStoreID, toStoreID string, quantity float64) error {
+	transfer := models.Transaction{
+		TransactionID:   generateID(),
+		TransactionType: "transfer",
+		ItemID:          itemID,
+		StoreID:         toStoreID,
+		Quantity:        quantity,
+		CreatedAt:       time.Now(),
+	}
+	return s.repo.RecordTransaction(transfer)
+}

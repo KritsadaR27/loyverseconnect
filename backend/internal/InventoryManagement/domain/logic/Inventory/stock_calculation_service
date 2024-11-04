@@ -1,0 +1,24 @@
+// backend/internal/InventoryManagement/domain/services/Inventory/stock_calculation_service.go
+package inventory
+
+import (
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+)
+
+// StockCalculationService calculates stock levels.
+type StockCalculationService struct {
+	repo repositories.ItemRepository
+}
+
+// CalculateTotalStock calculates total stock of an item across stores.
+func (s *StockCalculationService) CalculateTotalStock(itemID string) (float64, error) {
+	stockLevels, err := s.repo.GetStockLevels(itemID)
+	if err != nil {
+		return 0, err
+	}
+	totalStock := 0.0
+	for _, level := range stockLevels {
+		totalStock += level.InStock
+	}
+	return totalStock, nil
+}

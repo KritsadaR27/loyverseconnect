@@ -1,4 +1,0 @@
-# backend/air.toml
-[build]
-cmd = "go build -o main ." # คอมไพล์เป็นไฟล์ main
-bin = "./main"

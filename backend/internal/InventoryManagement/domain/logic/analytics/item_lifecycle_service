@@ -1,0 +1,39 @@
+// backend/internal/InventoryManagement/domain/services/analytics/item_lifecycle_service.go
+package analytics
+
+import (
+	"backend/internal/InventoryManagement/infrastructure/repositories"
+)
+
+// ItemLifecycleService manages lifecycle stages of items in inventory.
+type ItemLifecycleService struct {
+	itemRepo repositories.ItemRepository
+}
+
+// NewItemLifecycleService initializes a new instance of ItemLifecycleService.
+func NewItemLifecycleService(itemRepo repositories.ItemRepository) *ItemLifecycleService {
+	return &ItemLifecycleService{itemRepo: itemRepo}
+}
+
+// DiscontinueItem marks an item as discontinued.
+func (s *ItemLifecycleService) DiscontinueItem(itemID string) error {
+	return s.itemRepo.UpdateItemStatus(itemID, "discontinued")
+}
+
+// ReactivateItem reactivates a previously discontinued item.
+func (s *ItemLifecycleService) ReactivateItem(itemID string) error {
+	return s.itemRepo.UpdateItemStatus(itemID, "active")
+}
+
+// CheckItemLifecycle performs checks on item conditions to update lifecycle.
+func (s *ItemLifecycleService) CheckItemLifecycle(itemID string) error {
+	item, err := s.itemRepo.GetItemByID(itemID)
+	if err != nil {
+		return err
+	}
+	// Example condition: If item stock is low, mark as “low_stock”
+	if item.StockLevel < 10 {
+		return s.itemRepo.UpdateItemStatus(itemID, "low_stock")
+	}
+	return nil
+}

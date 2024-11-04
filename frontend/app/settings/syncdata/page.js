@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Navigation from '../../../components/Navigation';
+
 
 const SyncDataPage = () => {
     const [settings, setSettings] = useState({ inventory_sync_time: "03:00", receipts_sync_time: "04:30" });
@@ -8,12 +10,14 @@ const SyncDataPage = () => {
     const [userRole, setUserRole] = useState(null);
     const handleExportToGoogleSheet = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/export-to-google-sheet', {
+            const response = await fetch('http://localhost:8082/api/export-to-google-sheet', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
+            console.log(response); // Debugging response
+
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
@@ -81,6 +85,8 @@ const SyncDataPage = () => {
     };
 
     return (
+       
+        <div> <Navigation /> 
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 space-y-8">
             <h2 className="text-2xl font-bold text-blue-600">
                 Data Sync Settings & Actions  
@@ -144,7 +150,7 @@ const SyncDataPage = () => {
             {status && (
                 <p className="mt-6 text-lg font-medium text-gray-700 text-center">{status}</p>
             )}
-        </div> 
+        </div> </div>
     );
 };
 

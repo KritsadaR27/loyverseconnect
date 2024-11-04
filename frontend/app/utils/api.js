@@ -2,7 +2,7 @@
 
 export const fetchItemsStockData = async () => {
     try {
-        const response = await fetch('http://localhost:8080/api/get-item-stock-data');
+        const response = await fetch('http://localhost:8082/api/item-stock');
         if (!response.ok) {
             throw new Error("Failed to fetch items");
         }
@@ -10,6 +10,30 @@ export const fetchItemsStockData = async () => {
         return data;
     } catch (error) {
         console.error("Error fetching items:", error);
+    }
+};
+
+export const SaveOrderItems = async () => {
+    try {
+        const response = await fetch('/api/purchase-orders/line-item/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                poData: { supplierName, orderDate, status, updatedBy }, // ข้อมูล PO
+                lineItems: itemOrder // รายการ line items
+            }),
+        });
+
+        if (response.ok) {
+            alert("บันทึกข้อมูลสำเร็จ");
+        } else {
+            throw new Error('Failed to save data');
+        }
+    } catch (error) {
+        console.error("Error saving order items:", error.message);
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
 };
 
@@ -101,6 +125,19 @@ export const saveSupplierSettings = async (suppliers) => {
 };
 
 
+// src/utils/api.js
+export const fetchReceipts = async () => {
+    try {
+        const response = await fetch('http://localhost:8080/api/receipts');
+        if (!response.ok) {
+            throw new Error('Failed to fetch receipts');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};
 
 
 
