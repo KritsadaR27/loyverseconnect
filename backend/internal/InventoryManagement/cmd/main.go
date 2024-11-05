@@ -50,7 +50,7 @@ func main() {
 	defer db.Close()
 
 	// เริ่มต้น Google Sheets Client
-	sheetsClient, err := external.NewGoogleSheetsClient("./credentials.json", "143oyrxaUhx48sDXv144YMwPhqPa02rbSMtfU3fjAHfs", "itemstockdata!A1")
+	sheetsClient, err := external.NewGoogleSheetsClient("./credentials.json", "143oyrxaUhx48sDXv144YMwPhqPa02rbSMtfU3fjAHfs", "itemstockdata!A:E")
 	if err != nil {
 		log.Fatalf("Failed to initialize Google Sheets client: %v", err)
 	}

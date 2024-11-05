@@ -16,6 +16,11 @@ func NewExportService(itemInterface interfaces.ItemInterface, sheetsClient *exte
 }
 
 func (s *ExportService) ExportItemStockDataToGoogleSheet() error {
+	// Clear existing data in Google Sheet before writing new data
+	err := s.sheetsClient.ClearSheet()
+	if err != nil {
+		return err
+	}
 	itemStockData, err := s.itemInterface.FetchItemStockData()
 	if err != nil {
 		return err

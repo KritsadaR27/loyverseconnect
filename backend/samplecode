@@ -1,15 +1,9 @@
 \d loycategories      
 \d loyitems 
  \d loystores          
-\d loysupplier  
+\d loysuppliers  
 \d loyinventorylevels 
-
 \d loypaymenttypes    
-            
-    
-
-
-
 \d loyreceiptlineitems
 \d loyreceiptpayments 
 \d loyreceipts     

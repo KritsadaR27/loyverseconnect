@@ -44,10 +44,38 @@ const Navigation = () => {
           )}
         </li>
 
-        <li>
-          <Link href="/receipts">
-            <span className="text-white hover:bg-gray-700 px-3 py-2 rounded">ใบเสร็จ</span>
-          </Link>
+         {/* Dropdown Menu for sale */}
+         <li className="relative">
+          <button
+            onClick={() => toggleDropdown('sale')}
+            className="text-white hover:bg-gray-700 px-3 py-2 rounded focus:outline-none"
+          >
+            การขาย
+          </button>
+          {dropdowns['sale'] && (
+            <ul className="absolute left-0 mt-2 w-32 bg-gray-800 rounded shadow-lg">
+              <li> 
+                <Link href="/sales/">
+                  <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded">การขาย</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/sales/receipts">
+                  <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded">ใบเสร็จ</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/sales/salesbyitems">
+                  <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded">รายการขายตามสินค้า</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/sales/salesbyday">
+                  <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded"> ขายตามสินค้าตามวัน</span>
+                </Link>
+              </li>
+            </ul>
+          )}
         </li>
 
         <li className="relative">

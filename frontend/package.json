@@ -16,6 +16,7 @@
     "next": "15.0.1",
     "react": "^19.0.0-rc-69d4b800-20241021",
     "react-beautiful-dnd": "^13.1.1",
+    "react-datepicker": "^7.5.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0-rc-69d4b800-20241021",

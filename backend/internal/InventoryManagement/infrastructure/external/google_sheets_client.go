@@ -28,7 +28,15 @@ func NewGoogleSheetsClient(credentialsFile, spreadsheetID, rangeData string) (*G
 		rangeData:     rangeData,
 	}, nil
 }
+func (client *GoogleSheetsClient) ClearSheet() error {
+	if client.service == nil {
+		return errors.New("Google Sheets service not initialized")
+	}
 
+	clearRange := &sheets.ClearValuesRequest{}
+	_, err := client.service.Spreadsheets.Values.Clear(client.spreadsheetID, client.rangeData, clearRange).Do()
+	return err
+}
 func (client *GoogleSheetsClient) ExportDataToGoogleSheet(data [][]interface{}) error {
 	if client.service == nil {
 		return errors.New("Google Sheets service not initialized")

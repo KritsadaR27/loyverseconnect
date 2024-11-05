@@ -112,19 +112,19 @@ export const saveSupplierSettings = async (suppliers) => {
 };
 
 
-// src/utils/api.js
-export const fetchReceipts = async () => {
-    try {
-        const response = await fetch('http://localhost:8080/api/receipts');
-        if (!response.ok) {
-            throw new Error('Failed to fetch receipts');
-        }
-        return await response.json();
-    } catch (error) {
-        console.error(error);
-        return [];
-    }
-};
+// // src/utils/api.js
+// export const fetchReceipts = async () => {
+//     try {
+//         const response = await fetch('http://localhost:8084/api/receipts');
+//         if (!response.ok) {
+//             throw new Error('Failed to fetch receipts');
+//         }
+//         return await response.json();
+//     } catch (error) {
+//         console.error(error);
+//         return [];
+//     }
+// };
 
 
 
