@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"time"
 )
 
-const batchSize = 250 // กำหนด batch size
-// SaveReceipts บันทึกข้อมูลใบเสร็จในฐานข้อมูลแบบ Batch
+const batchSize = 250 // Define batch size
+
+// SaveReceipts saves receipts data into the database with timezone-aware timestamps
 func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
 	for i := 0; i < len(receipts); i += batchSize {
 		batchStart := i + 1
@@ -17,7 +19,7 @@ func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
 			batchEnd = len(receipts)
 		}
 
-		// เริ่ม Transaction สำหรับ batch นี้
+		// Start a transaction for the batch
 		tx, err := db.Begin()
 		if err != nil {
 			log.Println("Error starting transaction:", err)
@@ -28,15 +30,24 @@ func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
 			lineItemsJSON, err := json.Marshal(receipt.LineItems)
 			if err != nil {
 				log.Println("Error marshalling line items:", err)
-				tx.Rollback() // ยกเลิก Transaction หากมีข้อผิดพลาด
+				tx.Rollback()
 				return err
 			}
 
 			paymentsJSON, err := json.Marshal(receipt.Payments)
 			if err != nil {
 				log.Println("Error marshalling payments:", err)
-				tx.Rollback() // ยกเลิก Transaction หากมีข้อผิดพลาด
+				tx.Rollback()
 				return err
+			}
+
+			// Use UTC for consistency, or set to specific timezone if required
+			createdAt := receipt.CreatedAt.In(time.UTC)
+			receiptDate := receipt.ReceiptDate.In(time.UTC)
+			updatedAt := receipt.UpdatedAt.In(time.UTC)
+			var cancelledAt sql.NullTime
+			if receipt.CancelledAt != nil {
+				cancelledAt = sql.NullTime{Time: receipt.CancelledAt.In(time.UTC), Valid: true}
 			}
 
 			_, err = tx.Exec(`
@@ -74,10 +85,10 @@ func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
                     pos_device_id = $15`,
 				receipt.ReceiptNumber,
 				receipt.Note,
-				receipt.CreatedAt,
-				receipt.ReceiptDate,
-				receipt.UpdatedAt,
-				receipt.CancelledAt,
+				createdAt,
+				receiptDate,
+				updatedAt,
+				cancelledAt,
 				receipt.Source,
 				receipt.TotalMoney,
 				receipt.TotalTax,
@@ -89,13 +100,13 @@ func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
 				receipt.PosDeviceId,
 			)
 			if err != nil {
-				tx.Rollback() // ยกเลิก Transaction หากมีข้อผิดพลาด
+				tx.Rollback()
 				log.Println("Error saving receipt:", err)
 				return err
 			}
 		}
 
-		// Commit Transaction เมื่อบันทึก batch สำเร็จ
+		// Commit transaction after saving the batch
 		if err := tx.Commit(); err != nil {
 			log.Println("Error committing transaction:", err)
 			return err
