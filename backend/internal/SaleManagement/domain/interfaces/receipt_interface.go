@@ -1,10 +1,12 @@
-// SaleManagement/domain/interfaces/receipt_interface.go
 package interfaces
 
-import "backend/internal/SaleManagement/domain/models"
+import (
+	"backend/internal/SaleManagement/domain/models"
+	"time"
+)
 
 type ReceiptRepository interface {
-	FetchReceiptsWithDetails() ([]models.Receipt, error)
-	FetchSalesByItem() ([]models.SaleItem, error)
-	FetchSalesByDay() ([]models.SalesByDay, error)
+	FetchReceiptsWithDetails(limit, offset int) ([]models.Receipt, error) // เพิ่ม limit และ offset
+	FetchSalesByItem(limit, offset int) ([]models.SaleItem, error)
+	FetchSalesByDay(startDate, endDate time.Time) ([]models.SalesByDay, error)
 }

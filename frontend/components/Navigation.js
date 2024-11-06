@@ -107,6 +107,29 @@ const Navigation = () => {
             </ul>
           )}
         </li>
+         {/* Dropdown Menu for playground */}
+         <li className="relative">
+          <button
+            onClick={() => toggleDropdown('playground')}
+            className="text-white hover:bg-gray-700 px-3 py-2 rounded focus:outline-none"
+          >
+            playground
+          </button>
+          {dropdowns['playground'] && (
+            <ul className="absolute left-0 mt-2 w-32 bg-gray-800 rounded shadow-lg">
+              <li>
+                <Link href="/playground/jigsaw">
+                  <span className="text-white hover:bg-gray-700 px-3 py-2 rounded">Jigsaw</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/playground/etc">
+                  <span className="text-white hover:bg-gray-700 px-3 py-2 rounded">etc</span>
+                </Link>
+              </li>
+            </ul>
+          )}
+        </li>
       </ul>
     </nav>
   );

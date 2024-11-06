@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -14,20 +15,27 @@ type ReceiptRepository struct {
 	db *sql.DB
 }
 
+// / helper function to convert sql.NullString to string
+func nullStringToString(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return "ไม่ทราบ" // ค่าที่ต้องการแสดงแทน NULL
+}
 func NewReceiptRepository(db *sql.DB) *ReceiptRepository {
 	return &ReceiptRepository{db: db}
 }
 
-func (repo *ReceiptRepository) FetchReceiptsWithDetails() ([]models.Receipt, error) {
+func (repo *ReceiptRepository) FetchReceiptsWithDetails(limit, offset int) ([]models.Receipt, error) {
 	var receipts []models.Receipt
 	query := `
-        SELECT 
+       SELECT 
             r.receipt_date AS ReceiptDate,
             r.receipt_number AS ReceiptNumber,
             r.total_money AS TotalMoney,
             r.total_discount AS TotalDiscount,
             s.store_name AS StoreName,
-            array_agg(DISTINCT pt.name) AS PaymentNames,  -- ใช้ DISTINCT เพื่อหลีกเลี่ยงการซ้ำกัน
+            array_agg(DISTINCT pt.name) AS PaymentNames,
             CASE 
                 WHEN r.cancelled_at IS NOT NULL THEN 'ยกเลิก' 
                 ELSE 'ขาย' 
@@ -46,10 +54,11 @@ func (repo *ReceiptRepository) FetchReceiptsWithDetails() ([]models.Receipt, err
         GROUP BY 
             r.receipt_date, r.receipt_number, r.total_money, r.total_discount, s.store_name, r.cancelled_at
         ORDER BY 
-            r.receipt_date DESC, r.receipt_number;
+            r.receipt_date DESC, r.receipt_number
+        LIMIT $1 OFFSET $2;
     `
 
-	rows, err := repo.db.Query(query)
+	rows, err := repo.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -57,54 +66,58 @@ func (repo *ReceiptRepository) FetchReceiptsWithDetails() ([]models.Receipt, err
 
 	for rows.Next() {
 		var receipt models.Receipt
-		var paymentNames []string // ใช้สำหรับ array ของ payment names
-		var lineItemsData []byte  // ใช้สำหรับ JSON ของ line items
-		var status string         // สถานะการขาย เช่น "ขาย" หรือ "ยกเลิก"
+		var paymentNames []string // For the array of payment names
+		var lineItemsData []byte  // For the JSON of line items
+		var status string         // Sale status, e.g., "ขาย" or "ยกเลิก"
 
-		// ใช้ `pq.Array(&paymentNames)` เพื่ออ่าน array ของ payment names
+		// Use `pq.Array(&paymentNames)` to read array of payment names
 		err := rows.Scan(
 			&receipt.ReceiptDate,
 			&receipt.ReceiptNumber,
 			&receipt.TotalMoney,
 			&receipt.TotalDiscount,
 			&receipt.StoreName,
-			pq.Array(&paymentNames), // ใช้ `pq.Array` เพื่ออ่าน array ของ payment names
-			&status,                 // สถานะการขาย
-			&lineItemsData,          // JSON ของ LineItems
+			pq.Array(&paymentNames), // Use `pq.Array` to read array of payment names
+			&status,                 // Sale status
+			&lineItemsData,          // JSON for LineItems
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		// แปลง JSON `lineItemsData` ให้เป็นโครงสร้าง `[]models.LineItem`
+		// Convert `ReceiptDate` to Bangkok time
+		loc, _ := time.LoadLocation("Asia/Bangkok")
+		receipt.ReceiptDate = receipt.ReceiptDate.In(loc)
+
+		// Unmarshal JSON `lineItemsData` to `[]models.LineItem`
 		if err := json.Unmarshal(lineItemsData, &receipt.LineItems); err != nil {
 			return nil, fmt.Errorf("error unmarshalling line items: %w", err)
 		}
 
-		// สร้าง `LineItemsSummary`
+		// Generate `LineItemsSummary`
 		var lineItemsSummary string
 		for _, item := range receipt.LineItems {
 			lineItemsSummary += fmt.Sprintf("%s x %.0f, ", item.ItemName, item.Quantity)
 		}
 
-		// ลบคอมมาและเว้นวรรคที่ท้าย string
+		// Remove trailing comma and space
 		if len(lineItemsSummary) > 2 {
 			lineItemsSummary = lineItemsSummary[:len(lineItemsSummary)-2]
 		}
 		receipt.LineItemsSummary = lineItemsSummary
 
-		// ตั้งค่าฟิลด์ PaymentNames และ Status
+		// Set fields for PaymentNames and Status
 		receipt.PaymentNames = paymentNames
 		receipt.Status = status
 
-		// เพิ่ม receipt ที่จัดเตรียมไว้ใน `receipts` slice
+		// Append the prepared receipt to the `receipts` slice
 		receipts = append(receipts, receipt)
 	}
 
 	return receipts, nil
 }
 
-func (repo *ReceiptRepository) FetchSalesByItem() ([]models.SaleItem, error) {
+func (repo *ReceiptRepository) FetchSalesByItem(limit, offset int) ([]models.SaleItem, error) {
 	var salesByItem []models.SaleItem
 	query := `SELECT 
         r.receipt_date AS ReceiptDate,
@@ -113,12 +126,12 @@ func (repo *ReceiptRepository) FetchSalesByItem() ([]models.SaleItem, error) {
         SUM((li->>'price')::numeric * (li->>'quantity')::numeric) AS TotalSales,
         SUM((li->>'cost')::numeric * (li->>'quantity')::numeric) AS TotalCost,
         r.total_discount AS TotalDiscount,
-        pt.name AS PaymentName,
+        array_agg(DISTINCT pt.name) AS PaymentNames,
         CASE 
             WHEN r.cancelled_at IS NOT NULL THEN 'ยกเลิก' 
             ELSE 'ขาย' 
         END AS Status,
-        c.category_name AS CategoryName,
+        COALESCE(c.name, 'ไม่ทราบ') AS CategoryName,
         s.store_name AS StoreName,
         r.receipt_number AS ReceiptNumber
     FROM 
@@ -128,7 +141,9 @@ func (repo *ReceiptRepository) FetchSalesByItem() ([]models.SaleItem, error) {
     LEFT JOIN 
         jsonb_array_elements(r.line_items) AS li ON TRUE
     LEFT JOIN 
-        categories c ON (li->>'category_id') = c.category_id
+        loyitems i ON (li->>'item_id') = i.item_id
+    LEFT JOIN 
+        loycategories c ON i.category_id = c.category_id
     LEFT JOIN 
         jsonb_array_elements(r.payments) AS p ON TRUE
     LEFT JOIN 
@@ -136,12 +151,13 @@ func (repo *ReceiptRepository) FetchSalesByItem() ([]models.SaleItem, error) {
     WHERE 
         r.cancelled_at IS NULL
     GROUP BY 
-        ReceiptDate, ItemName, PaymentName, CategoryName, StoreName, ReceiptNumber, Status
+        ReceiptDate, ItemName, CategoryName, StoreName, ReceiptNumber, Status
     ORDER BY 
-        ReceiptDate DESC, ItemName;
+        ReceiptDate DESC, ItemName
+    LIMIT $1 OFFSET $2;
     `
 
-	rows, err := repo.db.Query(query)
+	rows, err := repo.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -149,36 +165,67 @@ func (repo *ReceiptRepository) FetchSalesByItem() ([]models.SaleItem, error) {
 
 	for rows.Next() {
 		var saleItem models.SaleItem
-		err := rows.Scan(&saleItem.ReceiptDate, &saleItem.ItemName, &saleItem.Quantity, &saleItem.TotalSales, &saleItem.TotalCost, &saleItem.TotalDiscount, &saleItem.PaymentName, &saleItem.Status, &saleItem.CategoryName, &saleItem.StoreName, &saleItem.ReceiptNumber)
+		var categoryName sql.NullString
+		var paymentNames []string // Handle as []string for pq.Array
+
+		var receiptDate time.Time
+		err := rows.Scan(
+			&receiptDate,
+			&saleItem.ItemName,
+			&saleItem.Quantity,
+			&saleItem.TotalSales,
+			&saleItem.TotalCost,
+			&saleItem.TotalDiscount,
+			pq.Array(&paymentNames), // Use pq.Array to parse PostgreSQL array
+			&saleItem.Status,
+			&categoryName,
+			&saleItem.StoreName,
+			&saleItem.ReceiptNumber,
+		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Convert the receipt date to Bangkok time
+		loc, _ := time.LoadLocation("Asia/Bangkok")
+		saleItem.ReceiptDate = receiptDate.In(loc)
+
+		// Assign parsed array to saleItem.PaymentNames
+		saleItem.PaymentNames = paymentNames
+
+		// Convert sql.NullString to regular string
+		saleItem.CategoryName = nullStringToString(categoryName)
+
 		salesByItem = append(salesByItem, saleItem)
 	}
+
 	return salesByItem, nil
 }
 
-func (repo *ReceiptRepository) FetchSalesByDay() ([]models.SalesByDay, error) {
+// Add startDate and endDate parameters
+func (repo *ReceiptRepository) FetchSalesByDay(startDate, endDate time.Time) ([]models.SalesByDay, error) {
 	var salesByDay []models.SalesByDay
-	query := `SELECT 
-        DATE(r.receipt_date) AS SaleDate,
-        li->>'item_name' AS ItemName,
-        SUM((li->>'quantity')::numeric) AS TotalQuantity,
-        SUM((li->>'price')::numeric * (li->>'quantity')::numeric) AS TotalSales,
-        SUM((li->>'quantity')::numeric * ((li->>'price')::numeric - (li->>'cost')::numeric)) AS TotalProfit
-    FROM 
-        loyreceipts r
-    LEFT JOIN 
-        jsonb_array_elements(r.line_items) AS li ON TRUE
-    WHERE 
-        r.cancelled_at IS NULL
-    GROUP BY 
-        SaleDate, ItemName
-    ORDER BY 
-        SaleDate, ItemName;
+	query := `
+        SELECT 
+            DATE(r.receipt_date) AS SaleDate,
+            li->>'item_name' AS ItemName,
+            SUM((li->>'quantity')::numeric) AS TotalQuantity,
+            SUM((li->>'price')::numeric * (li->>'quantity')::numeric) AS TotalSales,
+            SUM((li->>'quantity')::numeric * ((li->>'price')::numeric - (li->>'cost')::numeric)) AS TotalProfit
+        FROM 
+            loyreceipts r
+        LEFT JOIN 
+            jsonb_array_elements(r.line_items) AS li ON TRUE
+        WHERE 
+            r.cancelled_at IS NULL
+            AND r.receipt_date BETWEEN $1 AND $2
+        GROUP BY 
+            SaleDate, ItemName
+        ORDER BY 
+            SaleDate, ItemName;
     `
 
-	rows, err := repo.db.Query(query)
+	rows, err := repo.db.Query(query, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}

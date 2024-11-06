@@ -39,3 +39,18 @@ body {
 .cursor-grabbing {
   cursor: grabbing;
 }
+
+/* สร้าง class ในไฟล์ CSS */
+.align-top tr td{
+  vertical-align: top;
+}
+
+
+/* เพิ่มใน CSS */
+.item-summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 200px; /* กำหนดขนาดความกว้างตามต้องการ */
+}

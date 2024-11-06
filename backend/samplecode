@@ -4,8 +4,6 @@
 \d loysuppliers  
 \d loyinventorylevels 
 \d loypaymenttypes    
-\d loyreceiptlineitems
-\d loyreceiptpayments 
 \d loyreceipts     
 
 

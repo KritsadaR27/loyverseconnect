@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"backend/internal/SaleManagement/application/handlers"
+	"backend/internal/SaleManagement/application/services"
 	"backend/internal/SaleManagement/config"
+	"backend/internal/SaleManagement/infrastructure/data"
 	"backend/internal/SaleManagement/middleware"
 	"backend/internal/SaleManagement/router"
 
@@ -21,23 +24,26 @@ func main() {
 	}
 	defer db.Close()
 
-	// // Initialize repository, service, and handler
-	// receiptRepo := data.NewReceiptRepository(db)
-	// receiptService := services.NewReceiptService(receiptRepo)
-	// receiptHandler := handlers.NewReceiptHandler(receiptService)
+	// สร้างส่วนประกอบที่จำเป็น
+	receiptRepo := data.NewReceiptRepository(db)
+	receiptService := services.NewReceiptService(receiptRepo)
+	receiptHandler := handlers.NewReceiptHandler(receiptService)
 
-	// สร้าง routing
+	// สร้าง ServeMux และเพิ่มเส้นทาง
 	mux := http.NewServeMux()
+	mux.HandleFunc("/ws", receiptHandler.WebSocketEndpoint) // เพิ่มเส้นทาง WebSocket ใน mux
+	router.RegisterSaleRoutes(mux, db)                      // เพิ่มเส้นทางอื่น ๆ
 
-	router.RegisterSaleRoutes(mux, db)
+	// เพิ่ม Middleware
 	handlers := middleware.CORS(mux)
 
-	// Middleware และตั้งค่าพอร์ตเริ่มต้น
+	// ตั้งค่าพอร์ตเริ่มต้น
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8084" // Default port for SaleManagement
 	}
 
+	// เริ่มเซิร์ฟเวอร์
 	log.Printf("Starting Sale Management server on port %s", port)
 	if err := http.ListenAndServe(":"+port, handlers); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

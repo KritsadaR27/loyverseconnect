@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Receipt struct {
 	ReceiptNumber    string     `json:"receipt_number"`
@@ -23,6 +26,24 @@ type Receipt struct {
 	LineItemsSummary string     `json:"line_items_summary"` // เพิ่มฟิลด์นี้
 	PaymentNames     []string   `json:"payment_names"`      // เพิ่มฟิลด์นี้
 
+}
+
+// MarshalJSON customizes the JSON representation of the Receipt struct
+func (r Receipt) MarshalJSON() ([]byte, error) {
+	type Alias Receipt // Create an alias to avoid recursion in MarshalJSON
+
+	// Load Bangkok location
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	receiptDate := r.ReceiptDate.In(loc).Format("2006-01-02 15:04:05") // Adjust format as needed
+
+	// Alias instance for marshaling
+	return json.Marshal(&struct {
+		ReceiptDate string `json:"receipt_date"`
+		Alias
+	}{
+		ReceiptDate: receiptDate,
+		Alias:       (Alias)(r),
+	})
 }
 
 type LineItem struct {
