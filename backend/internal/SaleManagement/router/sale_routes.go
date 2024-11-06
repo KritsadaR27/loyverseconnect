@@ -18,4 +18,5 @@ func RegisterSaleRoutes(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("/api/receipts", receiptHandler.ListReceipts)       // ลิสใบเสร็จ
 	mux.HandleFunc("/api/sales/items", receiptHandler.ListSalesByItem) // รายการขายตามสินค้า
 	mux.HandleFunc("/api/sales/days", receiptHandler.ListSalesByDay)   // จำนวนขายตามวัน
+
 }

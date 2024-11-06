@@ -154,6 +154,22 @@ func (h *ReceiptHandler) ListSalesByItem(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// func (h *ReceiptHandler) ListSalesByDay(w http.ResponseWriter, r *http.Request) {
+// 	salesByDay, err := h.receiptService.GetSalesByDay()
+// 	if err != nil {
+// 		log.Println("Error fetching sales by day:", err)
+// 		http.Error(w, "Failed to fetch sales by day", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	if err := json.NewEncoder(w).Encode(salesByDay); err != nil {
+// 		log.Println("Error encoding sales by day to JSON:", err)
+// 		http.Error(w, "Failed to encode sales by day", http.StatusInternalServerError)
+// 		return
+// 	}
+// }
+
 // Assuming your backend handler can parse "startDate" and "endDate" from query params
 
 func (h *ReceiptHandler) ListSalesByDay(w http.ResponseWriter, r *http.Request) {

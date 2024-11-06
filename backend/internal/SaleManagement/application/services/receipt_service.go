@@ -31,3 +31,8 @@ func (s *ReceiptService) GetSalesByItem(limit, offset int) ([]models.SaleItem, e
 func (s *ReceiptService) GetSalesByDay(startDate, endDate time.Time) ([]models.SalesByDay, error) {
 	return s.receiptRepo.FetchSalesByDay(startDate, endDate)
 }
+
+// // ReceiptService.go
+// func (s *ReceiptService) GetSalesByDay() ([]models.SalesByDay, error) {
+// 	return s.receiptRepo.FetchSalesByDay() // ไม่ต้องส่งช่วงวันที่
+// }
