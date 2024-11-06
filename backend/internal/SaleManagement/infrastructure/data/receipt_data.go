@@ -233,10 +233,15 @@ func (repo *ReceiptRepository) FetchSalesByDay(startDate, endDate time.Time) ([]
 
 	for rows.Next() {
 		var saleByDay models.SalesByDay
-		err := rows.Scan(&saleByDay.SaleDate, &saleByDay.ItemName, &saleByDay.TotalQuantity, &saleByDay.TotalSales, &saleByDay.TotalProfit)
+		var saleDate time.Time
+		err := rows.Scan(&saleDate, &saleByDay.ItemName, &saleByDay.TotalQuantity, &saleByDay.TotalSales, &saleByDay.TotalProfit)
 		if err != nil {
 			return nil, err
 		}
+		// Convert the receipt date to Bangkok time
+		loc, _ := time.LoadLocation("Asia/Bangkok")
+		saleByDay.SaleDate = saleDate.In(loc)
+
 		salesByDay = append(salesByDay, saleByDay)
 	}
 	return salesByDay, nil
