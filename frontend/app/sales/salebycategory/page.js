@@ -14,8 +14,8 @@ export default function MonthlyCategorySales() {
   const [displayMode, setDisplayMode] = useState("quantity");
   const [dateRange, setDateRange] = useState([
     {
-      startDate: new Date("2024-09-24T14:00:00Z"),
-      endDate: new Date("2024-09-25T14:00:00Z"),
+      startDate: new Date("2024-01-01T14:00:00Z"),
+      endDate: new Date("2024-12-31T14:00:00Z"),
       key: "selection",
     },
   ]);
@@ -157,7 +157,7 @@ export default function MonthlyCategorySales() {
 
         <table className="min-w-full bg-white border">
           <thead>
-            <tr className="border-b">
+            <tr className="border bg-blue-300">
               <th className="border-r">เดือน</th>
               {categories.map((category) => (
                 <th key={category}>{category}</th>
@@ -167,9 +167,9 @@ export default function MonthlyCategorySales() {
           <tbody>
             {Object.entries(salesData).map(([month, data]) => (
               <tr key={month} className="border-b">
-                <td className="p-2 border-r">{month}</td>
+                <td className="p-2 border-r-2 bg-gray-100">{month}</td>
                 {categories.map((category) => (
-                  <td key={category} className="p-2">
+                  <td key={category} className="p-2 border">
                     {new Intl.NumberFormat("th-TH").format(data[category]?.[displayMode] || 0)}
                   </td>
                 ))}
