@@ -74,6 +74,11 @@ const Navigation = () => {
                   <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded"> ขายตามสินค้าตามวัน</span>
                 </Link>
               </li>
+              <li>
+                <Link href="/sales/salebycategory">
+                  <span className="block px-4 py-2 text-white hover:bg-gray-700 rounded"> ขายตามหมวดหมู่</span>
+                </Link>
+              </li>
             </ul>
           )}
         </li>

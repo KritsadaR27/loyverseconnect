@@ -202,50 +202,6 @@ func (repo *ReceiptRepository) FetchSalesByItem(limit, offset int) ([]models.Sal
 	return salesByItem, nil
 }
 
-// func (repo *ReceiptRepository) FetchSalesByDay(startDate, endDate time.Time) ([]models.SalesByDay, error) {
-// 	var salesByDay []models.SalesByDay
-
-// 	// // กำหนดวันที่เริ่มต้นและสิ้นสุด
-// 	// startDate := time.Date(2024, 11, 2, 17, 0, 0, 0, time.UTC)
-// 	// endDate := time.Date(2024, 11, 3, 17, 0, 0, 0, time.UTC)
-
-// 	query := `
-//         SELECT
-// 		DATE(r.receipt_date) AS SaleDate,
-//             li->>'item_name' AS item_name,
-//             SUM((li->>'quantity')::numeric) AS total_quantity
-//         FROM
-//             loyreceipts r
-//         LEFT JOIN
-//             jsonb_array_elements(r.line_items) AS li ON TRUE
-//         WHERE
-//             r.receipt_date BETWEEN $1 AND $2
-//             AND r.cancelled_at IS NULL
-//         GROUP BY
-//             SaleDate,item_name
-//         ORDER BY
-//             item_name;
-//     `
-
-// 	rows, err := repo.db.Query(query, startDate, endDate)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
-
-// 	for rows.Next() {
-// 		var saleByDay models.SalesByDay
-
-// 		err := rows.Scan(&saleByDay.ItemName, &saleByDay.TotalQuantity, &saleByDay.SaleDate)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		salesByDay = append(salesByDay, saleByDay)
-// 	}
-// 	return salesByDay, nil
-// }
-
 // Add startDate and endDate parameters
 func (repo *ReceiptRepository) FetchSalesByDay(startDate, endDate time.Time) ([]models.SalesByDay, error) {
 	var salesByDay []models.SalesByDay
