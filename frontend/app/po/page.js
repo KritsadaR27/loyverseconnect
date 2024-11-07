@@ -1,9 +1,50 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import axios from 'axios';
 import Navigation from '../../components/Navigation';
 
+const ItemType = {
+    ROW: 'row',
+};
+
+const DraggableRow = ({ po, index, moveRow, selectedPOs, handleSelect }) => {
+    const [, ref] = useDrag({
+        type: ItemType.ROW,
+        item: { index },
+    });
+
+    const [, drop] = useDrop({
+        accept: ItemType.ROW,
+        hover: (draggedItem) => {
+            if (draggedItem.index !== index) {
+                moveRow(draggedItem.index, index);
+                draggedItem.index = index;
+            }
+        },
+    });
+
+    return (
+        <tr ref={(node) => ref(drop(node))} className="border-b">
+            <td className="py-2 px-4">
+                <input
+                    type="checkbox"
+                    checked={selectedPOs.includes(po.id)}
+                    onChange={() => handleSelect(po.id)}
+                />
+            </td>
+            <td className="py-2 px-4">{po.id}</td>
+            <td className="py-2 px-4">{po.item_name}</td>
+            <td className="py-2 px-4">{po.total_stock}</td>
+            <td className="py-2 px-4">{po.supplier_name || 'ไม่ทราบ'}</td>
+            <td className="py-2 px-4">{new Date(po.order_date).toLocaleDateString()}</td>
+            <td className="py-2 px-4">{po.status}</td>
+            <td className="py-2 px-4">{po.updated_by || 'ไม่ทราบ'}</td>
+        </tr>
+    );
+};
 
 const POList = () => {
     const [poList, setPoList] = useState([]);
@@ -59,13 +100,20 @@ const POList = () => {
         document.body.removeChild(link);
     };
 
+    const moveRow = (fromIndex, toIndex) => {
+        const updatedList = [...poList];
+        const [movedRow] = updatedList.splice(fromIndex, 1);
+        updatedList.splice(toIndex, 0, movedRow);
+        setPoList(updatedList);
+    };
+
     if (loading) {
         return <div>Loading...</div>;
     }
 
     return (
-        <div>
-        <Navigation /> 
+        <DndProvider backend={HTML5Backend}>
+            <Navigation /> 
             <div className="container mx-auto p-4">
                 <h1 className="text-2xl font-bold mb-4">รายการใบสั่งซื้อ (PO)</h1>
                 <div className="flex space-x-4 mb-4">
@@ -104,28 +152,20 @@ const POList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {poList.map((po) => (
-                            <tr key={po.id} className="border-b">
-                                <td className="py-2 px-4">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedPOs.includes(po.id)}
-                                        onChange={() => handleSelect(po.id)}
-                                    />
-                                </td>
-                                <td className="py-2 px-4">{po.id}</td>
-                                <td className="py-2 px-4">{po.item_name}</td>
-                                <td className="py-2 px-4">{po.total_stock}</td>
-                                <td className="py-2 px-4">{po.supplier_name || 'ไม่ทราบ'}</td>
-                                <td className="py-2 px-4">{new Date(po.order_date).toLocaleDateString()}</td>
-                                <td className="py-2 px-4">{po.status}</td>
-                                <td className="py-2 px-4">{po.updated_by || 'ไม่ทราบ'}</td>
-                            </tr>
+                        {poList.map((po, index) => (
+                            <DraggableRow
+                                key={po.id}
+                                index={index}
+                                po={po}
+                                moveRow={moveRow}
+                                selectedPOs={selectedPOs}
+                                handleSelect={handleSelect}
+                            />
                         ))}
                     </tbody>
                 </table>
             </div>
-        </div>
+        </DndProvider>
     );
 };
 

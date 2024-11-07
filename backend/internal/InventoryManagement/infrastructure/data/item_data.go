@@ -72,6 +72,7 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 		var supplierName sql.NullString
 		var orderCycle sql.NullString
 		var selectedDays sql.NullString
+		var latestUpdate sql.NullTime // Use sql.NullTime for nullable time fields
 
 		if err := rows.Scan(
 			&itemData.ItemID,
@@ -80,7 +81,7 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 			&itemData.Cost,
 			&itemData.CategoryName,
 			&itemData.InStock,
-			&itemData.UpdatedAt,
+			&latestUpdate, // Use sql.NullTime here
 			&supplierName,
 			&orderCycle,
 			&selectedDays,
@@ -92,6 +93,8 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 			log.Println("Error scanning row in FetchItemStockData:", err)
 			return nil, err
 		}
+
+		itemData.UpdatedAt = latestUpdate
 
 		itemData.SupplierName = nullStringToString(supplierName)
 		itemData.OrderCycle = nullStringToString(orderCycle)

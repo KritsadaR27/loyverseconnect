@@ -29,9 +29,6 @@ func (s *ExportService) ExportItemStockDataToGoogleSheet() error {
 	var values [][]interface{}
 	for _, item := range itemStockData {
 		supplierName := item.SupplierName
-		if supplierName == "" {
-			supplierName = "ไม่ทราบ"
-		}
 
 		values = append(values, []interface{}{
 			item.ItemName,
