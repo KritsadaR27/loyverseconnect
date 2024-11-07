@@ -26,8 +26,9 @@ export default function MonthlyCategorySales() {
       const timeZone = 'Asia/Bangkok';
       
       // แปลงวันที่ให้เป็น string ในรูปแบบ 'YYYY-MM-DD' โดยตรง เพื่อให้ส่งให้ API ได้ตรงกับโซนเวลาในฐานข้อมูล
-      const startInBangkok = format(startDate, 'yyyy-MM-dd', { timeZone });
-      const endInBangkok = format(endDate, 'yyyy-MM-dd', { timeZone });
+        const startInBangkok = new Date(startDate).toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).split(" ")[0];
+        const endInBangkok = new Date(endDate).toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).split(" ")[0];
+
 
       console.log("Fetching data from", startInBangkok, endInBangkok);
 
