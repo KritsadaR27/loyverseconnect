@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchItemsStockData, saveItemOrderToAPI, fetchSuppliers, fetchSupplierCycles } from '../../utils/api';
-import DatePicker from '../../../components/DatePicker';
 import Tabs from '../../../components/Tabs';
 import DraggableTable from '../../../components/DraggableTable';
 import { DndProvider } from 'react-dnd';
@@ -10,6 +9,13 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { formatDateToThai } from '../../utils/dateUtils';
 import Navigation from '../../../components/Navigation';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import axios from "axios";
+import { CalendarIcon } from '@heroicons/react/solid';
+
+
+
 
 const TABS = [
     { label: 'สั่งของลุงรวย', key: 'order-lung-ruay' },
@@ -18,29 +24,18 @@ const TABS = [
 
 const EXCLUDED_STORES = ["ลุงรวย รถส่งของ", "สาขาอื่นๆ"];
 const LUNG_RUAY_SUPPLIERS = ["จัมโบ้", "หมูลุงรวย", "ลูกชิ้น"];
+
 const calculateRecommendation = (product) => {
     const reserve = product.reserve || 0;
     const remainingStock = product.total_stock - reserve - (product.sales ? product.sales.sat : 0) - (product.sales ? product.sales.sun : 0);
     return Math.ceil(Math.max(0, -remainingStock) / 10) * 10;
 };
-// Helper function to get tomorrow's date in Thai timezone
 
 const getOrderDate = () => {
     const now = new Date();
-    const sixAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
-
-    if (now < sixAM) {
-        // ก่อน 6 โมงเช้า
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else {
-        // หลัง 6 โมงเช้า
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    }
+    return now.getHours() < 6 ? now : new Date(now.setDate(now.getDate() + 1));
 };
 
-
-
-// Helper function to translate order cycle to Thai
 const getOrderCycleText = (value) => {
     switch(value) {
         case "daily": return "ทุกวัน";
@@ -52,44 +47,40 @@ const getOrderCycleText = (value) => {
     }
 };
 
-const Page = () => {
-       const [selectedDate, setSelectedDate] = useState(getOrderDate);
+const CustomInput = ({ value, onClick, date, formatDateToThai }) => (
+    <button className="example-custom-input" onClick={onClick}>
+        {date ? formatDateToThai(date, "วัน dd เดือน พ.ศ.") : "เลือกวันที่"}
+    </button>
+);
 
+const Page = () => {
+    const [selectedDate, setSelectedDate] = useState(getOrderDate);
     const [groupedItems, setGroupedItems] = useState({});
     const [activeTab, setActiveTab] = useState(TABS[0].key);
     const [suppliers, setSuppliers] = useState([]);
     const [collapsed, setCollapsed] = useState({});
     const [expandedItems, setExpandedItems] = useState({});
     const [itemOrder, setItemOrder] = useState({});
-    const [suppliersOrderCycle, setSuppliersOrderCycle] = useState({});
+    const [storeStocks, setStoreStocks] = useState({});
 
     useEffect(() => {
-         // ถ้ามีการเก็บค่า selectedDate ใน localStorage ให้นำออกเพื่อลดการแทรกแซงค่าเริ่มต้น
-            const storedDate = localStorage.getItem("selectedDate");
-            if (storedDate) {
-                setSelectedDate(new Date(storedDate));
-            }
-            if (storedDate) {
-                const date = new Date(storedDate);
-                setSelectedDate(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())));
-            }
-            const loadItems = async () => {
-                const fetchedItems = await fetchItemsStockData();
-                const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
-                const grouped = groupItemsBySupplierWithStores(filteredItems, activeTab);
-                setGroupedItems(grouped);
-        
-                // กำหนดค่าเริ่มต้นให้ itemOrder จากข้อมูลที่โหลดมา
-                const initialItemOrder = {};
-                Object.keys(grouped).forEach(supplier => {
-                    initialItemOrder[supplier] = grouped[supplier].map(item => ({
-                        item_name: item.item_name,
-                        reserve: 0,
-                        order_quantity: 0
-                    }));
-                });
-                setItemOrder(initialItemOrder);
-            };
+        const loadItems = async () => {
+            const fetchedItems = await fetchItemsStockData();
+            const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
+            const grouped = groupItemsBySupplierWithStores(filteredItems, activeTab);
+            setGroupedItems(grouped);
+
+            const initialItemOrder = {};
+            Object.keys(grouped).forEach(supplier => {
+                initialItemOrder[supplier] = grouped[supplier].map(item => ({
+                    item_name: item.item_name,
+                    total_stock: item.total_stock,
+                    reserve: 0,
+                    order_quantity: 0
+                }));
+            });
+            setItemOrder(initialItemOrder);
+        };
 
         const loadSuppliers = async () => {
             const supplierData = await fetchSuppliers();
@@ -103,9 +94,9 @@ const Page = () => {
     const groupItemsBySupplierWithStores = (items, activeTab) => {
         const result = {};
         items.forEach((item) => {
-            let { item_name, in_stock, store_name, supplier_name } = item;
+            let { item_id, item_name, in_stock, store_name, supplier_name } = item;
 
-            if (EXCLUDED_STORES.includes(store_name)) return;
+            if (!item_id || EXCLUDED_STORES.includes(store_name)) return;
 
             if (typeof supplier_name === 'object' && supplier_name.String) {
                 supplier_name = supplier_name.String;
@@ -126,6 +117,7 @@ const Page = () => {
 
             if (!result[supplierKey][item_name]) {
                 result[supplierKey][item_name] = {
+                    item_id,
                     item_name,
                     total_stock: 0,
                     stores: {},
@@ -157,43 +149,53 @@ const Page = () => {
         }));
     };
 
-    const toggleExpandItem = (supplier, itemName) => {
-        setExpandedItems((prev) => ({
-            ...prev,
-            [supplier]: {
-                ...prev[supplier],
-                [itemName]: !prev[supplier]?.[itemName],
+    const toggleExpand = async (itemID) => {
+        if (!itemID) return;
+        if (expandedItems[itemID]) {
+            setExpandedItems((prev) => ({ ...prev, [itemID]: false }));
+        } else {
+            try {
+                const response = await axios.get(`http://localhost:8082/api/item-stock/store`, {
+                    params: { item_id: itemID },
+                });
+                setStoreStocks((prev) => ({ ...prev, [itemID]: response.data }));
+                setExpandedItems((prev) => ({ ...prev, [itemID]: true }));
+            } catch (error) {
+                console.error("Error loading store stock data:", error);
             }
-        }));
+        }
     };
-
 
     const handleInputChange = (supplier, itemName, field, value) => {
-        setItemOrder((prevOrder) => {
-            const updatedOrder = {
-                ...prevOrder,
-                [supplier]: (prevOrder[supplier] || []).map(item =>
-                    item.item_name === itemName ? { ...item, [field]: Number(value) || 0 } : item
-                )
-            };
-            console.log("Updated itemOrder:", updatedOrder); // ตรวจสอบค่าของ itemOrder หลังอัปเดต
-            return updatedOrder;
-        });
+        setItemOrder((prevOrder) => ({
+            ...prevOrder,
+            [supplier]: (prevOrder[supplier] || []).map(item =>
+                item.item_name === itemName ? { ...item, [field]: Number(value) || 0 } : item
+            )
+        }));
     };
-    
-    
 
     return (
         <div>
             <Navigation /> 
             <DndProvider backend={HTML5Backend}>
-                <div className="min-h-screen bg-gradient-to-br from-green-400 to-green-200 flex flex-col items-stretch p-0 m-0">
-                    <h1 className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">สร้างใบสั่งซื้อ</h1>
-                    <DatePicker 
-                        label="สั่งเพื่อรับวันที่:" 
-                        selectedDate={selectedDate} 
-                        setSelectedDate={setSelectedDate} 
-                    />
+                <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 flex flex-col items-stretch p-0 m-0">
+                    <header className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
+                        
+                        <div className="flex items-center">
+                        <h1>สร้างใบสั่งซื้อ </h1> 
+                        <label className="font-semibold"> รับวัน </label>
+                        <DatePicker
+                           selected={selectedDate}
+                           onChange={(date) => setSelectedDate(date)}
+                           customInput={<CustomInput date={selectedDate} formatDateToThai={formatDateToThai} />}
+                           placeholderText="เลือกวันที่"
+                        />
+                            <CalendarIcon className="h-5 w-5 text-white ml-2" />
+
+                    </div>
+                    </header>
+                   
 
                     <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
@@ -206,11 +208,9 @@ const Page = () => {
                         return (
                             <div key={supplier} className="mb-4">
                                 <div className="flex justify-between items-center cursor-pointer bg-gray-300 p-4" onClick={() => toggleCollapse(supplier)}>
-                                    <h2 className="text-lg font-semibold">
-                                        {supplier}
-                                    </h2>
+                                    <h2 className="text-lg font-semibold">{supplier}</h2>
                                     <p className="text-sm text-gray-600">
-                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)}  
+                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)}
                                         (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
                                     </p>
                                     <button className="text-gray-700">
@@ -221,48 +221,48 @@ const Page = () => {
                                 {!collapsed[supplier] && (
                                     <DraggableTable 
                                         headers={["ชื่อสินค้า", "สต๊อก", "เผื่อ", "จำนวนแนะนำ", "สั่งสินค้า"]} 
-                                        items={itemOrder[supplier] || groupedItems[supplier]} 
+                                        items={groupedItems[supplier]} 
                                         onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)} 
-                                        mapItemToColumns={(product) => [
-                                            product.item_name,
-                                            product.total_stock,
+                                        mapItemToColumns={(item) => [
+                                            item.item_name,
+                                            item.total_stock,
                                             <input
                                                 type="number"
-                                                value={itemOrder[supplier]?.find(item => item.item_name === product.item_name)?.reserve ?? ""}
-                                                onChange={(e) => handleInputChange(supplier, product.item_name, 'reserve', e.target.value)}
+                                                value={itemOrder[supplier]?.find(i => i.item_name === item.item_name)?.reserve ?? ""}
+                                                onChange={(e) => handleInputChange(supplier, item.item_name, 'reserve', e.target.value)}
                                                 className="border px-2 py-1"
                                             />,
-                                            calculateRecommendation(product),
+                                            calculateRecommendation(item),
                                             <input
                                                 type="number"
-                                                    value={itemOrder[supplier]?.find(item => item.item_name === product.item_name)?.order_quantity ?? ""}
-                                                    onChange={(e) => handleInputChange(supplier, product.item_name, 'order_quantity', e.target.value)}
-                                                    className="border px-2 py-1"
-                                                />
-
-
-
+                                                value={itemOrder[supplier]?.find(i => i.item_name === item.item_name)?.order_quantity ?? ""}
+                                                onChange={(e) => handleInputChange(supplier, item.item_name, 'order_quantity', e.target.value)}
+                                                className="border px-2 py-1"
+                                            />
                                         ]}
-                                        expandedItems={expandedItems && expandedItems[supplier] ? expandedItems[supplier] : {}}
-
-                                        toggleExpand={(itemName) => toggleExpandItem(supplier, itemName)}
+                                        expandedItems={expandedItems}
+                                        toggleExpand={(itemID) => toggleExpand(itemID)}
                                         expandedContent={(item) => (
-                                            <table className="table-auto text-left ml-4">
-                                                <thead>
-                                                    <tr>
-                                                        <th className="px-4 py-2">สาขา</th>
-                                                        <th className="px-4 py-2">สต๊อก</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {Object.entries(item.stores).map(([store, stock]) => (
-                                                        <tr key={store}>
-                                                            <td className="px-4 py-2">{store}</td>
-                                                            <td className="px-4 py-2">{stock}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                            <div className="p-2 bg-yellow-100">
+                                                <table className="bg-yellow-100">
+                                                    <tbody>
+                                                        {storeStocks[item.item_id]?.length > 0 ? (
+                                                            storeStocks[item.item_id].map((stock) => (
+                                                                <tr key={stock.store_name}>
+                                                                    <td className="p-2">{stock.store_name}</td>
+                                                                    <td className="p-2">{stock.in_stock}</td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan="2" className="text-gray-500 text-center py-2">
+                                                                    ไม่มีข้อมูลสต๊อก
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         )}
                                     />
                                 )}

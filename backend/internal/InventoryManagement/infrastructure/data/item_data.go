@@ -26,39 +26,39 @@ func nullStringToString(ns sql.NullString) string {
 }
 func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, error) {
 	query := `
-		SELECT 
-			item_id, 
-			item_name, 
-			selling_price, 
-			cost, 
-			category_name, 
-			COALESCE(SUM(in_stock), 0) AS total_in_stock,  
-			MAX(updated_at) AS latest_update,              
-			CASE 
-				WHEN bool_or(use_production) = true THEN 'ผลิตเอง' 
-				ELSE COALESCE(MAX(supplier_name), 'ไม่ทราบ') 
-			END AS supplier_name,
-			MAX(order_cycle) AS order_cycle, 
-			MAX(selected_days) AS selected_days, 
-			variant_id, 
-			status, 
-			MAX(days_in_stock) AS days_in_stock,
-			bool_or(use_production) AS use_production
-		FROM 
-			item_stock_view
-		WHERE 
-			store_name NOT IN ('ลุงรวย รถส่งของ', 'สาขาอื่นๆ')
-		GROUP BY 
-			item_id, 
-			item_name, 
-			selling_price, 
-			cost, 
-			category_name, 
-			variant_id, 
-			status
-		ORDER BY 
-			item_name ASC
-	`
+        SELECT 
+            item_id, 
+            item_name, 
+            selling_price, 
+            cost, 
+            category_name, 
+            COALESCE(SUM(in_stock), 0) AS total_in_stock,  
+            MAX(updated_at) AS latest_update,              
+            CASE 
+                WHEN bool_or(use_production) = true THEN 'ผลิตเอง' 
+                ELSE COALESCE(MAX(supplier_name), 'ไม่ทราบ') 
+            END AS supplier_name,
+            MAX(order_cycle) AS order_cycle, 
+            MAX(selected_days) AS selected_days, 
+            variant_id, 
+            status, 
+            MAX(days_in_stock) AS days_in_stock,
+            bool_or(use_production) AS use_production
+        FROM 
+            item_stock_view
+        WHERE 
+            store_name NOT IN ('ลุงรวย รถส่งของ', 'สาขาอื่นๆ')
+        GROUP BY 
+            item_id, 
+            item_name, 
+            selling_price, 
+            cost, 
+            category_name, 
+            variant_id, 
+            status
+        ORDER BY 
+            item_name ASC
+    `
 	rows, err := repo.db.Query(query)
 	if err != nil {
 		log.Println("Error executing FetchItemStockData query:", err)
@@ -72,7 +72,7 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 		var supplierName sql.NullString
 		var orderCycle sql.NullString
 		var selectedDays sql.NullString
-		var latestUpdate sql.NullTime // Use sql.NullTime for nullable time fields
+		var latestUpdate sql.NullTime
 
 		if err := rows.Scan(
 			&itemData.ItemID,
@@ -81,7 +81,7 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 			&itemData.Cost,
 			&itemData.CategoryName,
 			&itemData.InStock,
-			&latestUpdate, // Use sql.NullTime here
+			&latestUpdate,
 			&supplierName,
 			&orderCycle,
 			&selectedDays,
@@ -95,10 +95,22 @@ func (repo *ItemRepositoryDB) FetchItemStockData() ([]models.ItemStockView, erro
 		}
 
 		itemData.UpdatedAt = latestUpdate
-
 		itemData.SupplierName = nullStringToString(supplierName)
 		itemData.OrderCycle = nullStringToString(orderCycle)
 		itemData.SelectedDays = nullStringToString(selectedDays)
+
+		// เรียกใช้ GetItemStockByStore เพื่อดึงข้อมูลสต๊อกตามสาขา
+		storeStocks, err := repo.GetItemStockByStore(itemData.ItemID)
+		if err != nil {
+			log.Println("Error fetching store stock data:", err)
+			return nil, err
+		}
+
+		// เพิ่มข้อมูล storeStocks เข้าไปใน itemData
+		itemData.Stores = make(map[string]float64)
+		for _, storeStock := range storeStocks {
+			itemData.Stores[storeStock.StoreName] = storeStock.InStock
+		}
 
 		itemStockDataList = append(itemStockDataList, itemData)
 	}

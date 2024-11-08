@@ -42,10 +42,9 @@ const DraggableTable = ({
                             index={index}
                             moveItem={handleMoveItem}
                             columns={mapItemToColumns(item)}
-                            isExpanded={expandedItems[item.item_name] || false}
-                            toggleExpand={() => toggleExpand(item.item_name)}
-                            expandedContent={typeof expandedContent === 'function' ? expandedContent : () => null} // ตรวจสอบว่าเป็นฟังก์ชัน
-
+                            isExpanded={expandedItems[item.item_id] || false} // เปลี่ยนจาก item_name เป็น item_id
+                            toggleExpand={() => toggleExpand(item.item_id)} // ส่ง item_id แทน item_name
+                            expandedContent={() => expandedContent(item)} // ส่ง item ทั้งหมดไปยัง expandedContent
                         />
                     ))}
                 </tbody>
