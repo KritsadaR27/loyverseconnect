@@ -73,15 +73,23 @@ const Page = () => {
                 const date = new Date(storedDate);
                 setSelectedDate(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())));
             }
-        const loadItems = async () => {
-            const fetchedItems = await fetchItemsStockData();
-            const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
-            const grouped = groupItemsBySupplierWithStores(filteredItems, activeTab);
-            setGroupedItems(grouped);
-
-            const fetchedCycles = await fetchSupplierCycles();
-            setSuppliersOrderCycle(fetchedCycles);
-        };
+            const loadItems = async () => {
+                const fetchedItems = await fetchItemsStockData();
+                const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
+                const grouped = groupItemsBySupplierWithStores(filteredItems, activeTab);
+                setGroupedItems(grouped);
+        
+                // กำหนดค่าเริ่มต้นให้ itemOrder จากข้อมูลที่โหลดมา
+                const initialItemOrder = {};
+                Object.keys(grouped).forEach(supplier => {
+                    initialItemOrder[supplier] = grouped[supplier].map(item => ({
+                        item_name: item.item_name,
+                        reserve: 0,
+                        order_quantity: 0
+                    }));
+                });
+                setItemOrder(initialItemOrder);
+            };
 
         const loadSuppliers = async () => {
             const supplierData = await fetchSuppliers();
@@ -161,13 +169,19 @@ const Page = () => {
 
 
     const handleInputChange = (supplier, itemName, field, value) => {
-        setItemOrder((prevOrder) => ({
-            ...prevOrder,
-            [supplier]: prevOrder[supplier].map(item =>
-                item.item_name === itemName ? { ...item, [field]: value } : item
-            )
-        }));
+        setItemOrder((prevOrder) => {
+            const updatedOrder = {
+                ...prevOrder,
+                [supplier]: (prevOrder[supplier] || []).map(item =>
+                    item.item_name === itemName ? { ...item, [field]: Number(value) || 0 } : item
+                )
+            };
+            console.log("Updated itemOrder:", updatedOrder); // ตรวจสอบค่าของ itemOrder หลังอัปเดต
+            return updatedOrder;
+        });
     };
+    
+    
 
     return (
         <div>
@@ -214,21 +228,42 @@ const Page = () => {
                                             product.total_stock,
                                             <input
                                                 type="number"
-                                                value={product.reserve}
-                                                onChange={(e) => handleInputChange(supplier, product.item_name, 'reserve', parseInt(e.target.value))}
+                                                value={itemOrder[supplier]?.find(item => item.item_name === product.item_name)?.reserve ?? ""}
+                                                onChange={(e) => handleInputChange(supplier, product.item_name, 'reserve', e.target.value)}
                                                 className="border px-2 py-1"
                                             />,
                                             calculateRecommendation(product),
                                             <input
                                                 type="number"
-                                                value={product.order_quantity}
-                                                onChange={(e) => handleInputChange(supplier, product.item_name, 'order_quantity', parseInt(e.target.value))}
-                                                className="border px-2 py-1"
-                                            />
+                                                    value={itemOrder[supplier]?.find(item => item.item_name === product.item_name)?.order_quantity ?? ""}
+                                                    onChange={(e) => handleInputChange(supplier, product.item_name, 'order_quantity', e.target.value)}
+                                                    className="border px-2 py-1"
+                                                />
+
+
+
                                         ]}
                                         expandedItems={expandedItems && expandedItems[supplier] ? expandedItems[supplier] : {}}
 
                                         toggleExpand={(itemName) => toggleExpandItem(supplier, itemName)}
+                                        expandedContent={(item) => (
+                                            <table className="table-auto text-left ml-4">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-4 py-2">สาขา</th>
+                                                        <th className="px-4 py-2">สต๊อก</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {Object.entries(item.stores).map(([store, stock]) => (
+                                                        <tr key={store}>
+                                                            <td className="px-4 py-2">{store}</td>
+                                                            <td className="px-4 py-2">{stock}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
                                     />
                                 )}
                             </div>

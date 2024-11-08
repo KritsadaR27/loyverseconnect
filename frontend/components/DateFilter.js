@@ -66,7 +66,7 @@ const DateFilter = ({ label, defaultOption = "", defaultDays = [], onSelectChang
                         ))}
                     </div>
                 </div>
-            )}
+        )}
         </div>
     );
 };
