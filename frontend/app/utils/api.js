@@ -12,7 +12,13 @@ export const fetchItemsStockData = async () => {
         console.error("Error fetching items:", error);
     }
 };
+export const saveItemFields = async (itemFields) => {
+    return axios.post('/api/inventory/saveItemFields', { itemFields });
+};
 
+export const saveSupplierFields = async (supplierFields) => {
+    return axios.post('/api/supplier/saveSupplierFields', { supplierFields });
+};
 export const SaveOrderItems = async () => {
     try {
         const response = await fetch('/api/purchase-orders/line-item/save', {

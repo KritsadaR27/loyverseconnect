@@ -5,6 +5,9 @@ import (
 	"backend/internal/SupplierManagement/domain/models"
 	"database/sql"
 	"fmt"
+	"log"
+
+	"github.com/lib/pq"
 )
 
 type SupplierRepository struct {
@@ -15,27 +18,70 @@ func NewSupplierRepository(db *sql.DB) *SupplierRepository {
 	return &SupplierRepository{db: db}
 }
 
-func (repo *SupplierRepository) GetSuppliers() ([]models.Supplier, error) {
-	var suppliers []models.Supplier
+func (repo *SupplierRepository) GetSuppliers() ([]models.SupplierWithCustomFields, error) {
+	var suppliers []models.SupplierWithCustomFields
 
-	rows, err := repo.db.Query(`SELECT supplier_id, supplier_name, order_cycle, selected_days, sort_order FROM loysuppliers`)
+	query := `
+       SELECT 
+    ls.supplier_id, 
+    ls.supplier_name, 
+    COALESCE(csf.order_cycle, '') AS order_cycle, 
+    COALESCE(csf.selected_days, ARRAY[]::text[]) AS selected_days, 
+    COALESCE(csf.sort_order, 0) AS sort_order
+FROM 
+    loysuppliers ls
+LEFT JOIN 
+    custom_supplier_fields csf ON ls.supplier_id = csf.supplier_id;
+
+    `
+	rows, err := repo.db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("error querying suppliers: %v", err)
+		log.Printf("Error executing GetSuppliers query: %v\nQuery: %s", err, query)
+		return nil, fmt.Errorf("error querying suppliers: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var supplier models.Supplier
-		if err := rows.Scan(&supplier.SupplierID, &supplier.SupplierName, &supplier.OrderCycle, &supplier.SelectedDays, &supplier.SortOrder); err != nil {
-			return nil, fmt.Errorf("error scanning supplier row: %v", err)
+		var supplier models.SupplierWithCustomFields
+		var selectedDays []string
+
+		if err := rows.Scan(
+			&supplier.SupplierID,
+			&supplier.SupplierName,
+			&supplier.OrderCycle,
+			pq.Array(&selectedDays),
+			&supplier.SortOrder,
+		); err != nil {
+			log.Printf("Error scanning supplier row: %v\n", err)
+			return nil, fmt.Errorf("error scanning supplier row: %w", err)
 		}
+
+		// Handle nullable fields
+		if !supplier.OrderCycle.Valid {
+			supplier.OrderCycle.String = "" // Set default value if NULL
+		}
+
+		if supplier.SortOrder.Valid {
+			// SortOrder is valid, use it directly
+		} else {
+			supplier.SortOrder.Int64 = 0 // Set default value if NULL
+		}
+
+		supplier.SelectedDays = selectedDays
 		suppliers = append(suppliers, supplier)
 	}
 
+	if err := rows.Err(); err != nil {
+		log.Printf("Row error after iterating suppliers: %v\n", err)
+		return nil, fmt.Errorf("row error after iterating suppliers: %w", err)
+	}
+
+	log.Printf("Fetched %d suppliers\n", len(suppliers))
 	return suppliers, nil
 }
 
-func (repo *SupplierRepository) SaveSupplierSettings(suppliers []models.Supplier) error {
+// SaveCustomSupplierFields saves or updates order_cycle, selected_days, and sort_order in custom_supplier_fields
+func (repo *SupplierRepository) SaveCustomSupplierFields(supplierFields []models.CustomSupplierField) error {
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %v", err)
@@ -43,46 +89,34 @@ func (repo *SupplierRepository) SaveSupplierSettings(suppliers []models.Supplier
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-        UPDATE loysuppliers
-        SET supplier_name = $1, order_cycle = $2, selected_days = $3, sort_order = $4
-        WHERE supplier_id = $5
+        INSERT INTO custom_supplier_fields (supplier_id, order_cycle, selected_days, sort_order)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (supplier_id) DO UPDATE
+        SET order_cycle = EXCLUDED.order_cycle,
+            selected_days = EXCLUDED.selected_days,
+            sort_order = EXCLUDED.sort_order
     `)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
 	}
 	defer stmt.Close()
 
-	for _, supplier := range suppliers {
-		_, err := stmt.Exec(supplier.SupplierName, supplier.OrderCycle.String, supplier.SelectedDays.String, supplier.SortOrder, supplier.SupplierID)
+	for _, supplier := range supplierFields {
+		// Use pq.Array to handle selected_days as an array
+		_, err := stmt.Exec(
+			supplier.SupplierID,
+			supplier.OrderCycle,
+			pq.Array(supplier.SelectedDays), // Using pq.Array for array handling
+			supplier.SortOrder,
+		)
 		if err != nil {
 			return fmt.Errorf("error executing statement: %v", err)
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
+	// Commit the transaction after all statements succeed
+	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("error committing transaction: %v", err)
 	}
 	return nil
 }
-
-// FetchSupplierCycles fetches supplier cycles from the database
-func (repo *SupplierRepository) FetchSupplierCycles() ([]models.Supplier, error) {
-	rows, err := repo.db.Query("SELECT supplier_id, supplier_name, order_cycle, selected_days FROM loysuppliers")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var suppliers []models.Supplier
-	for rows.Next() {
-		var supplier models.Supplier
-		if err := rows.Scan(&supplier.SupplierID, &supplier.SupplierName, &supplier.OrderCycle, &supplier.SelectedDays); err != nil {
-			return nil, fmt.Errorf("error scanning supplier row: %v", err)
-		}
-		suppliers = append(suppliers, supplier)
-	}
-
-	return suppliers, nil
-}
-
-// Implement the other methods of the interface as well...

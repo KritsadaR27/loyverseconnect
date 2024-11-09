@@ -7,7 +7,6 @@ import (
 
 	"backend/internal/SupplierManagement/application/services"
 	"backend/internal/SupplierManagement/domain/models"
-	"log"
 )
 
 type SupplierHandler struct {
@@ -18,6 +17,7 @@ func NewSupplierHandler(service *services.SupplierService) *SupplierHandler {
 	return &SupplierHandler{service: service}
 }
 
+// Existing method to get all suppliers
 func (h *SupplierHandler) GetSuppliers(w http.ResponseWriter, r *http.Request) {
 	suppliers, err := h.service.GetAllSuppliers()
 	if err != nil {
@@ -27,19 +27,19 @@ func (h *SupplierHandler) GetSuppliers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(suppliers)
 }
 
+// New method to save supplier settings
 func (h *SupplierHandler) SaveSupplierSettings(w http.ResponseWriter, r *http.Request) {
-	var suppliersInput []models.SupplierInput
-	if err := json.NewDecoder(r.Body).Decode(&suppliersInput); err != nil {
-		log.Println("Error decoding suppliers data:", err)
+	var supplierFields []models.CustomSupplierField
+	if err := json.NewDecoder(r.Body).Decode(&supplierFields); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.service.SaveSupplierSettings(suppliersInput); err != nil {
-		log.Println("Error saving supplier settings:", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.service.SaveCustomSupplierFields(supplierFields); err != nil {
+		http.Error(w, "Failed to save supplier settings", http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Supplier settings saved successfully"))
 }

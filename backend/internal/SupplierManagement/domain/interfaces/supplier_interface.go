@@ -1,10 +1,9 @@
+// interfaces/supplier_repository.go
 package interfaces
 
 import "backend/internal/SupplierManagement/domain/models"
 
-// SupplierRepository interface
 type SupplierRepository interface {
-	GetSuppliers() ([]models.Supplier, error)
-	SaveSupplierSettings(suppliers []models.Supplier) error
-	FetchSupplierCycles() ([]models.Supplier, error) // ตรวจสอบให้แน่ใจว่ามี method นี้
+	GetSuppliers() ([]models.SupplierWithCustomFields, error)
+	SaveCustomSupplierFields(supplierFields []models.CustomSupplierField) error
 }

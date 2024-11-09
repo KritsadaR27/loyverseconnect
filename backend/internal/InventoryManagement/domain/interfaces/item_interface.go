@@ -8,5 +8,5 @@ type ItemInterface interface {
 	GetItemByID(itemID string) (models.Item, error)
 	GetStockLevels(itemID string) ([]models.InventoryLevel, error)
 	UpdateItemStatus(itemID, status string) error
-	GetItemStockByStore(itemID string) ([]models.StoreStock, error) // เพิ่มฟังก์ชันนี้
+	GetItemStockByStore(itemID string) ([]models.StoreStock, error) // ใช้ที่ PO
 }

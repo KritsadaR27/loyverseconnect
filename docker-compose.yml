@@ -21,6 +21,10 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true  # เปิด polling สำหรับ hot reload
       - WATCHPACK_POLLING=true  # เพิ่ม polling สำหรับ Webpack
+      - REACT_APP_INVENTORY_BASE_URL=${REACT_APP_INVENTORY_BASE_URL}
+      - REACT_APP_SUPPLIER_BASE_URL=${REACT_APP_SUPPLIER_BASE_URL}
+      - REACT_APP_PURCHASE_ORDER_BASE_URL=${REACT_APP_PURCHASE_ORDER_BASE_URL}
+
     ports:
       - "3000:3000"  # เปิดพอร์ต 3000
     depends_on:
