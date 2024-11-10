@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"backend/internal/InventoryManagement/application/services"
+	"backend/internal/InventoryManagement/domain/models"
 	"encoding/json"
 	"net/http"
 )
@@ -42,4 +43,22 @@ func (h *ItemStockHandler) GetItemStockByStoreHandler(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+func (h *ItemStockHandler) SaveItemSupplierSettingHandler(w http.ResponseWriter, r *http.Request) {
+	var supplierSettings []models.CustomItemField
+	if err := json.NewDecoder(r.Body).Decode(&supplierSettings); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	// บันทึกข้อมูล item_supplier_call
+	err := h.itemStockService.SaveItemSupplierSetting(supplierSettings)
+	if err != nil {
+		http.Error(w, "Failed to save item supplier settings", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Item supplier settings saved successfully"})
 }

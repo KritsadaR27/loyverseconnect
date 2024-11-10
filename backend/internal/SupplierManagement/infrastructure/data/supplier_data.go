@@ -56,17 +56,6 @@ LEFT JOIN
 			return nil, fmt.Errorf("error scanning supplier row: %w", err)
 		}
 
-		// Handle nullable fields
-		if !supplier.OrderCycle.Valid {
-			supplier.OrderCycle.String = "" // Set default value if NULL
-		}
-
-		if supplier.SortOrder.Valid {
-			// SortOrder is valid, use it directly
-		} else {
-			supplier.SortOrder.Int64 = 0 // Set default value if NULL
-		}
-
 		supplier.SelectedDays = selectedDays
 		suppliers = append(suppliers, supplier)
 	}
@@ -79,8 +68,6 @@ LEFT JOIN
 	log.Printf("Fetched %d suppliers\n", len(suppliers))
 	return suppliers, nil
 }
-
-// SaveCustomSupplierFields saves or updates order_cycle, selected_days, and sort_order in custom_supplier_fields
 func (repo *SupplierRepository) SaveCustomSupplierFields(supplierFields []models.CustomSupplierField) error {
 	tx, err := repo.db.Begin()
 	if err != nil {
@@ -91,10 +78,10 @@ func (repo *SupplierRepository) SaveCustomSupplierFields(supplierFields []models
 	stmt, err := tx.Prepare(`
         INSERT INTO custom_supplier_fields (supplier_id, order_cycle, selected_days, sort_order)
         VALUES ($1, $2, $3, $4)
-        ON CONFLICT (supplier_id) DO UPDATE
-        SET order_cycle = EXCLUDED.order_cycle,
-            selected_days = EXCLUDED.selected_days,
-            sort_order = EXCLUDED.sort_order
+        ON CONFLICT (supplier_id) 
+        DO UPDATE SET order_cycle = EXCLUDED.order_cycle,
+                      selected_days = EXCLUDED.selected_days,
+                      sort_order = EXCLUDED.sort_order
     `)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
@@ -102,21 +89,36 @@ func (repo *SupplierRepository) SaveCustomSupplierFields(supplierFields []models
 	defer stmt.Close()
 
 	for _, supplier := range supplierFields {
-		// Use pq.Array to handle selected_days as an array
+		// ถ้า order_cycle เป็นค่าว่าง, ให้ตั้งเป็น NULL
+		if supplier.OrderCycle == "" {
+			supplier.OrderCycle = "" // ใช้ string ธรรมดา
+		}
+
+		// ถ้า sort_order เป็น 0, ให้ตั้งเป็น NULL
+		if supplier.SortOrder == 0 {
+			supplier.SortOrder = 0 // ใช้ 0 แทนค่าที่ว่าง
+		}
+
+		// ถ้า selected_days เป็น array ว่าง, ให้ตั้งเป็น NULL
+		if len(supplier.SelectedDays) == 0 {
+			supplier.SelectedDays = nil // ตั้งเป็น NULL ถ้าไม่มีวัน
+		}
+
+		// ทำการ Execute statement เพื่อบันทึกข้อมูลในฐานข้อมูล
 		_, err := stmt.Exec(
-			supplier.SupplierID,
-			supplier.OrderCycle,
-			pq.Array(supplier.SelectedDays), // Using pq.Array for array handling
-			supplier.SortOrder,
+			supplier.SupplierID,             // supplier_id
+			supplier.OrderCycle,             // order_cycle (string)
+			pq.Array(supplier.SelectedDays), // ใช้ pq.Array สำหรับ array
+			supplier.SortOrder,              // sort_order (int)
 		)
 		if err != nil {
 			return fmt.Errorf("error executing statement: %v", err)
 		}
 	}
 
-	// Commit the transaction after all statements succeed
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("error committing transaction: %v", err)
 	}
+
 	return nil
 }

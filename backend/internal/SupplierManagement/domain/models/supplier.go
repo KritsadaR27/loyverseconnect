@@ -1,7 +1,5 @@
 package models
 
-import "database/sql"
-
 // Supplier represents the main structure for storing supplier information.
 type Supplier struct {
 	SupplierID   string `json:"supplier_id"`
@@ -10,15 +8,15 @@ type Supplier struct {
 
 type CustomSupplierField struct {
 	SupplierID   string   `json:"supplier_id"`
-	OrderCycle   string   `json:"order_cycle"`
+	OrderCycle   string   `json:"order_cycle"` // ใช้ sql.NullString เพื่อรองรับ NULL
 	SelectedDays []string `json:"selected_days"`
-	SortOrder    int      `json:"sort_order"`
+	SortOrder    int      `json:"sort_order"` // ใช้ sql.NullInt64 เพื่อรองรับ NULL
 }
 
 type SupplierWithCustomFields struct {
-	SupplierID   string         `json:"supplier_id"`
-	SupplierName string         `json:"supplier_name"`
-	OrderCycle   sql.NullString `json:"order_cycle"`
-	SelectedDays []string       `json:"selected_days"`
-	SortOrder    sql.NullInt64  `json:"sort_order"`
+	SupplierID   string   `json:"supplier_id"`
+	SupplierName string   `json:"supplier_name"`
+	OrderCycle   string   `json:"order_cycle"`
+	SelectedDays []string `json:"selected_days"`
+	SortOrder    int      `json:"sort_order"`
 }

@@ -26,8 +26,3 @@ type ItemStockView struct {
 	PrimarySupplierID string             `json:"primary_supplier_id"` // New field for primary supplier
 	ItemSupplierCall  string             `json:"item_supplier_call"`  // This ensures it appears as item_supplier_call in JSON
 }
-
-type CustomItemField struct {
-	ItemID           string `json:"item_id"`
-	ItemSupplierCall string `json:"item_supplier_call"`
-}

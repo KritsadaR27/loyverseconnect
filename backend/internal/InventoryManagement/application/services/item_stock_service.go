@@ -34,3 +34,7 @@ func (s *ItemService) UpdateItemStatus(itemID, status string) error {
 func (s *ItemService) GetItemStockByStore(itemID string) ([]models.StoreStock, error) {
 	return s.itemInterface.GetItemStockByStore(itemID)
 }
+
+func (s *ItemService) SaveItemSupplierSetting(supplierSettings []models.CustomItemField) error {
+	return s.itemInterface.SaveItemSupplierSetting(supplierSettings)
+}

@@ -18,3 +18,9 @@ type Item struct {
 	CreatedAt       time.Time      `json:"created_at"`       // Creation timestamp
 	UpdatedAt       time.Time      `json:"updated_at"`       // Update timestamp
 }
+
+// CustomItemField represents the structure for storing item supplier call data in custom_item_fields.
+type CustomItemField struct {
+	ItemID           string `json:"item_id"`
+	ItemSupplierCall string `json:"item_supplier_call"`
+}

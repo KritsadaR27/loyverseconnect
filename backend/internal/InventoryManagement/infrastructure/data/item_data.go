@@ -4,6 +4,7 @@ package data
 import (
 	"backend/internal/InventoryManagement/domain/models"
 	"database/sql"
+	"fmt"
 	"log"
 )
 
@@ -215,6 +216,44 @@ func (repo *ItemRepositoryDB) UpdateItemStatus(itemID, status string) error {
 	if err != nil {
 		log.Println("Error executing UpdateItemStatus query:", err)
 		return err
+	}
+
+	return nil
+}
+
+// SaveItemSupplierSetting saves or updates the item supplier settings (including item_supplier_call) in the custom_item_fields table.
+func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.CustomItemField) error {
+	// เริ่มต้นการทำธุรกรรม
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`
+        INSERT INTO custom_item_fields (item_id, item_supplier_call)
+        VALUES ($1, $2)
+        ON CONFLICT (item_id) 
+        DO UPDATE SET item_supplier_call = EXCLUDED.item_supplier_call
+    `)
+	if err != nil {
+		return fmt.Errorf("error preparing statement: %v", err)
+	}
+	defer stmt.Close()
+
+	for _, supplierSetting := range supplierSettings {
+		// ทำการ Execute statement เพื่อบันทึกข้อมูลในฐานข้อมูล
+		_, err := stmt.Exec(
+			supplierSetting.ItemID,           // item_id
+			supplierSetting.ItemSupplierCall, // item_supplier_call
+		)
+		if err != nil {
+			return fmt.Errorf("error executing statement: %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %v", err)
 	}
 
 	return nil

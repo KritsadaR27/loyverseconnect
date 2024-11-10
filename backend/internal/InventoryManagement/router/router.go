@@ -27,6 +27,9 @@ func RegisterItemRoutes(mux *http.ServeMux, db *sql.DB) {
 
 	// Route to get store-specific stock data for a given item ID
 	mux.HandleFunc("/api/item-stock/store", itemHandler.GetItemStockByStoreHandler)
+	// Route to save item supplier settings
+	mux.HandleFunc("/api/item-supplier-settings", itemHandler.SaveItemSupplierSettingHandler) // ฟังก์ชันใหม่
+
 }
 
 // RegisterExportRoutes registers the route for exporting data to Google Sheets
