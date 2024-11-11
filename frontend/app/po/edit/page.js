@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { fetchItemsStockData, saveItemOrderToAPI, fetchSuppliers, fetchSupplierCycles } from '../../utils/api';
+import { fetchItemsStockData } from '../../utils/api/inventory';
+import { fetchSuppliers } from '../../utils/api/supplier';
 import Tabs from '../../../components/Tabs';
 import DraggableTable from '../../../components/DraggableTable';
 import { DndProvider } from 'react-dnd';
@@ -53,13 +54,16 @@ const CustomInput = ({ value, onClick, date, formatDateToThai }) => (
     </button>
 );
 
-const Page = () => {
+const POEdit = () => {
     const [selectedDate, setSelectedDate] = useState(getOrderDate);
-    const [groupedItems, setGroupedItems] = useState({});
     const [activeTab, setActiveTab] = useState(TABS[0].key);
-    const [suppliers, setSuppliers] = useState([]);
     const [collapsed, setCollapsed] = useState({});
+    
+    const [groupedItems, setGroupedItems] = useState({});
+    const [suppliers, setSuppliers] = useState([]);
     const [expandedItems, setExpandedItems] = useState({});
+
+ 
     const [itemOrder, setItemOrder] = useState({});
     const [storeStocks, setStoreStocks] = useState({});
 
@@ -174,6 +178,7 @@ const Page = () => {
             )
         }));
     };
+    
 
     return (
         <div>
@@ -275,4 +280,4 @@ const Page = () => {
     );
 };
 
-export default Page;
+export default POEdit;

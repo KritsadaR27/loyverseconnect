@@ -1,25 +1,54 @@
 "use client";
 
-import React, { useState, useEffect,useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchSuppliers, saveSupplierSettings } from '../../utils/api/supplier';
 import { fetchItemsStockData, saveItemFields } from '../../utils/api/inventory';
 import Navigation from '../../../components/Navigation';
 import DateFilter from '../../../components/DateFilter';
+import DraggableTable from '../../../components/DraggableTable'; // เพิ่มการ import คอมโพเนนต์
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend'; // Import backend
 
 const SupplierSettings = () => {
+    const [groupedItems, setGroupedItems] = useState({}); // Store items grouped by supplier
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedSupplier, setExpandedSupplier] = useState(null); // Track which supplier's items are expanded
-    const [groupedItems, setGroupedItems] = useState({}); // Store items grouped by supplier
     const [loadingItems, setLoadingItems] = useState(true);
     const inputRefs = useRef({});
+    const [highlightedSupplierId, setHighlightedSupplierId] = useState(null);
 
-    // Filter suppliers that have items in groupedItems
+
     const filteredSuppliers = suppliers.filter(supplier => groupedItems[supplier.supplier_id] && groupedItems[supplier.supplier_id].length > 0);
+    console.log("filteredSuppliers" , filteredSuppliers)
+    console.log("suppliers" , suppliers)
+    const [expandedItems, setExpandedItems] = useState({}); // Track multiple expanded items
+    const toggleExpand = (supplierId) => {
+        setExpandedItems((prevExpandedItems) => ({
+            ...prevExpandedItems,
+            [supplierId]: !prevExpandedItems[supplierId], // Toggle expand for the supplier
+        }));
+    };
+    const loadSuppliers = async () => {
+        const data = await fetchSuppliers();
+        console.log("Suppliers fetched:", data);
+
+        // Sort suppliers by sort_order
+        const sortedSuppliers = data.sort((a, b) => {
+            return (a.sort_order || 0) - (b.sort_order || 0);  // Sort in ascending order
+        });
+
+        setSuppliers(sortedSuppliers.map(supplier => ({
+            ...supplier,
+            order_cycle: supplier.order_cycle || "",    // Set default empty if missing
+            selected_days: supplier.selected_days || [], // Set default empty array if missing
+        })));
+        setLoading(false);
+    };
 
     const loadItems = async () => {
         setLoadingItems(true);
-        console.log("Fetching items...");
+
         const itemsData = await fetchItemsStockData();
         console.log("Items fetched:", itemsData);
 
@@ -59,74 +88,10 @@ const SupplierSettings = () => {
         setLoadingItems(false);
     };
 
-    const loadSuppliers = async () => {
-        console.log("Fetching suppliers...");
-        const data = await fetchSuppliers();
-        console.log("Suppliers fetched:", data);
-
-        // Sort suppliers by sort_order
-        const sortedSuppliers = data.sort((a, b) => {
-            return (a.sort_order || 0) - (b.sort_order || 0);  // Sort in ascending order
-        });
-
-        setSuppliers(sortedSuppliers.map(supplier => ({
-            ...supplier,
-            order_cycle: supplier.order_cycle || "",    // Set default empty if missing
-            selected_days: supplier.selected_days || [], // Set default empty array if missing
-        })));
-        setLoading(false);
-    };
-
     useEffect(() => {
-        console.log("useEffect for loading suppliers and items running...");
         loadSuppliers();
         loadItems();
     }, []);
-
-    const [highlightedSupplierId, setHighlightedSupplierId] = useState(null);
-
-    // ฟังก์ชันที่ใช้ในการแก้ไขค่า sort_order ของซัพพลายเออร์
-    const handleInputChange = (supplierId, field, value) => {
-        setSuppliers(prevSuppliers => 
-            prevSuppliers.map(supplier => 
-                supplier.supplier_id === supplierId 
-                ? { ...supplier, [field]: value } 
-                : supplier
-            )
-        );
-    };
-
-    // ฟังก์ชันที่ใช้ในการทำให้ช่อง input โดดเด่น (highlighted)
-    const handleFocus = (supplierId) => {
-        setHighlightedSupplierId(supplierId);
-        if (inputRefs.current[supplierId]) {
-            inputRefs.current[supplierId].select();
-        }
-    };
-
-    const handleBlur = () => {
-        setHighlightedSupplierId(null); // เมื่อไม่อยู่ในช่องให้หยุดการไฮไลต์
-    };
-    
-    
-    
-
-    const handleItemSupplierCallChange = (supplierId, itemId, value) => {
-        setGroupedItems(prevState => {
-            const updatedGroupedItems = { ...prevState };
-
-            // Find the supplier and item to update
-            const supplierItems = updatedGroupedItems[supplierId];
-            if (supplierItems) {
-                const item = supplierItems.find(i => i.item_id === itemId);
-                if (item) {
-                    item.item_supplier_call = value; // Update the supplier call
-                }
-            }
-
-            return updatedGroupedItems;
-        });
-    };
 
     const handleSave = async () => {
         const suppliersToSend = suppliers.map(supplier => ({
@@ -161,10 +126,55 @@ const SupplierSettings = () => {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล!');
         }
     };
-
-    const toggleExpand = (supplierId) => {
-        setExpandedSupplier(expandedSupplier === supplierId ? null : supplierId);
+ 
+      // ฟังก์ชันที่ใช้ในการทำให้ช่อง input โดดเด่น (highlighted)
+    const handleFocus = (supplierId) => {
+        setHighlightedSupplierId(supplierId);
+        if (inputRefs.current[supplierId]) {
+            inputRefs.current[supplierId].select();
+        }
     };
+
+    const handleBlur = () => {
+        setHighlightedSupplierId(null); // เมื่อไม่อยู่ในช่องให้หยุดการไฮไลต์
+    };
+
+    const handleInputChange = (supplierId, field, value) => {
+        // ใช้ map เพื่อสร้าง array ใหม่ โดยอัปเดตเฉพาะ supplier ที่ตรงกับ supplierId
+        const updatedSuppliers = suppliers.map(supplier =>
+            supplier.supplier_id === supplierId ? { ...supplier, [field]: value } : supplier
+        );
+        setSuppliers(updatedSuppliers); // อัปเดต state ด้วย array ใหม่
+    };
+    
+    const mapSupplierToColumns = (supplier) => [
+        supplier.supplier_name || "ไม่ระบุ",
+        <DateFilter
+            label="เลือกรอบการสั่ง"
+            defaultOption={supplier.order_cycle}
+            defaultDays={supplier.selected_days}
+            onSelectChange={(value) => handleInputChange(supplier.supplier_id, 'order_cycle', value)}
+            onDaysChange={(days) => handleInputChange(supplier.supplier_id, 'selected_days', days)}
+        />,
+        <input
+            ref={el => inputRefs.current[supplier.supplier_id] = el}
+            type="number"
+            value={supplier.sort_order || 0}
+            onChange={(e) => handleInputChange(supplier.supplier_id, 'sort_order', e.target.value)}
+            onFocus={() => handleFocus(supplier.supplier_id)}
+            onBlur={handleBlur}
+            className={`p-2 border ${highlightedSupplierId === supplier.supplier_id ? 'border-blue-500 bg-yellow-100' : 'border-gray-300'} rounded w-full`}
+            placeholder="Sort Order"
+        />,
+        <button
+            onClick={() => toggleExpand(supplier.supplier_id)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+        >
+            {expandedSupplier === supplier.supplier_id ? 'ซ่อนรายการสินค้า' : 'ดูรายการสินค้า'}
+        </button>
+        
+    
+    ];
 
     if (loading) {
         return <div>Loading...</div>;
@@ -175,88 +185,41 @@ const SupplierSettings = () => {
             <Navigation />
             <div className="container min-w-full mx-auto p-4 bg-gray-100">
                 <h2 className="text-2xl font-bold mb-4">ตั้งค่าซัพพลายเออร์</h2>
-                <table className="min-w-full bg-white shadow-md rounded">
-                    <thead>
-                        <tr className="bg-blue-700 text-white">
-                            <th className="py-2 px-4 text-left border-r">ชื่อซัพพลายเออร์</th>
-                            <th className="py-2 px-4 text-left">รอบการสั่งซื้อ</th>
-                            <th className="py-2 px-4 text-left">ลำดับ</th>
-                            <th className="py-2 px-4 text-left">รายการสินค้า</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredSuppliers.map((supplier, index) => (
-                            <React.Fragment key={supplier.supplier_id}>
-                                <tr className="border-b">
-                                    <td className="py-2 px-4 border-r">{supplier.supplier_name}</td>
-                                    <td className="py-2 px-4">
-                                        <DateFilter 
-                                            label="เลือกรอบการสั่ง"
-                                            defaultOption={supplier.order_cycle}
-                                            defaultDays={supplier.selected_days}
-                                            onSelectChange={(value) => handleInputChange(index, 'order_cycle', value)}
-                                            onDaysChange={(days) => handleInputChange(index, 'selected_days', days)}
-                                        />
-                                    </td>
-                                    <td className="py-2 px-4">
-                                    <input 
-                                    ref={el => inputRefs.current[supplier.supplier_id] = el}  // Assign the ref to input
+              
+                {filteredSuppliers.length > 0 && ( // Render only when filteredSuppliers has data
 
-                                    type="number" 
-                                    value={supplier.sort_order || 0} 
-                                    onChange={(e) => handleInputChange(supplier.supplier_id, 'sort_order', e.target.value)} 
-                                    onFocus={() => handleFocus(supplier.supplier_id)} 
-                                    onBlur={handleBlur}
-                                    className={`p-2 border ${highlightedSupplierId === supplier.supplier_id ? 'border-blue-500 bg-yellow-100' : 'border-gray-300'} rounded w-full`}
-                                    placeholder="Sort Order"
-                                />
+                <DndProvider backend={HTML5Backend}>
+                    <DraggableTable 
+                        headers={['ชื่อซัพพลายเออร์', 'รอบการสั่งซื้อ', 'ลำดับ', 'รายการสินค้า']}
+                        items={filteredSuppliers}
+                        mapItemToColumns={mapSupplierToColumns}
+                        onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)} 
 
-                                    </td>
-                                    <td className="py-2 px-4">
-                                        <button
-                                            onClick={() => toggleExpand(supplier.supplier_id)}
-                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                                        >
-                                            {expandedSupplier === supplier.supplier_id ? 'ซ่อนรายการสินค้า' : 'ดูรายการสินค้า'}
-                                        </button>
-                                    </td>
-                                </tr>
-                                {expandedSupplier === supplier.supplier_id && (
+                        expandedItems={expandedItems}  // Pass updated expandedItems
+
+                        toggleExpand={toggleExpand}
+                        expandedContent={(supplier) => (
+                            <table className="bg-yellow-100 w-full">
+                                <thead>
                                     <tr>
-                                        <td colSpan="4" className="p-4 bg-gray-100">
-                                            <table className="bg-yellow-100 w-full">
-                                                <thead>
-                                                    <tr>
-                                                        <th className="py-2 px-4 text-left">ชื่อสินค้า</th>
-                                                        <th className="py-2 px-4 text-left">ชื่อเรียกผู้ขาย</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {(groupedItems[supplier.supplier_id] || []).map(item => (
-                                                        <tr key={`${supplier.supplier_id}-${item.item_id}`} className="py-1 border-b">
-                                                            <td className="py-2 px-4">{item.item_name}</td>
-                                                            <td className="py-2 px-4">
-                                                                <input
-                                                                    ref={el => inputRefs.current[`${supplier.supplier_id}-${item.item_id}`] = el} // Assign ref to each item
-                                                                    className="w-full p-2 border border-gray-300 rounded"
-                                                                    value={item.item_supplier_call}
-                                                                    onFocus={() => handleFocus(`${supplier.supplier_id}-${item.item_id}`)} 
-                                                                    onBlur={handleBlur}
-                                                                    onChange={(e) => handleItemSupplierCallChange(supplier.supplier_id, item.item_id, e.target.value)}
-                                                                    type="text"
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </td>
+                                        <th className="py-2 px-4 text-left">ชื่อสินค้า</th>
+                                        <th className="py-2 px-4 text-left">ชื่อเรียกผู้ขาย</th>
                                     </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
+                                </thead>
+                                <tbody>
+                                    {(groupedItems[supplier.supplier_id] || []).map(item => (
+                                        <tr key={`${supplier.supplier_id}-${item.item_id}`} className="py-1 border-b">
+                                            <td className="py-2 px-4">{item.item_name}</td>
+                                            <td className="py-2 px-4">{item.item_supplier_call}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    />
+                </DndProvider>
+                )}
+
                 <button
                     onClick={handleSave}
                     className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"

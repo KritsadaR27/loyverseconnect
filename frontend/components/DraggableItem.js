@@ -1,3 +1,4 @@
+// frontend/components/DraggableItem.js
 import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DotsVerticalIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/solid';
@@ -27,6 +28,7 @@ const DraggableItem = ({ item, index, moveItem, columns, isExpanded, toggleExpan
             isOver: monitor.isOver(),
         }),
     });
+
     const dropClass = isOver ? 'bg-blue-100 border-b-2 border-indigo-500 animate-pulse ' : '';
 
     return (
@@ -34,14 +36,10 @@ const DraggableItem = ({ item, index, moveItem, columns, isExpanded, toggleExpan
             <tr
                 ref={(node) => ref(drop(node))}
                 className={`border-b ${isDragging ? 'dragging animate-pulse' : ''} ${dropClass}`} 
-
                 style={{ cursor: 'grab' }}
             >
                 {columns.map((column, idx) => (
-                    <td
-                        key={idx}
-                        className={`py-2 ${idx === 0 ? 'font-semibold text-gray-900 flex items-center' : 'text-gray-600'}`}
-                    >
+                    <td key={idx} className={`py-2 ${idx === 0 ? 'font-semibold text-gray-900 flex items-center' : 'text-gray-600'}`}>
                         {idx === 0 && <DotsVerticalIcon className="h-5 w-5 text-gray-400 mr-3" />}
                         {column}
                         {idx === 0 && (
