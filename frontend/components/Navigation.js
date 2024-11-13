@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -122,6 +123,11 @@ const Navigation = () => {
           </button>
           {dropdowns['playground'] && (
             <ul className="absolute left-0 mt-2 w-32 bg-gray-800 rounded shadow-lg">
+               <li>
+                <Link href="/playground/table">
+                  <span className="text-white hover:bg-gray-700 px-3 py-2 rounded">table</span>
+                </Link>
+              </li>
               <li>
                 <Link href="/playground/jigsaw">
                   <span className="text-white hover:bg-gray-700 px-3 py-2 rounded">Jigsaw</span>

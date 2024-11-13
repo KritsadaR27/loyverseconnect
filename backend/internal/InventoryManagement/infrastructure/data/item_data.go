@@ -222,6 +222,7 @@ func (repo *ItemRepositoryDB) UpdateItemStatus(itemID, status string) error {
 }
 
 // SaveItemSupplierSetting saves or updates the item supplier settings (including item_supplier_call) in the custom_item_fields table.
+// SaveItemSupplierSetting saves or updates the item supplier settings (including item_supplier_call and reserve_quantity) in the custom_item_fields table.
 func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.CustomItemField) error {
 	// เริ่มต้นการทำธุรกรรม
 	tx, err := repo.db.Begin()
@@ -231,10 +232,10 @@ func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-        INSERT INTO custom_item_fields (item_id, item_supplier_call)
-        VALUES ($1, $2)
+        INSERT INTO custom_item_fields (item_id, item_supplier_call, reserve_quantity)
+        VALUES ($1, $2, $3)
         ON CONFLICT (item_id) 
-        DO UPDATE SET item_supplier_call = EXCLUDED.item_supplier_call
+        DO UPDATE SET item_supplier_call = EXCLUDED.item_supplier_call, reserve_quantity = EXCLUDED.reserve_quantity
     `)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
@@ -246,6 +247,7 @@ func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.
 		_, err := stmt.Exec(
 			supplierSetting.ItemID,           // item_id
 			supplierSetting.ItemSupplierCall, // item_supplier_call
+			supplierSetting.ReserveQuantity,  // reserve_quantity
 		)
 		if err != nil {
 			return fmt.Errorf("error executing statement: %v", err)

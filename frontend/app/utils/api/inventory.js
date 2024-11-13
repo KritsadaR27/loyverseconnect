@@ -1,38 +1,50 @@
 // src/utils/api/inventory.js
+import { sendRequest } from './sendRequest';
 
 const inventoryBaseURL = process.env.REACT_APP_INVENTORY_BASE_URL || 'http://localhost:8082';
 
-
 export const fetchItemsStockData = async () => {
     try {
-        const response = await fetch(`${inventoryBaseURL}/api/item-stock`);
-        if (!response.ok) throw new Error("Failed to fetch items");
-        return await response.json();
+        const url = `${inventoryBaseURL}/api/item-stock`;
+        return await sendRequest(url);
     } catch (error) {
         console.error("Error fetching items:", error);
+        return [];
     }
 };
 
-
 export const saveItemFields = async (itemFields) => {
-    console.log("Sending item fields:", itemFields); // ตรวจสอบข้อมูลที่จะส่งไป
-    
+    console.log("Sending item fields:", itemFields);
+
     try {
-        const response = await fetch(`${inventoryBaseURL}/api/item-supplier-settings`, {
+        const url = `${inventoryBaseURL}/api/item-supplier-settings`;
+        return await sendRequest(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(itemFields),  // ส่งข้อมูลแบบ array ของ CustomItemField
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(itemFields),
         });
-
-        if (!response.ok) {
-            throw new Error("Failed to save item fields");
-        }
-
-        return await response.json();
     } catch (error) {
         console.error("Error saving item fields:", error);
         return { success: false, message: error.message };
     }
 };
+
+import { useEffect } from 'react';
+
+const fetchSalesByDay = async (startDate, endDate, setPivotData) => {
+    try {
+        const response = await axios.get("http://localhost:8084/api/sales/days", {
+            params: {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+            },
+        });
+        
+        const salesData = response.data;
+        const pivotedData = transformSalesData(salesData);
+        setPivotData(pivotedData); // เซ็ตข้อมูลที่ได้เพื่อใช้งานในคอลัมน์ใหม่
+    } catch (error) {
+        console.error("Error fetching sales by day:", error);
+    }
+};
+

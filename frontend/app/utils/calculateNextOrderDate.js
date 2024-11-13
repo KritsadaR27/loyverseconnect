@@ -1,4 +1,3 @@
-// src/utils/calculateNextOrderDate.js
 import { addDays } from './dateUtils';
 
 const daysOfWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -19,21 +18,21 @@ export const calculateNextOrderDate = (startDate, orderCycle, selectedDays = [])
             const nextDay = daysOfWeek[nextDate.getDay()];
             if (days.includes(nextDay)) return nextDate;
         }
-        return date; 
+        return null; // ถ้าไม่มีวันที่ตรงกันใน 7 วัน
     };
 
     switch (orderCycle) {
         case "":
-            nextDate = "ไม่ได้กำหนด";
+            nextDate = startDate; // คืนวันที่ปัจจุบันเมื่อไม่ได้กำหนด
             break;
         case "daily":
             nextDate = addDaysToDate(startDate, 1);
             break;
         case "alternateMon":
-            nextDate = dayOfWeek === 1 ? addDaysToDate(startDate, 2) : addDaysToDate(startDate, 1);
+            nextDate = dayOfWeek % 2 === 0 ? addDaysToDate(startDate, 2) : addDaysToDate(startDate, 1);
             break;
         case "alternateTue":
-            nextDate = dayOfWeek === 2 ? addDaysToDate(startDate, 2) : addDaysToDate(startDate, 1);
+            nextDate = dayOfWeek % 2 !== 0 ? addDaysToDate(startDate, 2) : addDaysToDate(startDate, 1);
             break;
         case "selectDays":
             nextDate = findClosestDay(startDate, selectedDays);

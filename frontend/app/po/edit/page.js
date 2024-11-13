@@ -1,21 +1,42 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { fetchItemsStockData } from '../../utils/api/inventory';
+import { fetchItemsStockData, fetchStoreStock, fetchSalesByDay } from '../../utils/api/inventory';
 import { fetchSuppliers } from '../../utils/api/supplier';
 import Tabs from '../../../components/Tabs';
-import DraggableTable from '../../../components/DraggableTable';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { AgGridReact } from 'ag-grid-react';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+import dynamic from 'next/dynamic';
+
 import { formatDateToThai } from '../../utils/dateUtils';
 import Navigation from '../../../components/Navigation';
+import CustomDateInput from '../components/CustomDateInput';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
-import DatePicker from 'react-datepicker';
+const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 import 'react-datepicker/dist/react-datepicker.css';
-import axios from "axios";
-import { CalendarIcon } from '@heroicons/react/solid';
+import { CalendarIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/solid';
+const getOrderDate = () => {
+    const now = new Date();
+    const hour = now.getHours();
 
-
+    if (hour >= 0 && hour < 6) {
+        return now; // ใช้วันนี้
+    } else {
+        const nextDay = new Date(now);
+        nextDay.setDate(now.getDate() + 1); // ใช้วันถัดไป
+        return nextDay;
+    }
+};
+const calculateSalesDates = (startDate, nextOrderDate) => {
+    const days = [];
+    let current = new Date(startDate);
+    while (current < nextOrderDate) {
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1); // เพิ่มวันทีละวัน
+    }
+    return days;
+};
 
 
 const TABS = [
@@ -32,10 +53,6 @@ const calculateRecommendation = (product) => {
     return Math.ceil(Math.max(0, -remainingStock) / 10) * 10;
 };
 
-const getOrderDate = () => {
-    const now = new Date();
-    return now.getHours() < 6 ? now : new Date(now.setDate(now.getDate() + 1));
-};
 
 const getOrderCycleText = (value) => {
     switch(value) {
@@ -48,42 +65,23 @@ const getOrderCycleText = (value) => {
     }
 };
 
-const CustomInput = ({ value, onClick, date, formatDateToThai }) => (
-    <button className="example-custom-input" onClick={onClick}>
-        {date ? formatDateToThai(date, "วัน dd เดือน พ.ศ.") : "เลือกวันที่"}
-    </button>
-);
-
 const POEdit = () => {
     const [selectedDate, setSelectedDate] = useState(getOrderDate);
     const [activeTab, setActiveTab] = useState(TABS[0].key);
-    const [collapsed, setCollapsed] = useState({});
-    
     const [groupedItems, setGroupedItems] = useState({});
     const [suppliers, setSuppliers] = useState([]);
-    const [expandedItems, setExpandedItems] = useState({});
-
- 
-    const [itemOrder, setItemOrder] = useState({});
-    const [storeStocks, setStoreStocks] = useState({});
+    const [collapsed, setCollapsed] = useState({});
+    const [salesData, setSalesData] = useState({});
 
     useEffect(() => {
+          // ดึงข้อมูลยอดขาย
+         
+  
         const loadItems = async () => {
             const fetchedItems = await fetchItemsStockData();
             const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
-            const grouped = groupItemsBySupplierWithStores(filteredItems, activeTab);
+            const grouped = groupItemsBySupplier(filteredItems, activeTab);
             setGroupedItems(grouped);
-
-            const initialItemOrder = {};
-            Object.keys(grouped).forEach(supplier => {
-                initialItemOrder[supplier] = grouped[supplier].map(item => ({
-                    item_name: item.item_name,
-                    total_stock: item.total_stock,
-                    reserve: 0,
-                    order_quantity: 0
-                }));
-            });
-            setItemOrder(initialItemOrder);
         };
 
         const loadSuppliers = async () => {
@@ -91,60 +89,64 @@ const POEdit = () => {
             setSuppliers(supplierData);
         };
 
+       
+
         loadItems();
         loadSuppliers();
-    }, [activeTab]);
+        fetchSalesData();
 
-    const groupItemsBySupplierWithStores = (items, activeTab) => {
+
+      
+        
+    }, [activeTab, selectedDate]);
+
+    
+
+    const groupItemsBySupplier = (items, activeTab) => {
         const result = {};
+    
         items.forEach((item) => {
-            let { item_id, item_name, in_stock, store_name, supplier_name } = item;
-
+            const { item_id, item_name, in_stock, store_name, supplier_name } = item;
+    
+            // ตรวจสอบว่าข้อมูล `item_id` มีค่า และร้านไม่อยู่ในรายการที่ต้องละเว้น
             if (!item_id || EXCLUDED_STORES.includes(store_name)) return;
-
-            if (typeof supplier_name === 'object' && supplier_name.String) {
-                supplier_name = supplier_name.String;
-            }
-
+    
+            // ตรวจสอบว่า supplier เป็นของ "ลุงรวย" หรือไม่
             const isLungRuaySupplier = LUNG_RUAY_SUPPLIERS.includes(supplier_name);
             if ((activeTab === 'order-lung-ruay' && !isLungRuaySupplier) || 
-                (activeTab === 'order-others' && isLungRuaySupplier)) {
-                return;
-            }
-
-            const cleanedStoreName = store_name.replace("ลุงรวย สาขา", "");
+                (activeTab === 'order-others' && isLungRuaySupplier)) return;
+    
+            // กำหนด key ของ supplier ถ้าไม่ทราบชื่อ supplier ให้ใช้ "ไม่ทราบ"
             const supplierKey = supplier_name || "ไม่ทราบ";
-
+    
+            // ถ้า result ไม่มี key ของ supplier นี้ ให้สร้าง array ใหม่
             if (!result[supplierKey]) {
-                result[supplierKey] = {};
+                result[supplierKey] = [];
             }
-
-            if (!result[supplierKey][item_name]) {
-                result[supplierKey][item_name] = {
+    
+            // ตรวจสอบว่ารายการนี้มีอยู่ใน array ของ supplier นี้หรือยัง
+            const existingItem = result[supplierKey].find(existing => existing.item_id === item_id);
+    
+            if (existingItem) {
+                // ถ้ามีอยู่แล้ว ให้บวกจำนวนสต๊อกเพิ่มเข้าไป
+                existingItem.total_stock += in_stock;
+            } else {
+                // ถ้าไม่มี ให้สร้างรายการใหม่
+                result[supplierKey].push({
                     item_id,
                     item_name,
-                    total_stock: 0,
-                    stores: {},
+                    total_stock: in_stock,
                     reserve: 0,
-                    recommended_order_quantity: 0,
-                    order_quantity: 0
-                };
+                    recommended_order_quantity: calculateRecommendation(item),
+                    order_quantity: 0,
+                    sales_by_day: salesData[item_id] || {} // เก็บข้อมูลยอดขายตามวันที่ในรูปแบบ object
+                });
             }
-
-            result[supplierKey][item_name].total_stock += in_stock;
-
-            if (!result[supplierKey][item_name].stores[cleanedStoreName]) {
-                result[supplierKey][item_name].stores[cleanedStoreName] = 0;
-            }
-            result[supplierKey][item_name].stores[cleanedStoreName] += in_stock;
         });
-
-        Object.keys(result).forEach(supplier => {
-            result[supplier] = Object.values(result[supplier]);
-        });
-
+    
         return result;
     };
+    
 
     const toggleCollapse = (supplier) => {
         setCollapsed((prev) => ({
@@ -152,130 +154,155 @@ const POEdit = () => {
             [supplier]: !prev[supplier]
         }));
     };
+// กำหนดฟังก์ชันเพื่อดึงข้อมูลยอดขาย
+const daysBack = 7; // Set the number of days to look back for sales data
 
-    const toggleExpand = async (itemID) => {
-        if (!itemID) return;
-        if (expandedItems[itemID]) {
-            setExpandedItems((prev) => ({ ...prev, [itemID]: false }));
-        } else {
-            try {
-                const response = await axios.get(`http://localhost:8082/api/item-stock/store`, {
-                    params: { item_id: itemID },
-                });
-                setStoreStocks((prev) => ({ ...prev, [itemID]: response.data }));
-                setExpandedItems((prev) => ({ ...prev, [itemID]: true }));
-            } catch (error) {
-                console.error("Error loading store stock data:", error);
-            }
-        }
-    };
+// Function to fetch sales data, now with nextOrderDate as an argument
+const fetchSalesData = async (nextOrderDate) => {
+    const startDate = new Date(selectedDate);
+    startDate.setDate(startDate.getDate() - daysBack); // Use daysBack constant or state variable
 
-    const handleInputChange = (supplier, itemName, field, value) => {
-        setItemOrder((prevOrder) => ({
-            ...prevOrder,
-            [supplier]: (prevOrder[supplier] || []).map(item =>
-                item.item_name === itemName ? { ...item, [field]: Number(value) || 0 } : item
-            )
+    const endDate = new Date(nextOrderDate);
+    endDate.setDate(endDate.getDate() - daysBack); // Calculate endDate based on nextOrderDate
+
+    const fetchedSalesData = await fetchSalesByDay(startDate, endDate);
+    console.log("Fetched Sales Data:", fetchedSalesData); // Check fetched sales data
+    setSalesData(fetchedSalesData);
+};
+
+
+// ฟังก์ชันเพื่อคำนวณวันที่แสดงยอดขายตั้งแต่ selectedDate - daysBack จนถึง nextOrderDate - daysBack
+const calculateSalesDays = (selectedDate, nextOrderDate, daysBack = 7) => {
+    const startDate = new Date(selectedDate);
+    startDate.setDate(startDate.getDate() - daysBack); // ลบ daysBack วันจาก selectedDate
+
+    const endDate = new Date(nextOrderDate);
+    endDate.setDate(endDate.getDate() - daysBack); // ลบ daysBack วันจาก nextOrderDate
+
+    const days = [];
+    let current = new Date(startDate);
+
+    while (current <= endDate) { // รวม endDate ในการแสดงยอดขาย
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+};
+
+const generateColumns = (nextOrderDate, daysBack = 7) => {
+       
+    const salesDays = calculateSalesDays(selectedDate, nextOrderDate, daysBack).map(date => ({
+        headerName: formatDateToThai(date),
+            field: `sales_${date.toISOString().split('T')[0]}`,
+            valueGetter: (params) => params.data.sales_by_day?.[date.toISOString().split('T')[0]] || 0,
         }));
+
+        return [
+            { headerName: "ชื่อสินค้า", field: "item_name" },
+            { headerName: "สต๊อก", field: "total_stock" },
+            {
+                headerName: "เผื่อ",
+                field: "reserve",
+                editable: true,
+                cellRendererFramework: (params) => (
+                    <input
+                        type="number"
+                        value={params.data.reserve}
+                        onChange={(e) => handleInputChange(params.data.supplier_name, params.data.item_name, 'reserve', e.target.value)}
+                        className="border px-2 py-1"
+                    />
+                )
+            },
+            ...salesDays,
+            { headerName: "จำนวนแนะนำ", field: "recommended_order_quantity" },
+            {
+                headerName: "สั่งสินค้า",
+                field: "order_quantity",
+                editable: true,
+                cellRendererFramework: (params) => (
+                    <input
+                        type="number"
+                        value={params.data.order_quantity}
+                        onChange={(e) => handleInputChange(params.data.supplier_name, params.data.item_name, 'order_quantity', e.target.value)}
+                        className="border px-2 py-1"
+                    />
+                )
+            }
+        ];
     };
-    
+
 
     return (
         <div>
-            <Navigation /> 
-            <DndProvider backend={HTML5Backend}>
-                <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 flex flex-col items-stretch p-0 m-0">
-                    <header className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
-                        
-                        <div className="flex items-center">
-                        <h1>สร้างใบสั่งซื้อ </h1> 
+            <Navigation />
+            <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 flex flex-col items-stretch p-0 m-0">
+                <header className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
+                    <div className="flex items-center">
+                        <h1>สร้างใบสั่งซื้อ</h1>
                         <label className="font-semibold"> รับวัน </label>
                         <DatePicker
-                           selected={selectedDate}
-                           onChange={(date) => setSelectedDate(date)}
-                           customInput={<CustomInput date={selectedDate} formatDateToThai={formatDateToThai} />}
-                           placeholderText="เลือกวันที่"
+                            selected={selectedDate}
+                            onChange={(date) => setSelectedDate(date)}
+                            customInput={
+                                <CustomDateInput
+                                    date={selectedDate}
+                                    formatDateToThai={formatDateToThai}
+                                />
+                            }
+                            placeholderText="เลือกวันที่"
+                            className="bg-green-500 text-white border-none rounded-lg px-3 py-2"
                         />
-                            <CalendarIcon className="h-5 w-5 text-white ml-2" />
 
                     </div>
-                    </header>
-                   
+                </header>
 
-                    <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+                <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
-                    {Object.keys(groupedItems).map((supplier) => {
-                        const supplierData = suppliers.find(s => s.name === supplier);
-                        const nextOrderDate = supplierData && supplierData.order_cycle
-                            ? calculateNextOrderDate(selectedDate, supplierData.order_cycle, supplierData.selected_days || [])
-                            : selectedDate;
+                {Object.keys(groupedItems).map((supplier) => {
+                    const supplierData = suppliers.find(s => s.supplier_name === supplier);
+                    const nextOrderDate = supplierData && supplierData.order_cycle
+                        ? calculateNextOrderDate(selectedDate, supplierData.order_cycle, supplierData.selected_days || [])
+                        : selectedDate;
 
-                        return (
-                            <div key={supplier} className="mb-4">
-                                <div className="flex justify-between items-center cursor-pointer bg-gray-300 p-4" onClick={() => toggleCollapse(supplier)}>
-                                    <h2 className="text-lg font-semibold">{supplier}</h2>
-                                    <p className="text-sm text-gray-600">
-                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)}
-                                        (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
-                                    </p>
-                                    <button className="text-gray-700">
-                                        {collapsed[supplier] ? '▼' : '▲'}
-                                    </button>
-                                </div>
+                        const currentColumns = generateColumns(nextOrderDate,7);
 
-                                {!collapsed[supplier] && (
-                                    <DraggableTable 
-                                        headers={["ชื่อสินค้า", "สต๊อก", "เผื่อ", "จำนวนแนะนำ", "สั่งสินค้า"]} 
-                                        items={groupedItems[supplier]} 
-                                        onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)} 
-                                        mapItemToColumns={(item) => [
-                                            item.item_name,
-                                            item.total_stock,
-                                            <input
-                                                type="number"
-                                                value={itemOrder[supplier]?.find(i => i.item_name === item.item_name)?.reserve ?? ""}
-                                                onChange={(e) => handleInputChange(supplier, item.item_name, 'reserve', e.target.value)}
-                                                className="border px-2 py-1"
-                                            />,
-                                            calculateRecommendation(item),
-                                            <input
-                                                type="number"
-                                                value={itemOrder[supplier]?.find(i => i.item_name === item.item_name)?.order_quantity ?? ""}
-                                                onChange={(e) => handleInputChange(supplier, item.item_name, 'order_quantity', e.target.value)}
-                                                className="border px-2 py-1"
-                                            />
-                                        ]}
-                                        expandedItems={expandedItems}
-                                        toggleExpand={(itemID) => toggleExpand(itemID)}
-                                        expandedContent={(item) => (
-                                            <div className="p-2 bg-yellow-100">
-                                                <table className="bg-yellow-100">
-                                                    <tbody>
-                                                        {storeStocks[item.item_id]?.length > 0 ? (
-                                                            storeStocks[item.item_id].map((stock) => (
-                                                                <tr key={stock.store_name}>
-                                                                    <td className="p-2">{stock.store_name}</td>
-                                                                    <td className="p-2">{stock.in_stock}</td>
-                                                                </tr>
-                                                            ))
-                                                        ) : (
-                                                            <tr>
-                                                                <td colSpan="2" className="text-gray-500 text-center py-2">
-                                                                    ไม่มีข้อมูลสต๊อก
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-                                    />
-                                )}
+                    return (
+                        <div key={supplier} className="mb-4">
+                            <div
+                                className="flex justify-between items-center bg-gray-300 p-4 cursor-pointer"
+                                onClick={() => toggleCollapse(supplier)}
+                            >
+                                <h2 className="text-lg font-semibold">{supplier}</h2>
+                                <p className="text-sm text-gray-600">
+                                    สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)} 
+                                    (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
+                                </p>
+                                <button className="text-gray-700">
+                                    {collapsed[supplier] ? (
+                                        <ChevronDownIcon className="h-5 w-5" />
+                                    ) : (
+                                        <ChevronUpIcon className="h-5 w-5" />
+                                    )}
+                                </button>
                             </div>
-                        );
-                    })}
-                </div>
-            </DndProvider>
+                            {!collapsed[supplier] && (
+                                <div className="ag-theme-alpine" style={{  width: '100%' }}>
+                                    <AgGridReact
+                                        rowData={groupedItems[supplier]}
+                                        columnDefs={currentColumns}
+                                        domLayout="autoHeight"
+                                        groupDefaultExpanded={-1}
+                                        rowSelection="single"
+                                        suppressRowClickSelection={true}
+                                        animateRows={true}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };

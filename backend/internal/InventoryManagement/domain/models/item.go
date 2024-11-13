@@ -23,4 +23,5 @@ type Item struct {
 type CustomItemField struct {
 	ItemID           string `json:"item_id"`
 	ItemSupplierCall string `json:"item_supplier_call"`
+	ReserveQuantity  int    `json:"reserve_quantity"` // เพิ่มฟิลด์ ReserveQuantity
 }
