@@ -33,7 +33,21 @@ const ItemStockView = () => {
         const fetchItemStockData = async () => {
             try {
                 const response = await axios.get('http://localhost:8082/api/item-stock');
-                setItems(response.data);
+                
+                // Group data by item_id to avoid duplicates
+                const groupedItems = response.data.reduce((acc, item) => {
+                    const existingItem = acc.find((i) => i.item_id === item.item_id);
+                    if (existingItem) {
+                        // If the item exists, aggregate the stock (or any other value if needed)
+                        existingItem.in_stock += item.in_stock;
+                    } else {
+                        // Add new item if not already in the array
+                        acc.push({ ...item });
+                    }
+                    return acc;
+                }, []);
+                
+                setItems(groupedItems);
                 setLoading(false);
             } catch (err) {
                 setError('Error fetching item stock data');
@@ -43,7 +57,7 @@ const ItemStockView = () => {
 
         fetchItemStockData();
 
-        // ตั้งค่า WebSocket
+        // WebSocket setup for real-time updates
         const socket = new WebSocket('ws://localhost:8082/ws/item-stock');
         socket.onmessage = (event) => {
             const updatedItem = JSON.parse(event.data);
@@ -52,11 +66,10 @@ const ItemStockView = () => {
                     item.item_id === updatedItem.item_id ? updatedItem : item
                 )
             );
-            // เพิ่มรายการที่เพิ่งอัปเดตใน updatedItems เพื่อสร้าง pulse effect
             setUpdatedItems((prev) => ({ ...prev, [updatedItem.item_id]: true }));
             setTimeout(() => {
                 setUpdatedItems((prev) => ({ ...prev, [updatedItem.item_id]: false }));
-            }, 2000); // เอฟเฟกต์ pulse จะหายไปหลังจาก 2 วินาที
+            }, 2000);
         };
 
         return () => socket.close();
