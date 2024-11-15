@@ -6,16 +6,46 @@ import (
 	"log"
 )
 
-// SaveInventoryLevels บันทึกข้อมูล inventory levels ลงในฐานข้อมูล
+// SaveInventoryLevels saves inventory levels to the database with conflict resolution.
+// If an entry with the same variant_id and store_id exists, it updates the in_stock value.
 func SaveInventoryLevels(db *sql.DB, inventoryLevels []models.LoyInventoryLevel) error {
-	for _, level := range inventoryLevels {
-		_, err := db.Exec("INSERT INTO loyinventorylevels (variant_id, store_id, in_stock) VALUES ($1, $2, $3) ON CONFLICT (variant_id, store_id) DO UPDATE SET in_stock = $3",
-			level.VariantID, level.StoreID, level.InStock)
+	// Begin a transaction for batch insert/update
+	tx, err := db.Begin()
+	if err != nil {
+		log.Println("Failed to begin transaction:", err)
+		return err
+	}
+	defer func() {
+		// Rollback the transaction in case of any error during the operation
 		if err != nil {
-			log.Println("Error saving inventory level:", err)
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// Prepare the SQL statement once for better performance in batch inserts
+	stmt, err := tx.Prepare(`
+		INSERT INTO loyinventorylevels (variant_id, store_id, in_stock)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (variant_id, store_id) DO UPDATE 
+		SET in_stock = EXCLUDED.in_stock
+	`)
+	if err != nil {
+		log.Println("Error preparing statement:", err)
+		return err
+	}
+	defer stmt.Close()
+
+	// Loop through each inventory level and execute the prepared statement
+	for _, level := range inventoryLevels {
+		_, err := stmt.Exec(level.VariantID, level.StoreID, level.InStock)
+		if err != nil {
+			log.Println("Error saving inventory level for variant:", level.VariantID, "store:", level.StoreID, "error:", err)
 			return err
 		}
 	}
+
 	log.Println("Inventory levels saved successfully.")
 	return nil
 }

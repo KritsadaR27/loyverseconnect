@@ -5,9 +5,11 @@ import (
 	"backend/external/loyverse/repository"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 // WebhookHandler จัดการ Webhook จาก Loyverse สำหรับเหตุการณ์ต่าง ๆ
@@ -48,6 +50,19 @@ func LoyverseWebhookHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		log.Println("Webhook Inventory levels updated successfully 555.")
+		// ตรวจสอบว่าเวลาปัจจุบันอยู่ระหว่าง 6 โมงเย็นถึง 6 โมงเช้าหรือไม่
+		currentTime := time.Now()
+		if currentTime.Hour() >= 18 || currentTime.Hour() < 6 {
+			// เรียก API ที่ต้องการส่งข้อมูลไป Google Sheets
+			if err := exportToGoogleSheet(); err != nil {
+				log.Println("Error exporting to Google Sheets:", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			// อัปเดตเวลาเมื่อส่งข้อมูลแล้ว
+
+			log.Println("Exported inventory levels to Google Sheets successfully.")
+		}
 
 	case "items.update":
 		if err := repository.SaveItems(db, webhookPayload.Items); err != nil {
@@ -73,4 +88,28 @@ func LoyverseWebhookHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) 
 
 	// ตอบกลับด้วย 200 OK
 	w.WriteHeader(http.StatusOK)
+}
+
+// exportToGoogleSheet ฟังก์ชันที่ทำการเรียก API เพื่อส่งข้อมูลไป Google Sheets
+func exportToGoogleSheet() error {
+	// สร้าง HTTP request
+	req, err := http.NewRequest("POST", "http://host.docker.internal:8082/api/export-to-google-sheet", nil)
+	if err != nil {
+		return err
+	}
+
+	// ส่ง HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// ตรวจสอบผลลัพธ์จากการเรียก API
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Failed to export to Google Sheets: %s", resp.Status)
+	}
+
+	return nil
 }

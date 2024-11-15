@@ -13,3 +13,11 @@
         background-color: transparent;
     }
 }
+
+.ml-8.mt-2.p-2.border {
+    display: block;
+    width: 100%;
+    overflow: visible;
+    background-color: #f9f9f9;
+    padding: 16px;
+}

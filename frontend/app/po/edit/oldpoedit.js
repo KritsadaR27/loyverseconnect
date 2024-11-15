@@ -280,4 +280,4 @@ const POEdit = () => {
     );
 };
 
-export default POEdit;
+export default Page;

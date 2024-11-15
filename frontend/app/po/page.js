@@ -1,54 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useTable, useRowSelect } from 'react-table';
 import Navigation from '../../components/Navigation';
-
-const ItemType = {
-    ROW: 'row',
-};
-
-const DraggableRow = ({ po, index, moveRow, selectedPOs, handleSelect }) => {
-    const [, ref] = useDrag({
-        type: ItemType.ROW,
-        item: { index },
-    });
-
-    const [, drop] = useDrop({
-        accept: ItemType.ROW,
-        hover: (draggedItem) => {
-            if (draggedItem.index !== index) {
-                moveRow(draggedItem.index, index);
-                draggedItem.index = index;
-            }
-        },
-    });
-
-    return (
-        <tr ref={(node) => ref(drop(node))} className="border-b">
-            <td className="py-2 px-4">
-                <input
-                    type="checkbox"
-                    checked={selectedPOs.includes(po.id)}
-                    onChange={() => handleSelect(po.id)}
-                />
-            </td>
-            <td className="py-2 px-4">{po.id}</td>
-            <td className="py-2 px-4">{po.item_name}</td>
-            <td className="py-2 px-4">{po.total_stock}</td>
-            <td className="py-2 px-4">{po.supplier_name || 'ไม่ทราบ'}</td>
-            <td className="py-2 px-4">{new Date(po.order_date).toLocaleDateString()}</td>
-            <td className="py-2 px-4">{po.status}</td>
-            <td className="py-2 px-4">{po.updated_by || 'ไม่ทราบ'}</td>
-        </tr>
-    );
-};
 
 const POList = () => {
     const [poList, setPoList] = useState([]);
-    const [selectedPOs, setSelectedPOs] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -65,21 +23,49 @@ const POList = () => {
         fetchPOs();
     }, []);
 
-    const handleSelect = (id) => {
-        setSelectedPOs(prev =>
-            prev.includes(id) ? prev.filter(poId => poId !== id) : [...prev, id]
-        );
-    };
+    const columns = useMemo(
+        () => [
+            {
+                id: 'selection',
+                Header: ({ getToggleAllRowsSelectedProps }) => (
+                    <input type="checkbox" {...getToggleAllRowsSelectedProps()} />
+                ),
+                Cell: ({ row }) => (
+                    <input type="checkbox" {...row.getToggleRowSelectedProps()} />
+                ),
+            },
+            { Header: 'ID', accessor: 'id' },
+            { Header: 'ชื่อสินค้า', accessor: 'item_name' },
+            { Header: 'จำนวนในสต๊อก', accessor: 'total_stock' },
+            { Header: 'ผู้จัดหา', accessor: 'supplier_name', Cell: ({ value }) => value || 'ไม่ทราบ' },
+            {
+                Header: 'วันสั่งซื้อ',
+                accessor: 'order_date',
+                Cell: ({ value }) => new Date(value).toLocaleDateString(),
+            },
+            { Header: 'สถานะ', accessor: 'status' },
+            { Header: 'แก้ไขล่าสุดโดย', accessor: 'updated_by', Cell: ({ value }) => value || 'ไม่ทราบ' },
+        ],
+        []
+    );
 
-    const handleSelectAll = () => {
-        setSelectedPOs(poList.length === selectedPOs.length ? [] : poList.map(po => po.id));
-    };
+    const {
+        getTableProps,
+        getTableBodyProps,
+        headerGroups,
+        rows,
+        prepareRow,
+        selectedFlatRows,
+    } = useTable(
+        { columns, data: poList },
+        useRowSelect,
+    );
 
     const handleBulkDelete = async () => {
+        const selectedIds = selectedFlatRows.map(row => row.original.id);
         try {
-            await axios.delete('/api/purchase_orders', { data: { ids: selectedPOs } });
-            setPoList(poList.filter(po => !selectedPOs.includes(po.id)));
-            setSelectedPOs([]);
+            await axios.delete('/api/purchase_orders', { data: { ids: selectedIds } });
+            setPoList(poList.filter(po => !selectedIds.includes(po.id)));
             alert('Selected POs deleted successfully!');
         } catch (error) {
             console.error("Error deleting selected POs:", error);
@@ -87,9 +73,9 @@ const POList = () => {
     };
 
     const handleBulkDownload = () => {
-        const selectedData = poList.filter(po => selectedPOs.includes(po.id));
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + selectedData.map(po => `${po.id},${po.item_name},${po.total_stock},${po.supplier_name},${po.order_date},${po.status},${po.updated_by}`)
+        const selectedData = selectedFlatRows.map(row => row.original);
+        const csvContent = "data:text/csv;charset=utf-8," +
+            selectedData.map(po => `${po.id},${po.item_name},${po.total_stock},${po.supplier_name},${po.order_date},${po.status},${po.updated_by}`)
                 .join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
@@ -100,72 +86,60 @@ const POList = () => {
         document.body.removeChild(link);
     };
 
-    const moveRow = (fromIndex, toIndex) => {
-        const updatedList = [...poList];
-        const [movedRow] = updatedList.splice(fromIndex, 1);
-        updatedList.splice(toIndex, 0, movedRow);
-        setPoList(updatedList);
-    };
-
     if (loading) {
         return <div>Loading...</div>;
     }
 
     return (
-        <DndProvider backend={HTML5Backend}>
-            <Navigation /> 
+        <>
+            <Navigation />
             <div className="container mx-auto p-4">
                 <h1 className="text-2xl font-bold mb-4">รายการใบสั่งซื้อ (PO)</h1>
                 <div className="flex space-x-4 mb-4">
-                    <button 
-                        onClick={handleBulkDelete} 
+                    <button
+                        onClick={handleBulkDelete}
                         className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700"
-                        disabled={selectedPOs.length === 0}
+                        disabled={selectedFlatRows.length === 0}
                     >
                         ลบที่เลือก
                     </button>
-                    <button 
-                        onClick={handleBulkDownload} 
+                    <button
+                        onClick={handleBulkDownload}
                         className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                        disabled={selectedPOs.length === 0}
+                        disabled={selectedFlatRows.length === 0}
                     >
                         ดาวน์โหลดที่เลือก
                     </button>
                 </div>
-                <table className="min-w-full bg-white shadow-md rounded">
+                <table {...getTableProps()} className="min-w-full bg-white shadow-md rounded">
                     <thead>
-                        <tr className="bg-gray-200">
-                            <th className="py-2 px-4">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedPOs.length === poList.length && poList.length > 0}
-                                    onChange={handleSelectAll}
-                                />
-                            </th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">ID</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">ชื่อสินค้า</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">จำนวนในสต๊อก</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">ผู้จัดหา</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">วันสั่งซื้อ</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">สถานะ</th>
-                            <th className="py-2 text-left px-4 text-gray-600 font-medium">แก้ไขล่าสุดโดย</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {poList.map((po, index) => (
-                            <DraggableRow
-                                key={po.id}
-                                index={index}
-                                po={po}
-                                moveRow={moveRow}
-                                selectedPOs={selectedPOs}
-                                handleSelect={handleSelect}
-                            />
+                        {headerGroups.map(headerGroup => (
+                            <tr {...headerGroup.getHeaderGroupProps()} className="bg-gray-200">
+                                {headerGroup.headers.map(column => (
+                                    <th {...column.getHeaderProps()} className="py-2 px-4 text-left text-gray-600 font-medium">
+                                        {column.render('Header')}
+                                    </th>
+                                ))}
+                            </tr>
                         ))}
+                    </thead>
+                    <tbody {...getTableBodyProps()}>
+                        {rows.map(row => {
+                            prepareRow(row);
+                            return (
+                                <tr {...row.getRowProps()} className="border-b">
+                                    {row.cells.map(cell => (
+                                        <td {...cell.getCellProps()} className="py-2 px-4">
+                                            {cell.render('Cell')}
+                                        </td>
+                                    ))}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
-        </DndProvider>
+        </>
     );
 };
 
