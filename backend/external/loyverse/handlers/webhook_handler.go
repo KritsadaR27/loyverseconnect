@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
 // WebhookHandler จัดการ Webhook จาก Loyverse สำหรับเหตุการณ์ต่าง ๆ
@@ -51,18 +50,18 @@ func LoyverseWebhookHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) 
 		}
 		log.Println("Webhook Inventory levels updated successfully 555.")
 		// ตรวจสอบว่าเวลาปัจจุบันอยู่ระหว่าง 6 โมงเย็นถึง 6 โมงเช้าหรือไม่
-		currentTime := time.Now()
-		if currentTime.Hour() >= 18 || currentTime.Hour() < 6 {
-			// เรียก API ที่ต้องการส่งข้อมูลไป Google Sheets
-			if err := exportToGoogleSheet(); err != nil {
-				log.Println("Error exporting to Google Sheets:", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			// อัปเดตเวลาเมื่อส่งข้อมูลแล้ว
+		// currentTime := time.Now()
+		// if currentTime.Hour() >= 18 || currentTime.Hour() < 6 {
+		// 	// เรียก API ที่ต้องการส่งข้อมูลไป Google Sheets
+		// 	if err := exportToGoogleSheet(); err != nil {
+		// 		log.Println("Error exporting to Google Sheets:", err)
+		// 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		// 		return
+		// 	}
+		// 	// อัปเดตเวลาเมื่อส่งข้อมูลแล้ว
 
-			log.Println("Exported inventory levels to Google Sheets successfully.")
-		}
+		// 	log.Println("Exported inventory levels to Google Sheets successfully.")
+		// }
 
 	case "items.update":
 		if err := repository.SaveItems(db, webhookPayload.Items); err != nil {

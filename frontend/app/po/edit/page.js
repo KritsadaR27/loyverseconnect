@@ -15,7 +15,7 @@ import CustomDateInput from '../components/CustomDateInput';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/solid';
+import { CalendarIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 const getOrderDate = () => {
     const now = new Date();
     const hour = now.getHours();
@@ -236,6 +236,7 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
     return (
         <div>
             <Navigation />
+            
             <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 flex flex-col items-stretch p-0 m-0">
                 <header className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
                     <div className="flex items-center">

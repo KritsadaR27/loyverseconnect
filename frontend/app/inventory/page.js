@@ -155,9 +155,8 @@ const ItemStockView = () => {
                                         {headerGroup.headers.map((column, index) => (
                                             <th
                                                 {...column.getHeaderProps()}
-                                                className={`p-1 border-b font-semibold text-gray-700 text-left 
-                                                    ${index === 0 ? 'sticky left-0 bg-gray-100' : ''}  // Freeze first column (ชื่อสินค้า)
-                                                    ${index === 1 ? 'sticky left-[100px] bg-gray-100 w-16 text-center' : ''} // Freeze and size จำนวนรวม`}
+                                                className={`p-1 border-b font-semibold text-gray-700 text-left `
+                                                   }
                                             >
                                                 {column.render('Header')}
                                             </th>
