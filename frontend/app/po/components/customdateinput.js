@@ -1,5 +1,5 @@
 // frontend/app/po/component/customdateinput.js
-import { CalendarIcon } from '@heroicons/react/solid';
+import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 
 const CustomDateInput = ({ value, onClick, date, formatDateToThai }) => (
     <button
@@ -7,8 +7,8 @@ const CustomDateInput = ({ value, onClick, date, formatDateToThai }) => (
         onClick={onClick}
     >
         <span>{date ? formatDateToThai(date, "วัน dd เดือน พ.ศ.") : "เลือกวันที่"}</span>
-        <CalendarIcon className="h-5 w-5 ml-2" /> {/* เพิ่มไอคอนแก้ไขที่นี่ */}
-    </button>
-);
+        <CalendarDaysIcon className="h-5 w-5 ml-2" /> {/* เพิ่มไอคอนแก้ไขที่นี่ */}
+    </button> 
+); 
 
-export default CustomDateInput;
+export default CustomDateInput; 

@@ -196,7 +196,7 @@ const POEdit = () => {
                            customInput={<CustomInput date={selectedDate} formatDateToThai={formatDateToThai} />}
                            placeholderText="เลือกวันที่"
                         />
-                            <CalendarIcon className="h-5 w-5 text-white ml-2" />
+
 
                     </div>
                     </header>

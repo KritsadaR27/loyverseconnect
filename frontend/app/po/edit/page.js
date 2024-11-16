@@ -8,6 +8,7 @@ import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import dynamic from 'next/dynamic';
+import  Sidebar from "../../../components/Sidebar";
 
 import { formatDateToThai } from '../../utils/dateUtils';
 import Navigation from '../../../components/Navigation';
@@ -15,7 +16,7 @@ import CustomDateInput from '../components/CustomDateInput';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import {  ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 const getOrderDate = () => {
     const now = new Date();
     const hour = now.getHours();
@@ -72,6 +73,8 @@ const POEdit = () => {
     const [suppliers, setSuppliers] = useState([]);
     const [collapsed, setCollapsed] = useState({});
     const [salesData, setSalesData] = useState({});
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Define the state
+
 
     useEffect(() => {
           // ดึงข้อมูลยอดขาย
@@ -234,75 +237,82 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
 
 
     return (
-        <div>
-            <Navigation />
+        <div className="flex  min-h-screen">
             
-            <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 flex flex-col items-stretch p-0 m-0">
-                <header className="text-2xl font-bold text-white mb-8 text-center bg-green-700 p-4 shadow-lg">
-                    <div className="flex items-center">
-                        <h1>สร้างใบสั่งซื้อ</h1>
-                        <label className="font-semibold"> รับวัน </label>
-                        <DatePicker
-                            selected={selectedDate}
-                            onChange={(date) => setSelectedDate(date)}
-                            customInput={
-                                <CustomDateInput
-                                    date={selectedDate}
-                                    formatDateToThai={formatDateToThai}
-                                />
-                            }
-                            placeholderText="เลือกวันที่"
-                            className="bg-green-500 text-white border-none rounded-lg px-3 py-2"
-                        />
-
-                    </div>
-                </header>
-
-                <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
-
-                {Object.keys(groupedItems).map((supplier) => {
-                    const supplierData = suppliers.find(s => s.supplier_name === supplier);
-                    const nextOrderDate = supplierData && supplierData.order_cycle
-                        ? calculateNextOrderDate(selectedDate, supplierData.order_cycle, supplierData.selected_days || [])
-                        : selectedDate;
-
-                        const currentColumns = generateColumns(nextOrderDate,7);
-
-                    return (
-                        <div key={supplier} className="mb-4">
-                            <div
-                                className="flex justify-between items-center bg-gray-300 p-4 cursor-pointer"
-                                onClick={() => toggleCollapse(supplier)}
-                            >
-                                <h2 className="text-lg font-semibold">{supplier}</h2>
-                                <p className="text-sm text-gray-600">
-                                    สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)} 
-                                    (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
-                                </p>
-                                <button className="text-gray-700">
-                                    {collapsed[supplier] ? (
-                                        <ChevronDownIcon className="h-5 w-5" />
-                                    ) : (
-                                        <ChevronUpIcon className="h-5 w-5" />
-                                    )}
-                                </button>
-                            </div>
-                            {!collapsed[supplier] && (
-                                <div className="ag-theme-alpine" style={{  width: '100%' }}>
-                                    <AgGridReact
-                                        rowData={groupedItems[supplier]}
-                                        columnDefs={currentColumns}
-                                        domLayout="autoHeight"
-                                        groupDefaultExpanded={-1}
-                                        rowSelection="single"
-                                        suppressRowClickSelection={true}
-                                        animateRows={true}
+            <Sidebar  sidebarCollapsed={sidebarCollapsed}
+                        setSidebarCollapsed={setSidebarCollapsed} />
+            
+ {/* Main Content */}
+            <div
+                className={`transition-all duration-300 flex-1`}
+                >
+                <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 ">                
+                    <header className="text-2xl font-bold mb-8 text-center bg-gray-300 p-4 shadow-lg">
+                        <div className="flex items-center">
+                            <h1>สร้างใบสั่งซื้อ</h1>
+                            <label className="font-semibold"> รับวัน </label>
+                            <DatePicker
+                                selected={selectedDate}
+                                onChange={(date) => setSelectedDate(date)}
+                                customInput={
+                                    <CustomDateInput
+                                        date={selectedDate}
+                                        formatDateToThai={formatDateToThai}
                                     />
-                                </div>
-                            )}
+                                }
+                                placeholderText="เลือกวันที่"
+                                className="bg-green-500 text-white border-none rounded-lg px-3 py-2"
+                            />
+
                         </div>
-                    );
-                })}
+                    </header>
+
+                    <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+                    {Object.keys(groupedItems).map((supplier) => {
+                        const supplierData = suppliers.find(s => s.supplier_name === supplier);
+                        const nextOrderDate = supplierData && supplierData.order_cycle
+                            ? calculateNextOrderDate(selectedDate, supplierData.order_cycle, supplierData.selected_days || [])
+                            : selectedDate;
+
+                            const currentColumns = generateColumns(nextOrderDate,7);
+
+                        return (
+                            <div key={supplier} className="mb-4">
+                                <div
+                                    className="flex justify-between items-center bg-gray-300 p-4 cursor-pointer"
+                                    onClick={() => toggleCollapse(supplier)}
+                                >
+                                    <h2 className="text-lg font-semibold">{supplier}</h2>
+                                    <p className="text-sm text-gray-600">
+                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)} 
+                                        (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
+                                    </p>
+                                    <button className="text-gray-700">
+                                        {collapsed[supplier] ? (
+                                            <ChevronDownIcon className="h-5 w-5" />
+                                        ) : (
+                                            <ChevronUpIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
+                                {!collapsed[supplier] && (
+                                    <div className="ag-theme-alpine" style={{  width: '100%' }}>
+                                        <AgGridReact
+                                            rowData={groupedItems[supplier]}
+                                            columnDefs={currentColumns}
+                                            domLayout="autoHeight"
+                                            groupDefaultExpanded={-1}
+                                            rowSelection="single"
+                                            suppressRowClickSelection={true}
+                                            animateRows={true}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

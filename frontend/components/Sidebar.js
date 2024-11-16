@@ -38,12 +38,13 @@ const menus = [
         { name: "การหมุนเวียนสต็อก", link: "/stock-rotation" },
       ],
     },
-    {
+    {  
       title: "จัดซื้อ",
       icon: ShoppingCartIcon,
       submenu: [
-        { name: "ใบสั่งซื้อ", link: "/purchase-orders" },
-        { name: "การเชื่อมต่อซัพพลายเออร์", link: "/supplier-integration" },
+        { name: "ใบสั่งซื้อ", link: "/po" },
+        { name: "สร้างใบสั่งซื้อ", link: "/po/edit" },
+        { name: "ตั้งค่าซัพพลายเออร์", link: "/settings/supplier" },
       ],
     },
     {
@@ -117,7 +118,7 @@ const utilityMenus = [
   {
     title: "ตั้งค่า",
     icon: Cog6ToothIcon,
-    link: "/settings",
+    link: "/settings/syncdata",
   },
 ];
 
