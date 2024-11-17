@@ -9,10 +9,9 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import dynamic from 'next/dynamic';
 import  Sidebar from "../../../components/Sidebar";
+import CustomDateInput from '../../components/CustomDateInput';
 
 import { formatDateToThai } from '../../utils/dateUtils';
-import Navigation from '../../../components/Navigation';
-import CustomDateInput from '../components/CustomDateInput';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 import 'react-datepicker/dist/react-datepicker.css';
@@ -73,7 +72,6 @@ const POEdit = () => {
     const [suppliers, setSuppliers] = useState([]);
     const [collapsed, setCollapsed] = useState({});
     const [salesData, setSalesData] = useState({});
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Define the state
 
 
     useEffect(() => {
@@ -239,13 +237,11 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
     return (
         <div className="flex  min-h-screen">
             
-            <Sidebar  sidebarCollapsed={sidebarCollapsed}
-                        setSidebarCollapsed={setSidebarCollapsed} />
+            <Sidebar />
             
  {/* Main Content */}
-            <div
-                className={`transition-all duration-300 flex-1`}
-                >
+            <div className={`transition-all duration-300 flex-1`}>
+                
                 <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 ">                
                     <header className="text-2xl font-bold mb-8 text-center bg-gray-300 p-4 shadow-lg">
                         <div className="flex items-center">

@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useTable } from 'react-table';
-import Navigation from '../../components/Navigation';
+import  Sidebar from "../../components/Sidebar";
+import  ActionBar from "./components/ActionBar";
+
 
 const ItemStockView = () => {
     const [items, setItems] = useState([]);
@@ -11,6 +13,22 @@ const ItemStockView = () => {
     const [error, setError] = useState(null);
     const [storeStocks, setStoreStocks] = useState({});
     const [isExpanded, setIsExpanded] = useState(false);
+    const [tableHeight, setTableHeight] = useState(0);
+
+    useEffect(() => {
+        const calculateHeight = () => {
+            const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+            const viewportHeight = window.innerHeight;
+            setTableHeight(viewportHeight - headerHeight - 20); // Adjust with padding/margin if needed
+        };
+
+        // Initial calculation
+        calculateHeight();
+
+        // Recalculate on window resize
+        window.addEventListener('resize', calculateHeight);
+        return () => window.removeEventListener('resize', calculateHeight);
+    }, []);
 
     const fetchStoreStock = async (itemIDs) => {
         try {
@@ -106,19 +124,24 @@ const ItemStockView = () => {
                 storeColumns.push({
                     Header: <span className="whitespace-nowrap">{storeName}</span>, // Prevent line breaks
                     accessor: `store_stock_${index}`,
-                    className: "text-center",
                     Cell: ({ row }) => {
-                        const storeStock = storeStocks[row.original.item_id]?.find(store => store.store_name.replace("ลุงรวย สาขา", "") === storeName);
-                        return storeStock ? (
-                            <div
-                                className={`text-center ${index % 2 === 0 ? 'bg-green-100' : 'bg-yellow-100'} p-0.5`}
-                            >
-                                {storeStock.in_stock}
-                            </div>
-                        ) : null;
-                    }
+                        const storeStock = storeStocks[row.original.item_id]?.find(
+                            (store) => store.store_name.replace("ลุงรวย สาขา", "") === storeName
+                        );
+                        return storeStock ? storeStock.in_stock : "0"; // Plain content
+                    },
+                    getCellProps: () => ({
+                        className: `p-1.5 border-b text-center ${
+                            index % 2 === 0 ? "bg-green-100" : "bg-yellow-100"
+                        }`,
+                    }),
                 });
             });
+            
+            
+            
+            
+            
         }
 
         return [...baseColumns.slice(0, 2), ...storeColumns, ...baseColumns.slice(2)];
@@ -143,22 +166,32 @@ const ItemStockView = () => {
     }
 
     return (
-        <div>
-            <Navigation />
-            <div className="container mx-auto p-4">
-                <h1 className="text-2xl font-bold text-center mb-4">Item Stock View</h1>
-                    <div className="overflow-x-auto">
-                        <table {...getTableProps()} className="min-w-[98vw] bg-white border border-gray-200 shadow-md rounded">
-                            <thead className="bg-gray-100">
+        <div className="flex h-screen">
+        {/* Sidebar */}
+            <Sidebar className="flex-shrink-0" />
+            <div className="flex-1 flex flex-col " >
+
+                <div className="h-lvh bg-white box-shadow rounded flex-1 flex-col overflow-y-hidden ">
+                    <header  className=" shadow-sm p-3">
+                        <h1 className=" font-bold">สต็อกสินค้า</h1>
+                        <ActionBar />
+                    </header>
+                    <div 
+                    className="flex-1 overflow-y-auto p-y-4 overflow-y-auto  border border-gray-200 "
+                    style={{ height: `${tableHeight}px` }} // Dynamically set the height
+                   
+                    >
+                        <table {...getTableProps()} className=" bg-white border border-gray-200  rounded w-full">
+                            <thead className="bg-gray-100 shadow-lg">
                                 {headerGroups.map(headerGroup => (
                                     <tr {...headerGroup.getHeaderGroupProps()}>
                                         {headerGroup.headers.map((column, index) => (
                                             <th
                                                 {...column.getHeaderProps()}
-                                                className={`p-1 border-b font-semibold text-gray-700 text-left `
-                                                   }
+                                                className={`p-2 border-b font-semibold text-gray-700 text-left bg-gray-100 sticky top-0 z-20`}
+                                                // Adding sticky header styles
                                             >
-                                                {column.render('Header')}
+                                                {column.render("Header")}
                                             </th>
                                         ))}
                                     </tr>
@@ -168,24 +201,28 @@ const ItemStockView = () => {
                                 {rows.map(row => {
                                     prepareRow(row);
                                     return (
-                                        <tr {...row.getRowProps()} className="hover:bg-gray-50 transition">
-                                            {row.cells.map((cell, index) => (
-                                                <td
-                                                    {...cell.getCellProps()}
-                                                    className={`p-0.5 border-b text-left 
-                                                        ${index === 0 ? 'sticky left-0 bg-white' : ''}  // Freeze first cell (ชื่อสินค้า)
-                                                        ${index === 1 ? 'sticky left-[100px] bg-white w-16 text-center' : ''} // Freeze and size จำนวนรวม`}
-                                                >
-                                                    {cell.render('Cell')}
-                                                </td>
-                                            ))}
-                                        </tr>
+                                       <tr {...row.getRowProps()} className="hover:bg-gray-50 transition">
+                                        {row.cells.map((cell, index) => (
+                                            <td
+                                                {...cell.getCellProps()}
+                                                className={`p-1.5 border-b text-left 
+                                                    ${index === 0 ? 'sticky left-0 w-[150px] bg-white z-10' : ''}  // Freeze first cell (ชื่อสินค้า)
+                                                    ${index === 1 ? 'sticky left-[150px] w-[100px] bg-white text-center z-10' : ''} // Freeze and size จำนวนรวม
+                                                    ${index > 1 ? 'min-w-[80px] text-center ' : ''} // Store-specific columns
+                                                `}
+                                            >
+                                                {cell.render('Cell')}
+                                            </td>
+                                        ))}
+                                    </tr>
+
                                     );
                                 })}
                             </tbody>
                         </table>
                     </div>
 
+                </div>
             </div>
         </div>
     );

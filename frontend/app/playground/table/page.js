@@ -31,8 +31,13 @@ const DataTable = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-4">Draggable Data Table</h1>
+      <div className="flex-1 px-2 py-2 bg-gradient-to-r from-blue-50 via-white to-teal-50" >
+        <div className="h-lvh bg-white box-shadow rounded ">
+        <header  className=" border-b p-5 border-b flex">
+          <h1 className="text-2xl font-bold mb-4 ">Draggable Data Table</h1>
+
+        </header>
+        
 
         {/* Drag and Drop Context */}
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -44,7 +49,7 @@ const DataTable = () => {
                 className="min-w-full border border-gray-300"
               >
                 <thead>
-                  <tr className="bg-gray-200">
+                  <tr className="bg-gray-100">
                     <th className="px-4 py-2 border">Name</th>
                     <th className="px-4 py-2 border">Age</th>
                     <th className="px-4 py-2 border">Country</th>
@@ -82,7 +87,7 @@ const DataTable = () => {
           </Droppable>
         </DragDropContext>
       </div>
-    </div>
+    </div></div>
   );
 };
 

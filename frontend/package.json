@@ -28,7 +28,8 @@
     "react-dom": "^19.0.0-rc-69d4b800-20241021",
     "react-select": "^5.8.1",
     "react-table": "^7.8.0",
-    "react-window": "^1.8.10"
+    "react-window": "^1.8.10",
+    "zustand": "^5.0.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",

@@ -5,6 +5,7 @@ import axios from "axios";
 import { ArrowUpIcon } from "@heroicons/react/solid";
 import Navigation from '../../../components/Navigation';
 import { formatDateToThai } from '../../utils/dateUtils';
+import  Sidebar from "../../../components/Sidebar";
 
 export default function Receipts() {
   const [receipts, setReceipts] = useState([]);
@@ -13,6 +14,7 @@ export default function Receipts() {
   const [isLoading, setIsLoading] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Define the state
 
   const fetchReceipts = async () => {
     if (isLoading) return;
@@ -69,9 +71,13 @@ export default function Receipts() {
   };
 
   return (
-    <div>
-      <Navigation />
-      <div className="container mx-auto">
+    <div className="flex  min-h-screen">
+            
+            <Sidebar  sidebarCollapsed={sidebarCollapsed}
+                        setSidebarCollapsed={setSidebarCollapsed} />
+            
+    {/* Main Content */}
+      <div className={`transition-all duration-300 flex-1`}>
         <h1 className="text-2xl font-bold my-4">Receipts List</h1>
         <table className="min-w-full bg-white border border-spacing-0.5 p-4">
           <thead className="bg-gray-200">
