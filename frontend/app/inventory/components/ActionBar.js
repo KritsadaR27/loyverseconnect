@@ -1,6 +1,6 @@
 const ActionBar = () => {
     return (
-      <div className="flex items-center justify-between bg-white  p-4 rounded-md">
+      <div className="flex items-center justify-between  p-4 rounded-md">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           {/* Store Selector */}

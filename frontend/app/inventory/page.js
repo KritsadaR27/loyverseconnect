@@ -85,10 +85,11 @@ const ItemStockView = () => {
             { Header: "ชื่อสินค้า", accessor: "item_name", className: "text-left" },
             {
                 Header: (
-                    <div className="flex justify-between items-center">
-                        <span>จำนวนรวม</span>
+                    <div className="flex justify-between">
+                        <span>รวม</span>
                         <button
                             onClick={toggleExpandAll}
+                            tooltip="ย่อ/ขยาย สาขา"
                             className="ml-2 px-2 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
                         >
                             {isExpanded ? '←' : '→'}
@@ -97,14 +98,40 @@ const ItemStockView = () => {
                 ),
                 accessor: "in_stock",
                 className: "text-left",
+                Cell: ({ value }) => 
+                    new Intl.NumberFormat('th-TH').format(value), // Format in-stock numbers
             },
-            { Header: "ราคาขาย", accessor: "selling_price", className: "text-left", Cell: ({ value }) => `฿${value}` },
-            { Header: "ต้นทุน", accessor: "cost", className: "text-left", Cell: ({ value }) => `฿${value}` },
+    
+
+            { Header: "ราคาขาย", accessor: "selling_price", className: "text-left", 
+                Cell: ({ value }) => 
+                    new Intl.NumberFormat('th-TH', { 
+                        style: 'currency', 
+                        currency: 'THB', 
+                        minimumFractionDigits: 0 
+                    }).format(value), // Format as Thai Baht
+            },
+    
+            { Header: "ต้นทุน", accessor: "cost", className: "text-left", 
+                Cell: ({ value }) => 
+                    new Intl.NumberFormat('th-TH', { 
+                        style: 'currency', 
+                        currency: 'THB', 
+                        minimumFractionDigits: 0 
+                    }).format(value), // Format as Thai Baht
+            },
             {
                 Header: "มูลค่าขาย",
                 accessor: "value",
                 className: "text-left",
-                Cell: ({ row }) => `฿${row.original.selling_price * row.original.in_stock}`
+                Cell: ({ row }) => {
+                    const value = row.original.selling_price * row.original.in_stock;
+                    return new Intl.NumberFormat('th-TH', { 
+                        style: 'currency', 
+                        currency: 'THB', 
+                        minimumFractionDigits: 0 
+                    }).format(value); // Calculate and format as Thai Baht
+                },
             },
             { Header: "หมวดหมู่", accessor: "category_name", className: "text-left" },
             { Header: "ซัพพลายเออร์", accessor: "supplier_name", className: "text-left", Cell: ({ value }) => value || 'ไม่ทราบ' },
@@ -138,10 +165,7 @@ const ItemStockView = () => {
                 });
             });
             
-            
-            
-            
-            
+          
         }
 
         return [...baseColumns.slice(0, 2), ...storeColumns, ...baseColumns.slice(2)];
@@ -169,10 +193,15 @@ const ItemStockView = () => {
         <div className="flex h-screen">
         {/* Sidebar */}
             <Sidebar className="flex-shrink-0" />
-            <div className="flex-1 flex flex-col " >
-
+            <div className="flex-1 flex flex-col  bg-gradient-to-r from-blue-600  from-10% via-white via-white to-teal-500 to-70% px-0 py-0.5" >
+             {/* Gradient Corner */}
+           
                 <div className="h-lvh bg-white box-shadow rounded flex-1 flex-col overflow-y-hidden ">
-                    <header  className=" shadow-sm p-3">
+                    {/* <header  className=" shadow-sm p-3  bg-gradient-to-tl from-purple-100 via-pink-50 to-blue-50 opacity-80 backdrop-blur-sm"> */}
+                    <header  className=" shadow-sm p-3  bg-gradient-to-bl from-white via-purple-200 via-pink-50 to-blue-50 opacity-80 backdrop-blur-lg">
+
+                    {/* <header  className=" shadow-sm p-3  bg-gradient-to-tl from-purple-100 via-cyan-50 to-teal-50 opacity-80 backdrop-blur-sm"> */}
+
                         <h1 className=" font-bold">สต็อกสินค้า</h1>
                         <ActionBar />
                     </header>
@@ -181,14 +210,17 @@ const ItemStockView = () => {
                     style={{ height: `${tableHeight}px` }} // Dynamically set the height
                    
                     >
-                        <table {...getTableProps()} className=" bg-white border border-gray-200  rounded w-full">
-                            <thead className="bg-gray-100 shadow-lg">
+                        <table {...getTableProps()} className=" bg-white border  rounded w-full">
+                            <thead className="bg-gray-100 shadow-lg z-40">
                                 {headerGroups.map(headerGroup => (
                                     <tr {...headerGroup.getHeaderGroupProps()}>
                                         {headerGroup.headers.map((column, index) => (
                                             <th
                                                 {...column.getHeaderProps()}
-                                                className={`p-2 border-b font-semibold text-gray-700 text-left bg-gray-100 sticky top-0 z-20`}
+                                                className={`p-2 border-r border-gray-400 font-semibold 
+                                                    text-gray-700 text-left bg-gray-100 sticky 
+                                                    top-0 z-30  shadow-md  backdrop-blur-lg`}
+
                                                 // Adding sticky header styles
                                             >
                                                 {column.render("Header")}
@@ -205,11 +237,10 @@ const ItemStockView = () => {
                                         {row.cells.map((cell, index) => (
                                             <td
                                                 {...cell.getCellProps()}
-                                                className={`p-1.5 border-b text-left 
-                                                    ${index === 0 ? 'sticky left-0 w-[150px] bg-white z-10' : ''}  // Freeze first cell (ชื่อสินค้า)
-                                                    ${index === 1 ? 'sticky left-[150px] w-[100px] bg-white text-center z-10' : ''} // Freeze and size จำนวนรวม
-                                                    ${index > 1 ? 'min-w-[80px] text-center ' : ''} // Store-specific columns
-                                                `}
+                                                className={`p-1.5 border-b text-left border-r   border-x-gray-200	  border-y-gray-300
+                                                    ${index === 0 ? 'sticky left-0 w-[300px]  z-10 shadow-md border-x-gray-300' : ''} 
+                                                    ${index === 1 ? 'sticky left-[150px] w-[100px]  text-center z-10 shadow-md border-x-gray-300' : ''} 
+                                                    ${index > 1 ? 'min-w-[80px] text-left' : ''}`}
                                             >
                                                 {cell.render('Cell')}
                                             </td>
@@ -224,7 +255,10 @@ const ItemStockView = () => {
 
                 </div>
             </div>
+            
         </div>
+
+
     );
 };
 
