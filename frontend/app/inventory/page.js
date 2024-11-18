@@ -198,7 +198,7 @@ const ItemStockView = () => {
            
                 <div className="h-lvh bg-white box-shadow rounded flex-1 flex-col overflow-y-hidden ">
                     {/* <header  className=" shadow-sm p-3  bg-gradient-to-tl from-purple-100 via-pink-50 to-blue-50 opacity-80 backdrop-blur-sm"> */}
-                    <header  className=" shadow-sm p-3  bg-gradient-to-bl from-white via-purple-200 via-pink-50 to-blue-50 opacity-80 backdrop-blur-lg">
+                    <header  className=" shadow-sm p-3  bg-gradient-to-bl from-white via-purple-50 via-pink-50 to-blue-50 opacity-80 backdrop-blur-lg">
 
                     {/* <header  className=" shadow-sm p-3  bg-gradient-to-tl from-purple-100 via-cyan-50 to-teal-50 opacity-80 backdrop-blur-sm"> */}
 
