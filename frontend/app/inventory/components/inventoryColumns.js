@@ -1,6 +1,6 @@
 //frontend/app/inventory/components/inventoryColumns.js
 export const createInventoryColumns = (isExpanded = false, storeStocks = {}, toggleExpandAll = () => { }) => {
-    const baseColumnsBefore = [{ Header: "ชื่อสินค้า", accessor: "item_name" }];
+    const baseColumnsBefore = [{ Header: "ชื่อสินค้า", accessor: "item_name", className: "min-w-[150px]" }];
 
     const summaryColumn = {
         Header: (
@@ -29,11 +29,12 @@ export const createInventoryColumns = (isExpanded = false, storeStocks = {}, tog
                 )
             )
         ).map((storeName) => ({
-            Header: storeName,
+            Header: storeName.replace("ลุงรวย สาขา", ""), // ตัดคำว่า "ลุงรวย สาขา" ออก
             id: `store-${storeName}`, // เพิ่ม id เพื่อให้ไม่ซ้ำกัน
             accessor: (row) => {
                 const storeStock = storeStocks[row.item_id]?.find(
                     (store) => store.store_name === storeName
+
                 );
                 return storeStock ? storeStock.in_stock : 0;
             },

@@ -1,3 +1,4 @@
+//frontend/app/inventory/page.js
 import React from "react";
 import SidebarLayout from "../../components/layouts/SidebarLayout";
 import InventoryTable from "./components/InventoryTable";
