@@ -1,18 +1,16 @@
 const ActionBar = () => {
     return (
-      <div className="flex items-center justify-between  p-4 rounded-md">
+      <div className="flex items-center justify-between  py-1.5 rounded-md">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           {/* Store Selector */}
           <div className="flex items-center space-x-2">
-            <label htmlFor="store" className="text-sm font-medium">
-              Store
-            </label>
+          
             <select
               id="store"
               className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="all">All Stores</option>
+              <option value="all">ร้านค้าทั้งหมด</option>
               <option value="store1">Store 1</option>
               <option value="store2">Store 2</option>
             </select>
@@ -20,14 +18,12 @@ const ActionBar = () => {
   
           {/* Supplier Selector */}
           <div className="flex items-center space-x-2">
-            <label htmlFor="supplier" className="text-sm font-medium">
-              Supplier
-            </label>
+            
             <select
               id="supplier"
               className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="all">All Suppliers</option>
+              <option value="all">ผู้จำหน่ายทั้งหมด</option>
               <option value="supplier1">Supplier 1</option>
               <option value="supplier2">Supplier 2</option>
             </select>
@@ -35,14 +31,12 @@ const ActionBar = () => {
   
           {/* Category Selector */}
           <div className="flex items-center space-x-2">
-            <label htmlFor="category" className="text-sm font-medium">
-              Category
-            </label>
+            
             <select
               id="category"
               className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="all">All Categories</option>
+              <option value="all">หมวดหมู่ทั้งหมด</option>
               <option value="category1">Category 1</option>
               <option value="category2">Category 2</option>
             </select>

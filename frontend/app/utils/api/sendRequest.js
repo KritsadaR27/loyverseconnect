@@ -1,8 +1,6 @@
-// src/utils/api/sendRequest.js
+const defaultTimeout = 15000;
 
-const defaultTimeout = 15000; // กำหนด Timeout 15 วินาทีเป็นค่าเริ่มต้น
-
-export const sendRequest = async (url, options = {}, timeout = defaultTimeout) => {
+export const sendRequest = async (url, options = {}, timeout = defaultTimeout, retries = 3) => {
     const controller = new AbortController();
     const { signal } = controller;
 
@@ -10,7 +8,7 @@ export const sendRequest = async (url, options = {}, timeout = defaultTimeout) =
 
     try {
         const response = await fetch(url, { ...options, signal });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Error ${response.status}: ${errorText}`);
@@ -23,8 +21,14 @@ export const sendRequest = async (url, options = {}, timeout = defaultTimeout) =
         } else {
             console.error("Request error:", error);
         }
+
+        if (retries > 0) {
+            console.warn(`Retrying... (${3 - retries} attempts left)`);
+            return sendRequest(url, options, timeout, retries - 1);
+        }
+
         return { success: false, message: error.message };
     } finally {
-        clearTimeout(timeoutId); // ยกเลิก Timeout
+        clearTimeout(timeoutId);
     }
 };
