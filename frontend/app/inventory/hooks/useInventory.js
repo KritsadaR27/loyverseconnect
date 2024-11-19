@@ -1,29 +1,41 @@
-// frontend/app/inventory/hooks/useInventory.js
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { fetchItemsStockData } from "../../utils/api/inventory";
+import { fetchSuppliers } from "../../utils/api/supplier";
+
 
 export const useInventory = () => {
-    const [items, setItems] = useState([]);
-    const [storeStocks, setStoreStocks] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [items, setItems] = useState([]); // Grouped items with total stock
+    const [storeStocks, setStoreStocks] = useState({}); // Store-specific stock for each item
+    const [suppliers, setSuppliers] = useState([]); // Suppliers data
 
-    const fetchItemStockData = async () => {
+    const [loading, setLoading] = useState(false); // Loading state
+    const [error, setError] = useState(null); // Error state
+
+    const fetchInventoryData = async () => {
         setLoading(true);
         try {
-            const response = await axios.get("http://localhost:8082/api/item-stock");
+            // Fetch items data and suppliers data in parallel
+            const [rawItems, rawSuppliers] = await Promise.all([
+                fetchItemsStockData(),
+                fetchSuppliers()
+            ]);
+
             const groupedItems = [];
             const stores = {};
 
-            response.data.forEach((item) => {
-                
+            rawItems.forEach((item) => {
+                // Check if the item already exists in groupedItems
                 const existingItem = groupedItems.find((i) => i.item_id === item.item_id);
+
                 if (existingItem) {
+                    // Increment the total stock for grouped items
                     existingItem.in_stock += item.in_stock;
                 } else {
+                    // Add new item to groupedItems
                     groupedItems.push({ ...item });
                 }
 
+                // Add store-specific stock details
                 if (!stores[item.item_id]) {
                     stores[item.item_id] = [];
                 }
@@ -33,18 +45,20 @@ export const useInventory = () => {
                 });
             });
 
-            setItems(groupedItems);
-            setStoreStocks(stores);
+            setItems(groupedItems); // Update grouped items state
+            setStoreStocks(stores); // Update store-specific stocks state
+            setSuppliers(rawSuppliers); // Set suppliers data
+
         } catch (err) {
-            setError(err.message || "Error fetching item stock data");
+            setError(err.message || "Error fetching inventory data");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchItemStockData();
+        fetchInventoryData(); // Fetch inventory data on component mount
     }, []);
 
-    return { items, storeStocks, loading, error, fetchItemStockData };
+    return { items, storeStocks, suppliers, loading, error, fetchInventoryData };
 };

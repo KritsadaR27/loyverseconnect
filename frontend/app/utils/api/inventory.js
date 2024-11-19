@@ -29,7 +29,6 @@ export const saveItemFields = async (itemFields) => {
     }
 };
 
-import { useEffect } from 'react';
 
 const fetchSalesByDay = async (startDate, endDate, setPivotData) => {
     try {
@@ -39,7 +38,7 @@ const fetchSalesByDay = async (startDate, endDate, setPivotData) => {
                 endDate: endDate.toISOString(),
             },
         });
-        
+
         const salesData = response.data;
         const pivotedData = transformSalesData(salesData);
         setPivotData(pivotedData); // เซ็ตข้อมูลที่ได้เพื่อใช้งานในคอลัมน์ใหม่

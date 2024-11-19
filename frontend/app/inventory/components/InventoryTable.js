@@ -1,14 +1,12 @@
 //frontend/app/inventory/components/InventoryTable.js"use client";
 "use client";
 
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { useTable } from "react-table";
 import { createInventoryColumns } from "./inventoryColumns";
-import { useInventory } from "../hooks/useInventory";
 
-const InventoryTable = () => {
-    const { items, storeStocks, loading, error } = useInventory();
-    const [isExpanded, setIsExpanded] = React.useState(false);
+const InventoryTable = ({ items, storeStocks }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const toggleExpandAll = useCallback(() => {
         setIsExpanded((prev) => !prev);
@@ -26,19 +24,19 @@ const InventoryTable = () => {
         data,
     });
 
-    if (loading) {
-        return <p>Loading...</p>;
-    }
-
-    if (error) {
-        return <p>Error: {error}</p>;
+    if (!items || items.length === 0) {
+        return <p className="text-center">No items to display.</p>;
     }
 
     return (
-        <table {...getTableProps()} className="bg-white border rounded w-full">
+        <table
+            {...getTableProps()}
+            className="bg-white border rounded min-w-full table-auto border-collapse"
+        >
             <thead className="bg-gray-100 shadow-lg">
                 {headerGroups.map((headerGroup) => {
-                    const { key: headerGroupKey, ...headerGroupProps } = headerGroup.getHeaderGroupProps();
+                    const { key: headerGroupKey, ...headerGroupProps } =
+                        headerGroup.getHeaderGroupProps();
                     return (
                         <tr key={headerGroupKey} {...headerGroupProps}>
                             {headerGroup.headers.map((column) => {
@@ -62,7 +60,11 @@ const InventoryTable = () => {
                     prepareRow(row);
                     const { key: rowKey, ...rowProps } = row.getRowProps();
                     return (
-                        <tr key={rowKey} {...rowProps} className="hover:bg-gray-50 transition">
+                        <tr
+                            key={rowKey}
+                            {...rowProps}
+                            className="hover:bg-gray-50 transition"
+                        >
                             {row.cells.map((cell) => {
                                 const { key: cellKey, ...cellProps } = cell.getCellProps();
                                 return (
@@ -84,3 +86,4 @@ const InventoryTable = () => {
 };
 
 export default InventoryTable;
+

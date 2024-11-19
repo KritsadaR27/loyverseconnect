@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Navigation from '../../../components/Navigation';
-
+import SidebarLayout from "../../../components/layouts/SidebarLayout";
 
 const SyncDataPage = () => {
     const [settings, setSettings] = useState({ inventory_sync_time: "03:00", receipts_sync_time: "04:30" });
     const [status, setStatus] = useState("");
     const [userRole, setUserRole] = useState(null);
+    const [count, setCount] = useState(0); // กำหนด state เริ่มต้นเป็น 0
+
+    const increment = () => setCount(count + 1);
+    const decrement = () => setCount(count - 1);
     const handleExportToGoogleSheet = async () => {
         try {
             const response = await fetch('http://localhost:8082/api/export-to-google-sheet', {
@@ -29,7 +32,7 @@ const SyncDataPage = () => {
             alert('เกิดข้อผิดพลาดในการส่งข้อมูลไปยัง Google Sheets');
         }
     };
-    
+
     // ตั้งค่า userRole เป็น 'super' เพื่อทดสอบ
     useEffect(() => {
         setUserRole("super"); // สมมติ role เป็น 'super' สำหรับการทดสอบ
@@ -85,12 +88,13 @@ const SyncDataPage = () => {
     };
 
     return (
-       
-        <div> <Navigation /> 
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 space-y-8">
-            <h2 className="text-2xl font-bold text-blue-600">
-                Data Sync Settings & Actions  
-            </h2>
+        <SidebarLayout headerTitle="Data Sync Settings & Actions  " >
+
+            <div>
+                <p>Count: {count}</p>
+                <button onClick={increment}>Increase</button>
+                <button onClick={decrement}>Decrease</button>
+            </div>
 
             <div className="bg-white p-6 rounded-xl shadow-md space-y-4 w-full max-w-lg">
                 <h3 className="text-xl font-semibold mb-4">Sync Time Settings</h3>
@@ -121,36 +125,37 @@ const SyncDataPage = () => {
 
             <div className="bg-white p-6 rounded-xl shadow-md space-y-4 w-full max-w-lg">
                 <h3 className="text-xl font-semibold mb-4">Manual Data Sync</h3>
-                <button 
+                <button
                     onClick={() => handleSync("http://localhost:8080/api/sync-master-data")}
                     className="bg-blue-500 text-white px-4 py-2 rounded-md w-full hover:bg-blue-600 transition duration-200"
                 >
                     Sync Master Data
                 </button>
-                <button 
+                <button
                     onClick={() => handleSync("http://localhost:8080/api/sync-receipts")}
                     className="bg-green-500 text-white px-4 py-2 rounded-md w-full hover:bg-green-600 transition duration-200"
                 >
                     Sync Receipts
                 </button>
-                <button 
+                <button
                     onClick={() => handleSync("http://localhost:8080/api/sync-inventory-levels")}
                     className="bg-purple-500 text-white px-4 py-2 rounded-md w-full hover:bg-purple-600 transition duration-200"
                 >
                     Sync Inventory Levels
                 </button>
-                <button 
-                        onClick={handleExportToGoogleSheet}
-                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
-                    >
-                        ส่งข้อมูลไปยัง Google Sheets :t
-                    </button> 
+                <button
+                    onClick={handleExportToGoogleSheet}
+                    className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
+                >
+                    ส่งข้อมูลไปยัง Google Sheets :t
+                </button>
             </div>
- 
+
             {status && (
                 <p className="mt-6 text-lg font-medium text-gray-700 text-center">{status}</p>
             )}
-        </div> </div>
+
+        </SidebarLayout>
     );
 };
 

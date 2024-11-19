@@ -19,8 +19,8 @@ const DynamicHeightWrapper = ({ children }) => {
     }, []);
 
     return (
-        <div 
-            className="flex-1 overflow-y-auto border border-gray-200"
+        <div
+            className="flex-1 overflow-y-auto overflow-x-auto border border-gray-200"
             style={{ height: `${mainContentHeight}px` }}
         >
             {children}
