@@ -1,4 +1,4 @@
-// src/utils/api/inventory.js
+// frontend/app/utils/api/inventory.js
 import { sendRequest } from './sendRequest';
 
 const inventoryBaseURL = process.env.REACT_APP_INVENTORY_BASE_URL || 'http://localhost:8082';

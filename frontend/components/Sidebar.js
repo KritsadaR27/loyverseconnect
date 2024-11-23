@@ -48,7 +48,7 @@ const menus = [
       { name: "สร้างใบสั่งซื้อ", link: "/po/edit" },
       { name: "ตั้งค่าซัพพลายเออร์ *", link: "/settings/supplier" },
     ],
-  },{
+  }, {
     title: "การขาย  (1)",
     icon: ChartBarIcon,
     submenu: [
@@ -121,27 +121,25 @@ const utilityMenus = [
 ];
 
 const Sidebar = () => {
-    
+
   const { isCollapsed, toggleSidebar, theme, setTheme } = useSidebarStore();
   const [activeItem, setActiveItem] = useState("");
 
   return (
     <div
-      className={`flex flex-col h-screen ${
-        isCollapsed ? "w-16" : "w-72"
-      } ${theme.color} transition-all`}
+      className={`flex flex-col h-screen z-50 ${isCollapsed ? "w-16" : "w-72"
+        } ${theme.color} transition-all`}
       style={{ overflowY: isCollapsed ? "visible" : "auto" }}
     >
       {/* Logo Section */}
-      <div className={`flex items-center justify-center py-4 ${theme.hover}`}>
+      <div className={`flex items-center justify-center py-4 z-50 ${theme.hover}`}>
         <Image
           src={logo}
           alt="Logo"
           width={40}
           height={40}
-          className={`rounded-full bg-white p-2 transition-transform ${
-            isCollapsed ? "scale-75" : "scale-100"
-          }`}
+          className={`rounded-full bg-white p-2 transition-transform ${isCollapsed ? "scale-75" : "scale-100"
+            }`}
         />
         {!isCollapsed && (
           <span className="ml-3 text-white font-semibold text-xl">ร้านลุงรวย</span>
@@ -161,14 +159,13 @@ const Sidebar = () => {
       </button>
 
       {/* Menu Section */}
-      <nav className="flex flex-col mt-4 space-y-2">
+      <nav className="flex flex-col mt-4 space-y-2 z-50">
         {menus.map((menu, index) => (
           <div key={index} className="relative group">
             <Link href="#">
               <div
-                className={`flex items-center p-3 ${
-                  isCollapsed ? "justify-center" : "space-x-2"
-                } cursor-pointer ${theme.hover}`}
+                className={`flex items-center p-3 ${isCollapsed ? "justify-center" : "space-x-2"
+                  } cursor-pointer ${theme.hover}`}
                 onClick={() => setActiveItem(menu.title)}
               >
                 <menu.icon className="w-6 h-6 text-white" />
@@ -179,30 +176,27 @@ const Sidebar = () => {
             {/* Submenu */}
             {menu.submenu && (
               <div
-                className={`${
-                  isCollapsed
-                    ? "absolute left-16 top-0 hidden group-hover:block bg-white rounded shadow-lg p-3 w-56"
-                    : "ml-4 mt-2 ${theme.hover}"
-                }`}
+                className={`${isCollapsed
+                  ? "absolute left-16 top-0 hidden group-hover:block bg-white rounded shadow-lg p-3 w-56"
+                  : "ml-4 mt-2 ${theme.hover}"
+                  }`}
               >
-                <div 
-                className={`  ${
-                  isCollapsed
+                <div
+                  className={`  ${isCollapsed
                     ? "text-black"
                     : "text-white"
-                }`}
+                    }`}
                 >
                   {menu.submenu.map((item, subIndex) => (
-                   <Link href={item.link} key={subIndex}>
-                    <div
-                      className={`px-4 py-2 border-l ${
-                        isCollapsed ?  "hover:border-black hover:bg-gray-200" : theme.hover 
-                      }`}
-                    >
-                      {item.name}
-                    </div>
-                  </Link>
-                 
+                    <Link href={item.link} key={subIndex}>
+                      <div
+                        className={`px-4 py-2 border-l ${isCollapsed ? "hover:border-black hover:bg-gray-200" : theme.hover
+                          }`}
+                      >
+                        {item.name}
+                      </div>
+                    </Link>
+
                   ))}
 
                 </div>
@@ -218,11 +212,10 @@ const Sidebar = () => {
           {utilityMenus.map((menu, index) => (
             <Link href={menu.link} key={index}>
               <div
-                className={`flex items-center p-3 ${
-                  activeItem === menu.title
-                    ? "text-black font-semibold"
-                    : "text-white"
-                } hover:bg-gray-800`}
+                className={`flex items-center p-3 ${activeItem === menu.title
+                  ? "text-black font-semibold"
+                  : "text-white"
+                  } hover:bg-gray-800`}
                 onClick={() => setActiveItem(menu.title)}
               >
                 <menu.icon className="w-6 h-6" />
@@ -241,9 +234,8 @@ const Sidebar = () => {
             <button
               key={t.name}
               onClick={() => setTheme(t)}
-              className={`w-6 h-6 rounded-full border-2 ${
-                theme.name === t.name ? "border-black" : "border-gray-300"
-              } ${t.color}`}
+              className={`w-6 h-6 rounded-full border-2 ${theme.name === t.name ? "border-black" : "border-gray-300"
+                } ${t.color}`}
             />
           ))}
         </div>

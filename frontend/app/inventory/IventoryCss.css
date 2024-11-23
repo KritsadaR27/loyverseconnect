@@ -21,3 +21,24 @@
     background-color: #f9f9f9;
     padding: 16px;
 }
+.table-container {
+    overflow-x: auto;
+    white-space: nowrap;
+}
+.table {
+    min-width: 100%;
+    border-collapse: collapse;
+}
+.table th,
+.table td {
+    padding: 8px 12px;
+    text-align: center;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+}
+.sticky-header {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+}

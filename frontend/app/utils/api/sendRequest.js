@@ -1,3 +1,4 @@
+//frontend/app/utils/api/sendRequest.js
 const defaultTimeout = 15000;
 
 export const sendRequest = async (url, options = {}, timeout = defaultTimeout, retries = 3) => {

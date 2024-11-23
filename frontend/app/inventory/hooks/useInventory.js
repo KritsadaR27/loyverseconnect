@@ -1,64 +1,50 @@
+// src/app/inventory/hooks/useInventory.js
 import { useState, useEffect } from "react";
-import { fetchItemsStockData } from "../../utils/api/inventory";
-import { fetchSuppliers } from "../../utils/api/supplier";
 
-
-export const useInventory = () => {
-    const [items, setItems] = useState([]); // Grouped items with total stock
-    const [storeStocks, setStoreStocks] = useState({}); // Store-specific stock for each item
-    const [suppliers, setSuppliers] = useState([]); // Suppliers data
-
-    const [loading, setLoading] = useState(false); // Loading state
-    const [error, setError] = useState(null); // Error state
-
-    const fetchInventoryData = async () => {
-        setLoading(true);
-        try {
-            // Fetch items data and suppliers data in parallel
-            const [rawItems, rawSuppliers] = await Promise.all([
-                fetchItemsStockData(),
-                fetchSuppliers()
-            ]);
-
-            const groupedItems = [];
-            const stores = {};
-
-            rawItems.forEach((item) => {
-                // Check if the item already exists in groupedItems
-                const existingItem = groupedItems.find((i) => i.item_id === item.item_id);
-
-                if (existingItem) {
-                    // Increment the total stock for grouped items
-                    existingItem.in_stock += item.in_stock;
-                } else {
-                    // Add new item to groupedItems
-                    groupedItems.push({ ...item });
-                }
-
-                // Add store-specific stock details
-                if (!stores[item.item_id]) {
-                    stores[item.item_id] = [];
-                }
-                stores[item.item_id].push({
-                    store_name: item.store_name,
-                    in_stock: item.in_stock,
-                });
-            });
-
-            setItems(groupedItems); // Update grouped items state
-            setStoreStocks(stores); // Update store-specific stocks state
-            setSuppliers(rawSuppliers); // Set suppliers data
-
-        } catch (err) {
-            setError(err.message || "Error fetching inventory data");
-        } finally {
-            setLoading(false);
-        }
-    };
+export const useInventory = (initialData, initialStoreStocks, initialMasterData, initialError) => {
+    const [items, setItems] = useState(initialData || []);
+    const [storeStocks, setStoreStocks] = useState(initialStoreStocks || {});
+    const [masterData, setMasterData] = useState(initialMasterData || {});
+    const [filterText, setFilterText] = useState("");
+    const [groupBy, setGroupBy] = useState("");
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+    const [error, setError] = useState(initialError || null);
 
     useEffect(() => {
-        fetchInventoryData(); // Fetch inventory data on component mount
-    }, []);
+        if (!initialData) {
+            const fetchData = async () => {
+                const { items, storeStocks, error } = await fetchItemsStockData();
+                setItems(items);
+                setStoreStocks(storeStocks);
+                setError(error);
+            };
 
-    return { items, storeStocks, suppliers, loading, error, fetchInventoryData };
+            fetchData();
+        }
+    }, [initialData]);
+
+    const filterInventory = (searchText) => {
+        setFilterText(searchText);
+    };
+
+    const filteredItems = items.filter((item) => {
+        const matchesSearchText = item.item_name.toLowerCase().includes(filterText.toLowerCase());
+        const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category_name);
+        const matchesSupplier = selectedSuppliers.length === 0 || selectedSuppliers.includes(item.supplier_name);
+        return matchesSearchText && matchesCategory && matchesSupplier;
+    });
+
+    const groupedItems = groupBy !== ""
+        ? filteredItems.reduce((acc, item) => {
+            const group = item[groupBy] || "ไม่ระบุ";
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(item);
+            return acc;
+        }, {})
+        : { "": filteredItems };
+
+    console.log("Grouped Items:", groupedItems);
+
+    return { items: groupedItems, storeStocks, masterData, filterText, filterInventory, groupBy, setGroupBy, selectedCategories, setSelectedCategories, selectedSuppliers, setSelectedSuppliers, error };
 };

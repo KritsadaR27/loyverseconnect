@@ -26,4 +26,7 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("/api/get-settings", func(w http.ResponseWriter, r *http.Request) {
 		handlers.GetSettingsHandler(db).ServeHTTP(w, r)
 	})
+
+	mux.HandleFunc("/api/masterdata", handlers.GetMasterDataHandler)
+
 }

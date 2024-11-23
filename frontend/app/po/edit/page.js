@@ -8,14 +8,14 @@ import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import dynamic from 'next/dynamic';
-import  Sidebar from "../../../components/Sidebar";
-import CustomDateInput from '../../components/CustomDateInput';
+import Sidebar from "../../../components/Sidebar";
+// import CustomDateInput from '../../components/CustomDateInput';
 
 import { formatDateToThai } from '../../utils/dateUtils';
 import { calculateNextOrderDate } from '../../utils/calculateNextOrderDate';
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 import 'react-datepicker/dist/react-datepicker.css';
-import {  ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 const getOrderDate = () => {
     const now = new Date();
     const hour = now.getHours();
@@ -55,7 +55,7 @@ const calculateRecommendation = (product) => {
 
 
 const getOrderCycleText = (value) => {
-    switch(value) {
+    switch (value) {
         case "daily": return "ทุกวัน";
         case "selectDays": return "เลือกวัน";
         case "exceptDays": return "ทุกวันยกเว้น";
@@ -75,9 +75,9 @@ const POEdit = () => {
 
 
     useEffect(() => {
-          // ดึงข้อมูลยอดขาย
-         
-  
+        // ดึงข้อมูลยอดขาย
+
+
         const loadItems = async () => {
             const fetchedItems = await fetchItemsStockData();
             const filteredItems = fetchedItems.filter(item => !EXCLUDED_STORES.includes(item.store_name));
@@ -90,44 +90,44 @@ const POEdit = () => {
             setSuppliers(supplierData);
         };
 
-       
+
 
         loadItems();
         loadSuppliers();
         fetchSalesData();
 
 
-      
-        
+
+
     }, [activeTab, selectedDate]);
 
-    
+
 
     const groupItemsBySupplier = (items, activeTab) => {
         const result = {};
-    
+
         items.forEach((item) => {
             const { item_id, item_name, in_stock, store_name, supplier_name } = item;
-    
+
             // ตรวจสอบว่าข้อมูล `item_id` มีค่า และร้านไม่อยู่ในรายการที่ต้องละเว้น
             if (!item_id || EXCLUDED_STORES.includes(store_name)) return;
-    
+
             // ตรวจสอบว่า supplier เป็นของ "ลุงรวย" หรือไม่
             const isLungRuaySupplier = LUNG_RUAY_SUPPLIERS.includes(supplier_name);
-            if ((activeTab === 'order-lung-ruay' && !isLungRuaySupplier) || 
+            if ((activeTab === 'order-lung-ruay' && !isLungRuaySupplier) ||
                 (activeTab === 'order-others' && isLungRuaySupplier)) return;
-    
+
             // กำหนด key ของ supplier ถ้าไม่ทราบชื่อ supplier ให้ใช้ "ไม่ทราบ"
             const supplierKey = supplier_name || "ไม่ทราบ";
-    
+
             // ถ้า result ไม่มี key ของ supplier นี้ ให้สร้าง array ใหม่
             if (!result[supplierKey]) {
                 result[supplierKey] = [];
             }
-    
+
             // ตรวจสอบว่ารายการนี้มีอยู่ใน array ของ supplier นี้หรือยัง
             const existingItem = result[supplierKey].find(existing => existing.item_id === item_id);
-    
+
             if (existingItem) {
                 // ถ้ามีอยู่แล้ว ให้บวกจำนวนสต๊อกเพิ่มเข้าไป
                 existingItem.total_stock += in_stock;
@@ -144,10 +144,10 @@ const POEdit = () => {
                 });
             }
         });
-    
+
         return result;
     };
-    
+
 
     const toggleCollapse = (supplier) => {
         setCollapsed((prev) => ({
@@ -155,46 +155,46 @@ const POEdit = () => {
             [supplier]: !prev[supplier]
         }));
     };
-// กำหนดฟังก์ชันเพื่อดึงข้อมูลยอดขาย
-const daysBack = 7; // Set the number of days to look back for sales data
+    // กำหนดฟังก์ชันเพื่อดึงข้อมูลยอดขาย
+    const daysBack = 7; // Set the number of days to look back for sales data
 
-// Function to fetch sales data, now with nextOrderDate as an argument
-const fetchSalesData = async (nextOrderDate) => {
-    const startDate = new Date(selectedDate);
-    startDate.setDate(startDate.getDate() - daysBack); // Use daysBack constant or state variable
+    // Function to fetch sales data, now with nextOrderDate as an argument
+    const fetchSalesData = async (nextOrderDate) => {
+        const startDate = new Date(selectedDate);
+        startDate.setDate(startDate.getDate() - daysBack); // Use daysBack constant or state variable
 
-    const endDate = new Date(nextOrderDate);
-    endDate.setDate(endDate.getDate() - daysBack); // Calculate endDate based on nextOrderDate
+        const endDate = new Date(nextOrderDate);
+        endDate.setDate(endDate.getDate() - daysBack); // Calculate endDate based on nextOrderDate
 
-    const fetchedSalesData = await fetchSalesByDay(startDate, endDate);
-    console.log("Fetched Sales Data:", fetchedSalesData); // Check fetched sales data
-    setSalesData(fetchedSalesData);
-};
+        const fetchedSalesData = await fetchSalesByDay(startDate, endDate);
+        console.log("Fetched Sales Data:", fetchedSalesData); // Check fetched sales data
+        setSalesData(fetchedSalesData);
+    };
 
 
-// ฟังก์ชันเพื่อคำนวณวันที่แสดงยอดขายตั้งแต่ selectedDate - daysBack จนถึง nextOrderDate - daysBack
-const calculateSalesDays = (selectedDate, nextOrderDate, daysBack = 7) => {
-    const startDate = new Date(selectedDate);
-    startDate.setDate(startDate.getDate() - daysBack); // ลบ daysBack วันจาก selectedDate
+    // ฟังก์ชันเพื่อคำนวณวันที่แสดงยอดขายตั้งแต่ selectedDate - daysBack จนถึง nextOrderDate - daysBack
+    const calculateSalesDays = (selectedDate, nextOrderDate, daysBack = 7) => {
+        const startDate = new Date(selectedDate);
+        startDate.setDate(startDate.getDate() - daysBack); // ลบ daysBack วันจาก selectedDate
 
-    const endDate = new Date(nextOrderDate);
-    endDate.setDate(endDate.getDate() - daysBack); // ลบ daysBack วันจาก nextOrderDate
+        const endDate = new Date(nextOrderDate);
+        endDate.setDate(endDate.getDate() - daysBack); // ลบ daysBack วันจาก nextOrderDate
 
-    const days = [];
-    let current = new Date(startDate);
+        const days = [];
+        let current = new Date(startDate);
 
-    while (current <= endDate) { // รวม endDate ในการแสดงยอดขาย
-        days.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-    }
+        while (current <= endDate) { // รวม endDate ในการแสดงยอดขาย
+            days.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
 
-    return days;
-};
+        return days;
+    };
 
-const generateColumns = (nextOrderDate, daysBack = 7) => {
-       
-    const salesDays = calculateSalesDays(selectedDate, nextOrderDate, daysBack).map(date => ({
-        headerName: formatDateToThai(date),
+    const generateColumns = (nextOrderDate, daysBack = 7) => {
+
+        const salesDays = calculateSalesDays(selectedDate, nextOrderDate, daysBack).map(date => ({
+            headerName: formatDateToThai(date),
             field: `sales_${date.toISOString().split('T')[0]}`,
             valueGetter: (params) => params.data.sales_by_day?.[date.toISOString().split('T')[0]] || 0,
         }));
@@ -236,13 +236,13 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
 
     return (
         <div className="flex  min-h-screen">
-            
+
             <Sidebar />
-            
- {/* Main Content */}
+
+            {/* Main Content */}
             <div className={`transition-all duration-300 flex-1`}>
-                
-                <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 ">                
+
+                <div className="min-h-screen bg-gradient-to-tl from-green-200 to-green-500 ">
                     <header className="text-2xl font-bold mb-8 text-center bg-gray-300 p-4 shadow-lg">
                         <div className="flex items-center">
                             <h1>สร้างใบสั่งซื้อ</h1>
@@ -271,7 +271,7 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
                             ? calculateNextOrderDate(selectedDate, supplierData.order_cycle, supplierData.selected_days || [])
                             : selectedDate;
 
-                            const currentColumns = generateColumns(nextOrderDate,7);
+                        const currentColumns = generateColumns(nextOrderDate, 7);
 
                         return (
                             <div key={supplier} className="mb-4">
@@ -281,7 +281,7 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
                                 >
                                     <h2 className="text-lg font-semibold">{supplier}</h2>
                                     <p className="text-sm text-gray-600">
-                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)} 
+                                        สั่งรอบหน้าวันที่: {formatDateToThai(nextOrderDate)}
                                         (รอบสั่ง {getOrderCycleText(supplierData?.order_cycle)} {supplierData?.selected_days?.join(", ") || "N/A"})
                                     </p>
                                     <button className="text-gray-700">
@@ -293,7 +293,7 @@ const generateColumns = (nextOrderDate, daysBack = 7) => {
                                     </button>
                                 </div>
                                 {!collapsed[supplier] && (
-                                    <div className="ag-theme-alpine" style={{  width: '100%' }}>
+                                    <div className="ag-theme-alpine" style={{ width: '100%' }}>
                                         <AgGridReact
                                             rowData={groupedItems[supplier]}
                                             columnDefs={currentColumns}

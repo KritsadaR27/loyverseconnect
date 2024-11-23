@@ -1,4 +1,4 @@
-// src/utils/api/supplier.js
+// frontend/app/utils/api/supplier.js
 import { sendRequest } from './sendRequest';
 
 const supplierBaseURL = process.env.REACT_APP_SUPPLIER_BASE_URL || 'http://localhost:8083';
