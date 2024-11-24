@@ -66,7 +66,7 @@ const InventoryTable = ({ items, storeStocks, showStoreStocks, groupBy }) => {
     // สร้างรายการชื่อสาขา
     const storeNames = Object.values(storeStocks).flat().map(store => store.store_name.replace("ลุงรวย สาขา", ""));
     const uniqueStoreNames = [...new Set(storeNames)];
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md backdrop-blur-lg border-r border-gray-300 resize-handle";
+    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
     const tdClass = "p-2 border-r border-b border-gray-300 text-gray-700";
 
     // คำนวณความกว้างของ table
