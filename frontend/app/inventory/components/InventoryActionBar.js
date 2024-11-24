@@ -7,11 +7,13 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
   const [showCategories, setShowCategories] = useState(false);
   const [showSuppliers, setShowSuppliers] = useState(false);
   const [showGroupBy, setShowGroupBy] = useState(false);
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [supplierSearchTerm, setSupplierSearchTerm] = useState("");
   const categoriesRef = useRef(null);
   const suppliersRef = useRef(null);
   const groupByRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -23,6 +25,9 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
       }
       if (groupByRef.current && !groupByRef.current.contains(event.target)) {
         setShowGroupBy(false);
+      }
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        setShowSearchInput(false);
       }
     };
 
@@ -53,6 +58,10 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
 
   const toggleGroupBy = () => {
     setShowGroupBy(!showGroupBy);
+  };
+
+  const toggleSearchInput = () => {
+    setShowSearchInput(!showSearchInput);
   };
 
   const handleCategoryChange = (category) => {
@@ -93,7 +102,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
 
   return (
     <div>
-      <div className="flex items-center justify-between py-1.5 rounded-md">
+      <div className="flex items-center justify-between py-1.5 rounded-md " style={{ maxWidth: '100vw' }}>
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <div className="relative flex-shrink-0 items-center space-x-2" ref={categoriesRef}>
@@ -101,7 +110,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
               {selectedCategories.length > 0 ? `เลือก ${selectedCategories.length} หมวดหมู่` : "ทุกหมวดหมู่"} <ChevronDownIcon className="h-5 w-5 inline" />
             </button>
             {showCategories && (
-              <div className="absolute z-30 bg-white border rounded shadow-lg w-60 max-h-2/3 overflow-y-auto">
+              <div className="absolute z-30 bg-white border rounded shadow-lg w-60 max-h-96 overflow-y-auto">
                 <input
                   type="text"
                   value={categorySearchTerm}
@@ -136,7 +145,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
               {selectedSuppliers.length > 0 ? `เลือก ${selectedSuppliers.length} ผู้จำหน่าย` : "ทุกผู้จำหน่าย"} <ChevronDownIcon className="h-5 w-5 inline" />
             </button>
             {showSuppliers && (
-              <div className="absolute z-30 bg-white border shadow-lg w-60 max-h-2/3 overflow-y-auto">
+              <div className="absolute z-30 bg-white border shadow-lg w-60 max-h-96	overflow-y-auto">
                 <input
                   type="text"
                   value={supplierSearchTerm}
@@ -166,18 +175,21 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
               </div>
             )}
           </div>
-          <button onClick={toggleShowStoreStocks} className={`ml-4 px-4 py-1 text-black rounded border ${showStoreStocks ? 'bg-yellow-200' : 'bg-gray-200'}`}>
-            <StoreIcon className="h-5 w-5 inline" /> {showStoreStocks ? "ปิด" : "ดูสาขา"}
+          <button onClick={toggleShowStoreStocks} className={`flex items-center ml-4 px-4 py-1 text-black rounded border ${showStoreStocks ? 'bg-yellow-200' : 'bg-gray-200'}`}>
+            <StoreIcon className="h-5 w-5 mr-1 inline" />  ดูสาขา
+            {showStoreStocks && (
+              <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={toggleShowStoreStocks} />
+            )}
           </button>
           <div className="relative flex-shrink-0 items-center space-x-2" ref={groupByRef}>
-            <button onClick={toggleGroupBy} className={`bg-gray-200 px-4 py-1 rounded border hover:bg-gray-300 transition ${groupBy ? 'bg-green-500 text-white' : ''} ${showGroupBy ? 'border-2 border-blue-500' : ''}`}>
-              <GroupIcon className="h-5 w-5 inline" /> {groupBy ? `จัดกลุ่ม ${groupBy === 'category_name' ? 'หมวดหมู่' : 'ผู้จำหน่าย'}` : 'จัดกลุ่ม'}
+            <button onClick={toggleGroupBy} className={`flex items-center bg-gray-200 px-4 py-1 rounded border hover:bg-gray-300 transition ${groupBy ? 'bg-green-500 text-white' : ''} ${showGroupBy ? 'border-2 border-blue-500' : ''}`}>
+              <GroupIcon className="h-5 w-5 mr-1 inline" /> {groupBy ? `จัดกลุ่ม ${groupBy === 'category_name' ? 'หมวดหมู่' : 'ผู้จำหน่าย'}` : 'จัดกลุ่ม'}
               {groupBy && (
                 <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => setGroupBy('')} />
               )}
             </button>
             {showGroupBy && (
-              <div className="absolute z-30 bg-white border rounded shadow-lg w-60 max-h-2/3 overflow-y-auto">
+              <div className="absolute z-30 bg-white border rounded shadow-lg w-60 max-h-screen	 overflow-y-auto">
                 <label className="block px-4 py-1">
                   <input
                     type="radio"
@@ -218,20 +230,28 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
         {/* Right Section */}
         <div className="relative flex-shrink-0 items-center space-x-2">
           {/* Search Input */}
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleChange}
-              placeholder="ค้นหาสินค้า..."
-              className="border border-gray-300 rounded-md pl-8 pr-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500"
-            />
-            {searchTerm && (
-              <button onClick={clearSearch} className="absolute right-2 top-2 w-4 h-4 text-gray-500">
-                <XMarkIcon className="w-4 h-4" />
+          <div className="relative" ref={searchInputRef}>
+            {showSearchInput ? (
+              <>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={handleChange}
+                  placeholder="ค้นหาสินค้า..."
+                  className="border border-gray-300 rounded-md pl-8 pr-0 py-1 text-sm h-9 focus:ring-blue-500 focus:border-blue-500 w-60"
+                />
+                {searchTerm && (
+                  <button onClick={clearSearch} className="absolute right-2 top-2 w-4 h-4 text-gray-500">
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
+                )}
+                <SearchIcon className="absolute left-2 top-2.5 w-4 h-4 text-gray-500" />
+              </>
+            ) : (
+              <button onClick={toggleSearchInput} className="p-2">
+                <SearchIcon className="w-6 h-6 text-gray-500" />
               </button>
             )}
-            <SearchIcon className="absolute left-2 top-2.5 w-4 h-4 text-gray-500" />
           </div>
         </div>
       </div>
@@ -242,7 +262,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
             <>
               <span className="bg-yellow-300 p-1 rounded-md">หมวดหมู่:</span>
               {selectedCategories.map((category) => (
-                <div key={category} className="flex items-center bg-blue-500 text-white font-bold mx-1 px-2 py-1 rounded-full text-sm">
+                <div key={category} className="flex items-center bg-blue-500 text-white font-bold mx-1 px-2 py-1 rounded-full text-sm ">
                   {category} <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => handleCategoryChange(category)} />
                 </div>
               ))}

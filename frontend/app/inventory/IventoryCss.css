@@ -21,24 +21,18 @@
     background-color: #f9f9f9;
     padding: 16px;
 }
-.table-container {
-    overflow-x: auto;
-    white-space: nowrap;
-}
-.table {
-    min-width: 100%;
-    border-collapse: collapse;
-}
-.table th,
-.table td {
-    padding: 8px 12px;
-    text-align: center;
-    border: 1px solid #ddd;
-    white-space: nowrap;
-}
-.sticky-header {
-    position: sticky;
+
+/* เพิ่มในไฟล์ IventoryCss.css */
+.resizer {
+    display: inline-block;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    position: absolute;
+    right: 0;
     top: 0;
-    background: #fff;
-    z-index: 10;
+    z-index: 1;
+}
+th {
+    position: relative;
 }

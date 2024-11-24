@@ -10,7 +10,7 @@ const DynamicHeightWrapper = ({ children }) => {
         const calculateHeight = () => {
             const headerHeight = document.querySelector("header")?.offsetHeight || 0;
             const viewportHeight = window.innerHeight;
-            setMainContentHeight(viewportHeight - headerHeight - 20); // Adjust with padding/margin if needed
+            setMainContentHeight(viewportHeight - headerHeight); // Adjust with padding/margin if needed
         };
 
         calculateHeight(); // Initial calculation

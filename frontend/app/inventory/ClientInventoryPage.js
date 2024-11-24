@@ -15,7 +15,10 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
 
     const { items, filterText, filterInventory, groupBy, setGroupBy, selectedCategories, setSelectedCategories, selectedSuppliers, setSelectedSuppliers } = useInventory(initialData, storeStocks, masterData, error); // ใช้ Client-side hook
     const [showStoreStocks, setShowStoreStocks] = useState(false);
-
+    // ฟังก์ชันสำหรับการเปลี่ยนค่า groupBy
+    const handleGroupByChange = (newGroupBy) => {
+        setGroupBy(newGroupBy);
+    };
     if (error) {
         return <div className="text-center text-red-500">Error: {error}</div>;
     }
@@ -28,7 +31,7 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
                     filterText={filterText}
                     filterInventory={filterInventory}
                     groupBy={groupBy}
-                    setGroupBy={setGroupBy}
+                    setGroupBy={handleGroupByChange}
                     categories={masterData.categories}
                     selectedCategories={selectedCategories}
                     setSelectedCategories={setSelectedCategories}
@@ -40,7 +43,7 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
                 />
             }
         >
-            <InventoryTable items={items} storeStocks={storeStocks} showStoreStocks={showStoreStocks} />
+            <InventoryTable items={items} storeStocks={storeStocks} showStoreStocks={showStoreStocks} groupBy={groupBy} />
         </SidebarLayout>
     );
 };
