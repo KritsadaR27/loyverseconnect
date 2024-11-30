@@ -8,6 +8,7 @@ import DateFilter from '../../../components/DateFilter';
 import DraggableTable from '../../../components/DraggableTable'; // เพิ่มการ import คอมโพเนนต์
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend'; // Import backend
+import { XMarkIcon } from '@heroicons/react/24/outline'; // Import icon จาก Heroicons v2
 
 const SupplierSettings = () => {
     const [groupedItems, setGroupedItems] = useState({}); // Store items grouped by supplier
@@ -18,10 +19,9 @@ const SupplierSettings = () => {
     const inputRefs = useRef({});
     const [highlightedSupplierId, setHighlightedSupplierId] = useState(null);
 
-
     const filteredSuppliers = suppliers.filter(supplier => groupedItems[supplier.supplier_id] && groupedItems[supplier.supplier_id].length > 0);
-    console.log("filteredSuppliers" , filteredSuppliers)
-    console.log("suppliers" , suppliers)
+    console.log("filteredSuppliers", filteredSuppliers);
+    console.log("suppliers", suppliers);
     const [expandedItems, setExpandedItems] = useState({}); // Track multiple expanded items
     const toggleExpand = (supplierId) => {
         setExpandedItems((prevExpandedItems) => ({
@@ -126,8 +126,8 @@ const SupplierSettings = () => {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล!');
         }
     };
- 
-      // ฟังก์ชันที่ใช้ในการทำให้ช่อง input โดดเด่น (highlighted)
+
+    // ฟังก์ชันที่ใช้ในการทำให้ช่อง input โดดเด่น (highlighted)
     const handleFocus = (supplierId) => {
         setHighlightedSupplierId(supplierId);
         if (inputRefs.current[supplierId]) {
@@ -146,7 +146,7 @@ const SupplierSettings = () => {
         );
         setSuppliers(updatedSuppliers); // อัปเดต state ด้วย array ใหม่
     };
-    
+
     const mapSupplierToColumns = (supplier) => [
         supplier.supplier_name || "ไม่ระบุ",
         <DateFilter
@@ -172,8 +172,6 @@ const SupplierSettings = () => {
         >
             {expandedSupplier === supplier.supplier_id ? 'ซ่อนรายการสินค้า' : 'ดูรายการสินค้า'}
         </button>
-        
-    
     ];
 
     if (loading) {
@@ -185,39 +183,39 @@ const SupplierSettings = () => {
             <Navigation />
             <div className="container min-w-full mx-auto p-4 bg-gray-100">
                 <h2 className="text-2xl font-bold mb-4">ตั้งค่าซัพพลายเออร์</h2>
-              
+
                 {filteredSuppliers.length > 0 && ( // Render only when filteredSuppliers has data
 
-                <DndProvider backend={HTML5Backend}>
-                    <DraggableTable 
-                        headers={['ชื่อซัพพลายเออร์', 'รอบการสั่งซื้อ', 'ลำดับ', 'รายการสินค้า']}
-                        items={filteredSuppliers}
-                        mapItemToColumns={mapSupplierToColumns}
-                        onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)} 
+                    <DndProvider backend={HTML5Backend}>
+                        <DraggableTable
+                            headers={['ชื่อซัพพลายเออร์', 'รอบการสั่งซื้อ', 'ลำดับ', 'รายการสินค้า']}
+                            items={filteredSuppliers}
+                            mapItemToColumns={mapSupplierToColumns}
+                            onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)}
 
-                        expandedItems={expandedItems}  // Pass updated expandedItems
+                            expandedItems={expandedItems}  // Pass updated expandedItems
 
-                        toggleExpand={toggleExpand}
-                        expandedContent={(supplier) => (
-                            <table className="bg-yellow-100 w-full">
-                                <thead>
-                                    <tr>
-                                        <th className="py-2 px-4 text-left">ชื่อสินค้า</th>
-                                        <th className="py-2 px-4 text-left">ชื่อเรียกผู้ขาย</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(groupedItems[supplier.supplier_id] || []).map(item => (
-                                        <tr key={`${supplier.supplier_id}-${item.item_id}`} className="py-1 border-b">
-                                            <td className="py-2 px-4">{item.item_name}</td>
-                                            <td className="py-2 px-4">{item.item_supplier_call}</td>
+                            toggleExpand={toggleExpand}
+                            expandedContent={(supplier) => (
+                                <table className="bg-yellow-100 w-full">
+                                    <thead>
+                                        <tr>
+                                            <th className="py-2 px-4 text-left">ชื่อสินค้า</th>
+                                            <th className="py-2 px-4 text-left">ชื่อเรียกผู้ขาย</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    />
-                </DndProvider>
+                                    </thead>
+                                    <tbody>
+                                        {(groupedItems[supplier.supplier_id] || []).map(item => (
+                                            <tr key={`${supplier.supplier_id}-${item.item_id}`} className="py-1 border-b">
+                                                <td className="py-2 px-4">{item.item_name}</td>
+                                                <td className="py-2 px-4">{item.item_supplier_call}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        />
+                    </DndProvider>
                 )}
 
                 <button

@@ -17,6 +17,15 @@ type Item struct {
 	PurchaseCost    float64        `json:"purchase_cost"`    // Purchase cost of the item
 	CreatedAt       time.Time      `json:"created_at"`       // Creation timestamp
 	UpdatedAt       time.Time      `json:"updated_at"`       // Update timestamp
+	UseProduction   bool           `json:"use_production"`   // Flag to indicate if the item is used in production
+	IsComposite     bool           `json:"is_composite"`     // Flag to indicate if the item is a composite item
+	Variants        []ItemVariant  `json:"variants"`         // Variants of the item
+}
+
+type ItemVariant struct {
+	ItemVariantID string `json:"item_variant_id"` // Unique identifier for the item variant
+	ItemID        string `json:"item_id"`         // Foreign key to Item
+	Barcode       string `json:"barcode"`         // Barcode for the item variant
 }
 
 // CustomItemField represents the structure for storing item supplier call data in custom_item_fields.

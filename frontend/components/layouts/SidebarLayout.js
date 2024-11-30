@@ -4,7 +4,7 @@ import Sidebar from "../Sidebar";
 
 import DynamicHeightWrapper from "./DynamicHeightWrapper";
 
-const SidebarLayout = ({ children, headerTitle, actionBar }) => {
+const SidebarLayout = ({ children, headerTitle, actionBar, onScroll }) => {
     return (
         <div className="flex h-screen">
             {/* Sidebar */}
@@ -17,8 +17,7 @@ const SidebarLayout = ({ children, headerTitle, actionBar }) => {
                         {actionBar}
                     </header>
                     {/* Page Content */}
-                    <DynamicHeightWrapper headerTitle={headerTitle} actionBar={actionBar}>
-
+                    <DynamicHeightWrapper headerTitle={headerTitle} actionBar={actionBar} onScroll={onScroll}>
 
                         {children}
                     </DynamicHeightWrapper>

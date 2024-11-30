@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 
-const DynamicHeightWrapper = ({ children }) => {
+const DynamicHeightWrapper = ({ children, onScroll }) => {
     const [mainContentHeight, setMainContentHeight] = useState(0);
 
     useEffect(() => {
@@ -22,6 +22,7 @@ const DynamicHeightWrapper = ({ children }) => {
         <div
             className="flex-1 overflow-y-auto overflow-x-auto border border-gray-200"
             style={{ height: `${mainContentHeight}px` }}
+            onScroll={onScroll} // Add onScroll prop
         >
             {children}
         </div>

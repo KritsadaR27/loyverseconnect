@@ -52,7 +52,11 @@ func FetchMasterData() (models.LoyMasterData, error) {
 		return masterData, err
 	}
 
-	log.Println("Fetched master data from API successfully.")
+	// Filter unused categories and suppliers
+	masterData.Categories = filterUnusedCategories(masterData.Categories, masterData.Items)
+	masterData.Suppliers = filterUnusedSuppliers(masterData.Suppliers, masterData.Items)
+
+	log.Println("Fetched master data from API successfully....")
 	return masterData, nil
 }
 
@@ -121,4 +125,40 @@ func fetchData(endpoint, token string, result interface{}) error {
 	}
 
 	return nil
+}
+
+// Filter unused categories
+func filterUnusedCategories(categories []models.LoyCategory, items []models.LoyItem) []models.LoyCategory {
+	usedCategoryIDs := make(map[string]bool)
+	for _, item := range items {
+		if item.CategoryID != nil {
+			usedCategoryIDs[*item.CategoryID] = true
+		}
+	}
+
+	var filteredCategories []models.LoyCategory
+	for _, category := range categories {
+		if usedCategoryIDs[category.CategoryID] {
+			filteredCategories = append(filteredCategories, category)
+		}
+	}
+
+	return filteredCategories
+}
+
+// Filter unused suppliers
+func filterUnusedSuppliers(suppliers []models.LoySupplier, items []models.LoyItem) []models.LoySupplier {
+	usedSupplierIDs := make(map[string]bool)
+	for _, item := range items {
+		usedSupplierIDs[item.PrimarySupplierID] = true
+	}
+
+	var filteredSuppliers []models.LoySupplier
+	for _, supplier := range suppliers {
+		if usedSupplierIDs[supplier.SupplierID] {
+			filteredSuppliers = append(filteredSuppliers, supplier)
+		}
+	}
+
+	return filteredSuppliers
 }

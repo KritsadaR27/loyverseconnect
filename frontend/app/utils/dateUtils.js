@@ -1,11 +1,16 @@
 // src/utils/dateUtils.js
+// src/utils/dateUtils.js
 export const formatDateToThai = (date, format = "วัน dd เดือน พ.ศ.", timeZone = 'Asia/Bangkok') => {
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+
     if (!(date instanceof Date) || isNaN(date)) {
         console.error("Invalid date:", date);
         return ""; // หรือ return ค่าเริ่มต้นหาก date ไม่ถูกต้อง
     }
 
-    const daysOfWeek = [ "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์","อาทิตย์"];
+    const daysOfWeek = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
     const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
     // Adjust date to Thai timezone
@@ -39,6 +44,7 @@ export const formatDateToThai = (date, format = "วัน dd เดือน �
         .replace("HH", hours)
         .replace("MM", minutes);
 };
+
 
 
 

@@ -1,4 +1,4 @@
-// backend/internal/InventoryManagement/infrastructure/repositories/item_repository.go
+// backend/internal/InventoryManagement/infrastructure/repositories/item_data.go
 package data
 
 import (
@@ -221,7 +221,6 @@ func (repo *ItemRepositoryDB) UpdateItemStatus(itemID, status string) error {
 	return nil
 }
 
-// SaveItemSupplierSetting saves or updates the item supplier settings (including item_supplier_call) in the custom_item_fields table.
 // SaveItemSupplierSetting saves or updates the item supplier settings (including item_supplier_call and reserve_quantity) in the custom_item_fields table.
 func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.CustomItemField) error {
 	// เริ่มต้นการทำธุรกรรม
@@ -259,4 +258,104 @@ func (repo *ItemRepositoryDB) SaveItemSupplierSetting(supplierSettings []models.
 	}
 
 	return nil
+}
+
+// FetchCategories ดึงข้อมูล Categories จากฐานข้อมูลของเรา
+func (repo *ItemRepositoryDB) FetchCategories() ([]models.Category, error) {
+	rows, err := repo.db.Query("SELECT category_id, name FROM loycategories")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []models.Category
+	for rows.Next() {
+		var category models.Category
+		if err := rows.Scan(&category.CategoryID, &category.Name); err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+// FetchItems ดึงข้อมูล Items จากฐานข้อมูลของเรา
+func (repo *ItemRepositoryDB) FetchItems() ([]models.Item, error) {
+	rows, err := repo.db.Query("SELECT item_id, item_name, description, category_id, primary_supplier_id, image_url, variants, is_composite, use_production FROM loyitems")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.Item
+	for rows.Next() {
+		var item models.Item
+		if err := rows.Scan(&item.ItemID, &item.ItemName, &item.Description, &item.CategoryID, &item.PrimarySupplier, &item.ImageURL, &item.Variants, &item.IsComposite, &item.UseProduction); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// FetchStores ดึงข้อมูล Stores จากฐานข้อมูลของเรา
+func (repo *ItemRepositoryDB) FetchStores() ([]models.Store, error) {
+	rows, err := repo.db.Query("SELECT store_id, store_name FROM loystores")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stores []models.Store
+	for rows.Next() {
+		var store models.Store
+		if err := rows.Scan(&store.StoreID, &store.StoreName); err != nil {
+			return nil, err
+		}
+		stores = append(stores, store)
+	}
+
+	return stores, nil
+}
+
+// FetchSuppliers ดึงข้อมูล Suppliers จากฐานข้อมูลของเรา
+func (repo *ItemRepositoryDB) FetchSuppliers() ([]models.Supplier, error) {
+	rows, err := repo.db.Query("SELECT supplier_id, supplier_name FROM loysuppliers")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suppliers []models.Supplier
+	for rows.Next() {
+		var supplier models.Supplier
+		if err := rows.Scan(&supplier.SupplierID, &supplier.SupplierName); err != nil {
+			return nil, err
+		}
+		suppliers = append(suppliers, supplier)
+	}
+
+	return suppliers, nil
+}
+
+// FetchPaymentTypes ดึงข้อมูล Payment Types จากฐานข้อมูลของเรา
+func (repo *ItemRepositoryDB) FetchPaymentTypes() ([]models.PaymentType, error) {
+	rows, err := repo.db.Query("SELECT payment_type_id, name, type FROM loypaymenttypes")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var paymentTypes []models.PaymentType
+	for rows.Next() {
+		var paymentType models.PaymentType
+		if err := rows.Scan(&paymentType.PaymentTypeID, &paymentType.Name, &paymentType.Type); err != nil {
+			return nil, err
+		}
+		paymentTypes = append(paymentTypes, paymentType)
+	}
+
+	return paymentTypes, nil
 }

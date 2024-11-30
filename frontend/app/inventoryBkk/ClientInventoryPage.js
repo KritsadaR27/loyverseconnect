@@ -1,7 +1,7 @@
 // src/app/inventory/ClientInventoryPage.js
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useInventory } from "./hooks/useInventory"; // นำเข้า useInventory
 import SidebarLayout from "../../components/layouts/SidebarLayout";
 import InventoryTable from "./components/InventoryTable";
@@ -34,16 +34,9 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
     const handleGroupByChange = (newGroupBy) => {
         setGroupBy(newGroupBy);
     };
-
-    const memoizedItems = useMemo(() => items, [items]);
-    const memoizedStoreStocks = useMemo(() => storeStocks, [storeStocks]);
-    const memoizedCategories = useMemo(() => masterData.categories, [masterData.categories]);
-    const memoizedSuppliers = useMemo(() => masterData.suppliers, [masterData.suppliers]);
-
     if (error) {
         return <div className="text-center text-red-500">Error: {error}</div>;
     }
-
 
     return (
         <SidebarLayout
@@ -54,10 +47,10 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
                     filterInventory={filterInventory}
                     groupBy={groupBy}
                     setGroupBy={handleGroupByChange}
-                    categories={memoizedCategories}
+                    categories={masterData.categories}
                     selectedCategories={selectedCategories}
                     setSelectedCategories={setSelectedCategories}
-                    suppliers={memoizedSuppliers}
+                    suppliers={masterData.suppliers}
                     selectedSuppliers={selectedSuppliers}
                     setSelectedSuppliers={setSelectedSuppliers}
                     toggleShowStoreStocks={() => setShowStoreStocks(!showStoreStocks)}
@@ -70,7 +63,7 @@ const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) =>
                 />
             }
         >
-            <InventoryTable items={memoizedItems} storeStocks={memoizedStoreStocks} showStoreStocks={showStoreStocks} groupBy={groupBy} showFriendOrder={showFriendOrder} />
+            <InventoryTable items={items} storeStocks={storeStocks} showStoreStocks={showStoreStocks} groupBy={groupBy} showFriendOrder={showFriendOrder} />
         </SidebarLayout>
     );
 };

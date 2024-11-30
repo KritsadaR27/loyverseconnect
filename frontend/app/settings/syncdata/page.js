@@ -7,10 +7,7 @@ const SyncDataPage = () => {
     const [settings, setSettings] = useState({ inventory_sync_time: "03:00", receipts_sync_time: "04:30" });
     const [status, setStatus] = useState("");
     const [userRole, setUserRole] = useState(null);
-    const [count, setCount] = useState(0); // กำหนด state เริ่มต้นเป็น 0
 
-    const increment = () => setCount(count + 1);
-    const decrement = () => setCount(count - 1);
     const handleExportToGoogleSheet = async () => {
         try {
             const response = await fetch('http://localhost:8082/api/export-to-google-sheet', {
@@ -90,11 +87,6 @@ const SyncDataPage = () => {
     return (
         <SidebarLayout headerTitle="Data Sync Settings & Actions  " >
 
-            <div>
-                <p>Count: {count}</p>
-                <button onClick={increment}>Increase</button>
-                <button onClick={decrement}>Decrease</button>
-            </div>
 
             <div className="bg-white p-6 rounded-xl shadow-md space-y-4 w-full max-w-lg">
                 <h3 className="text-xl font-semibold mb-4">Sync Time Settings</h3>

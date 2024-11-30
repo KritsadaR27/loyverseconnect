@@ -6,17 +6,26 @@ import { fetchItemsStockData, fetchMasterData } from "./../api/inventoryService"
 import './IventoryCss.css'; // นำเข้าไฟล์ CSS
 
 const InventoryPage = async () => {
-    const { items, storeStocks, error } = await fetchItemsStockData();
-    const masterData = await fetchMasterData(); // ดึง master data ในฝั่ง server
+    try {
+        const [itemsStockData, masterData] = await Promise.all([
+            fetchItemsStockData(),
+            fetchMasterData()
+        ]);
 
-    return (
-        <ClientInventoryPage
-            initialData={items}
-            storeStocks={storeStocks}
-            masterData={masterData} // ส่ง master data ไปยัง ClientInventoryPage
-            error={error}
-        />
-    );
+        const { items, storeStocks, error } = itemsStockData;
+
+        return (
+            <ClientInventoryPage
+                initialData={items}
+                storeStocks={storeStocks}
+                masterData={masterData} // ส่ง master data ไปยัง ClientInventoryPage
+                error={error}
+            />
+        );
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        return <div>Error loading data</div>;
+    }
 };
 
 export default InventoryPage;

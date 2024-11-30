@@ -1,41 +1,46 @@
 // src/app/inventory/components/InventoryActionBar.js
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDownIcon, ChevronUpIcon, BuildingStorefrontIcon as StoreIcon, XMarkIcon, AdjustmentsHorizontalIcon as GroupIcon, MagnifyingGlassIcon as SearchIcon } from '@heroicons/react/24/outline';
+import React, { memo } from "react";
+import { ChevronDownIcon, ChevronUpIcon, BuildingStorefrontIcon as StoreIcon, XMarkIcon, AdjustmentsHorizontalIcon as GroupIcon, MagnifyingGlassIcon as SearchIcon, ShoppingCartIcon as OrderIcon, ArrowPathIcon as SyncIcon } from '@heroicons/react/24/outline';
+import Alert from '../../../components/Alert';
+import MultiSelect from '../../../components/MultiSelect';
+import useInventoryActionBar from '../hooks/useInventoryActionBar';
 
-const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, categories, selectedCategories, setSelectedCategories, suppliers, selectedSuppliers, setSelectedSuppliers, toggleShowStoreStocks, showStoreStocks }) => {
-  const [searchTerm, setSearchTerm] = useState(filterText);
-  const [showCategories, setShowCategories] = useState(false);
-  const [showSuppliers, setShowSuppliers] = useState(false);
-  const [showGroupBy, setShowGroupBy] = useState(false);
-  const [showSearchInput, setShowSearchInput] = useState(false);
-  const [categorySearchTerm, setCategorySearchTerm] = useState("");
-  const [supplierSearchTerm, setSupplierSearchTerm] = useState("");
-  const categoriesRef = useRef(null);
-  const suppliersRef = useRef(null);
-  const groupByRef = useRef(null);
-  const searchInputRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
-        setShowCategories(false);
-      }
-      if (suppliersRef.current && !suppliersRef.current.contains(event.target)) {
-        setShowSuppliers(false);
-      }
-      if (groupByRef.current && !groupByRef.current.contains(event.target)) {
-        setShowGroupBy(false);
-      }
-      if (searchInputRef.current && !searchInputRef.current.contains(event.target)) {
-        setShowSearchInput(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, categories, selectedCategories, setSelectedCategories, suppliers, selectedSuppliers, setSelectedSuppliers, toggleShowStoreStocks, showStoreStocks, showFriendOrder, setShowFriendOrder }) => {
+  const {
+    searchTerm,
+    setSearchTerm,
+    showCategories,
+    setShowCategories,
+    showSuppliers,
+    setShowSuppliers,
+    showGroupBy,
+    setShowGroupBy,
+    showSearchInput,
+    setShowSearchInput,
+    categorySearchTerm,
+    setCategorySearchTerm,
+    supplierSearchTerm,
+    setSupplierSearchTerm,
+    alert,
+    setAlert,
+    isLoading,
+    setIsLoading,
+    categoriesRef,
+    suppliersRef,
+    groupByRef,
+    searchInputRef,
+    handleCategoryChange,
+    handleSupplierChange,
+    clearCategories,
+    clearSuppliers,
+    selectAllCategories,
+    selectAllSuppliers,
+    handleFriendOrderToggle,
+    handleFriendOrderCancel,
+    handleSync,
+    toggleGroupBy,
+    toggleSearchInput,
+  } = useInventoryActionBar(setSelectedCategories, setSelectedSuppliers, toggleShowStoreStocks, setGroupBy, showFriendOrder, setShowFriendOrder, categories, suppliers);
 
   const handleChange = (event) => {
     const value = event.target.value;
@@ -48,48 +53,8 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
     filterInventory("");
   };
 
-  const toggleCategories = () => {
-    setShowCategories(!showCategories);
-  };
-
-  const toggleSuppliers = () => {
-    setShowSuppliers(!showSuppliers);
-  };
-
-  const toggleGroupBy = () => {
-    setShowGroupBy(!showGroupBy);
-  };
-
-  const toggleSearchInput = () => {
-    setShowSearchInput(!showSearchInput);
-  };
-
-  const handleCategoryChange = (category) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    );
-  };
-
-  const handleSupplierChange = (supplier) => {
-    setSelectedSuppliers((prev) =>
-      prev.includes(supplier) ? prev.filter((s) => s !== supplier) : [...prev, supplier]
-    );
-  };
-
-  const clearCategories = () => {
-    setSelectedCategories([]);
-  };
-
-  const clearSuppliers = () => {
-    setSelectedSuppliers([]);
-  };
-
-  const selectAllCategories = () => {
-    setSelectedCategories(categories.map(category => category.name));
-  };
-
-  const selectAllSuppliers = () => {
-    setSelectedSuppliers(suppliers.map(supplier => supplier.name));
+  const handleSyncClick = () => {
+    handleSync("http://localhost:8080/api/sync-inventory-levels");
   };
 
   const filteredCategories = categories.filter(category =>
@@ -102,88 +67,50 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
 
   return (
     <div>
+      {alert && <Alert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
+
       <div className="flex items-center justify-between py-1.5 rounded-md " style={{ maxWidth: '100vw' }}>
         {/* Left Section */}
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-shrink-0 items-center space-x-2" ref={categoriesRef}>
-            <button onClick={toggleCategories} className={`px-4 py-1 text-black rounded border ${selectedCategories.length > 0 ? 'bg-blue-600 text-white' : 'bg-white'} ${showCategories ? 'border-2 border-blue-500' : ''}`}>
-              {selectedCategories.length > 0 ? `เลือก ${selectedCategories.length} หมวดหมู่` : "ทุกหมวดหมู่"} <ChevronDownIcon className="h-5 w-5 inline" />
-            </button>
-            {showCategories && (
-              <div className="absolute z-30 bg-white border rounded shadow-lg w-60 max-h-96 overflow-y-auto">
-                <input
-                  type="text"
-                  value={categorySearchTerm}
-                  onChange={(e) => setCategorySearchTerm(e.target.value)}
-                  placeholder="ค้นหาหมวดหมู่..."
-                  className="border border-gray-300 w-full px-2 py-1 mb-2"
-                />
-                {filteredCategories.map((category) => (
-                  <label key={category.id} className="block px-4 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category.name)}
-                      onChange={() => handleCategoryChange(category.name)}
-                      className="mr-2"
-                    />
-                    {category.name}
-                  </label>
-                ))}
-                <button onClick={selectAllCategories} className="block w-full text-left px-4 py-1 text-blue-500">
-                  เลือกทั้งหมด
-                </button>
-                {selectedCategories.length > 0 && (
-                  <button onClick={clearCategories} className="block w-full text-left px-4 py-1 text-red-500">
-                    ไม่เลือก
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative flex-shrink-0 items-center space-x-2" ref={suppliersRef}>
-            <button onClick={toggleSuppliers} className={`px-4 py-1 text-black rounded border ${selectedSuppliers.length > 0 ? 'bg-blue-600 text-white' : 'bg-white'} ${showSuppliers ? 'border-2 border-blue-500' : ''}`}>
-              {selectedSuppliers.length > 0 ? `เลือก ${selectedSuppliers.length} ผู้จำหน่าย` : "ทุกผู้จำหน่าย"} <ChevronDownIcon className="h-5 w-5 inline" />
-            </button>
-            {showSuppliers && (
-              <div className="absolute z-30 bg-white border shadow-lg w-60 max-h-96	overflow-y-auto">
-                <input
-                  type="text"
-                  value={supplierSearchTerm}
-                  onChange={(e) => setSupplierSearchTerm(e.target.value)}
-                  placeholder="ค้นหาผู้จำหน่าย..."
-                  className="border border-gray-300 rounded-md w-full px-2 py-1 mb-2"
-                />
-                {filteredSuppliers.map((supplier) => (
-                  <label key={supplier.id} className="block px-4 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedSuppliers.includes(supplier.name)}
-                      onChange={() => handleSupplierChange(supplier.name)}
-                      className="mr-2"
-                    />
-                    {supplier.name}
-                  </label>
-                ))}
-                <button onClick={selectAllSuppliers} className="block w-full text-left px-4 py-1 text-blue-500">
-                  เลือกทั้งหมด
-                </button>
-                {selectedSuppliers.length > 0 && (
-                  <button onClick={clearSuppliers} className="block w-full text-left px-4 py-1 text-red-500">
-                    ไม่เลือก
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <button onClick={toggleShowStoreStocks} className={`flex items-center ml-4 px-4 py-1 text-black rounded border ${showStoreStocks ? 'bg-yellow-200' : 'bg-gray-200'}`}>
-            <StoreIcon className="h-5 w-5 mr-1 inline" />  ดูสาขา
+        <div className="flex items-center space-x-5">
+          <MultiSelect
+            title="หมวดหมู่"
+            items={categories}
+            selectedItems={selectedCategories}
+            toggleItem={handleCategoryChange}
+            onClear={clearCategories}
+            onSelectAll={selectAllCategories}
+          />
+
+          <MultiSelect
+            title="ผู้จำหน่าย"
+            items={suppliers}
+            selectedItems={selectedSuppliers}
+            toggleItem={handleSupplierChange}
+            onClear={clearSuppliers}
+            onSelectAll={selectAllSuppliers}
+          />
+
+          <button onClick={toggleShowStoreStocks} className={`flex items-center ml-4 px-2 py-1 text-black rounded border ${showStoreStocks ? 'bg-yellow-300' : 'bg-gray-200'}`}>
+            <StoreIcon className="h-5 w-5 mr-1 inline" /> <span className="hidden sm:inline">ดูสาขา</span>
             {showStoreStocks && (
               <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={toggleShowStoreStocks} />
             )}
           </button>
+          <button onClick={handleFriendOrderToggle} className={`flex items-center ml-4 px-2 py-1 text-black rounded border ${showFriendOrder ? 'bg-pink-300' : 'bg-gray-200'}`}>
+            <OrderIcon className="h-5 w-5 mr-1 inline" /> <span className="hidden sm:inline">ดูเพื่อสั่ง</span>
+            {showFriendOrder && (
+              <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={handleFriendOrderCancel} />
+            )}
+          </button>
+          <button
+            onClick={handleSyncClick}
+            className={`px-2 py-1 rounded-md  transition duration-200 ${isLoading ? 'bg-purple-500 text-white' : 'bg-gray-200'}`}
+          >
+            <SyncIcon className={`h-5 w-5 mr-1 inline ${isLoading ? 'animate-spin' : ''}`} /> <span className="hidden sm:inline">ซิงค์</span>
+          </button>
           <div className="relative flex-shrink-0 items-center space-x-2" ref={groupByRef}>
-            <button onClick={toggleGroupBy} className={`flex items-center bg-gray-200 px-4 py-1 rounded border hover:bg-gray-300 transition ${groupBy ? 'bg-green-500 text-white' : ''} ${showGroupBy ? 'border-2 border-blue-500' : ''}`}>
-              <GroupIcon className="h-5 w-5 mr-1 inline" /> {groupBy ? `จัดกลุ่ม ${groupBy === 'category_name' ? 'หมวดหมู่' : 'ผู้จำหน่าย'}` : 'จัดกลุ่ม'}
+            <button onClick={toggleGroupBy} className={`flex items-center bg-gray-200 px-4 py-1 rounded border hover:bg-gray-300 transition ${groupBy ? 'bg-green-600 text-white' : ''} ${showGroupBy ? 'border-2 border-blue-500' : ''}`}>
+              <GroupIcon className="h-5 w-5 mr-1 inline" /> <span className="hidden sm:inline">{groupBy ? `จัดกลุ่ม ${groupBy === 'category_name' ? 'หมวดหมู่' : 'ผู้จำหน่าย'}` : 'จัดกลุ่ม'}</span>
               {groupBy && (
                 <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => setGroupBy('')} />
               )}
@@ -228,7 +155,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
           </div>
         </div>
         {/* Right Section */}
-        <div className="relative flex-shrink-0 items-center space-x-2">
+        <div className="relative flex-shrink-0 items-center space-x-1">
           {/* Search Input */}
           <div className="relative" ref={searchInputRef}>
             {showSearchInput ? (
@@ -287,4 +214,4 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
   );
 };
 
-export default InventoryActionBar;
+export default memo(InventoryActionBar);

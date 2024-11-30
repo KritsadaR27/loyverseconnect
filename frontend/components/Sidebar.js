@@ -1,10 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import logo from "../app/assets/logo192.png"; // Import the logo
 import Image from "next/image"; // Import Image component from Next.js
 import useSidebarStore from "./sidebarStore"; // Adjust the path as needed
-
 
 import {
   CubeIcon,
