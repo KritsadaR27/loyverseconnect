@@ -23,6 +23,7 @@ const DraggableTable = ({
             <table className="min-w-full border-separate border-spacing-0">
                 <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
                     <tr className="bg-gray-200">
+                        <th className={`${thClass} w-5 border-r-0`}></th>
                         {headers.map((header, index) => (
                             <th key={index} className={`${thClass}`}>
                                 {header}

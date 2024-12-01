@@ -83,7 +83,7 @@ const DateFilter = ({ label, defaultOption = "", defaultDays = [], onSelectChang
             )}
             <button
                 onClick={toggleDropdown}
-                className={`flex  w-full  px-4 py-1 text-black rounded border ${selectedOption ? 'bg-blue-100' : 'bg-white'
+                className={`flex  w-full  px-4 py-1 text-black rounded border ${selectedOption ? 'bg-gray-100' : 'bg-white'
                     } ${showDropdown ? 'border-2  border-blue-600 box-border ' : 'border-white'} ${className}`}
             >
                 <span className="hidden sm:inline flex-1 text-left">

@@ -20,7 +20,7 @@ const SupplierSettingsTable = ({
             label: 'supplier_name',
             value: supplier.supplier_name,
             readOnly: true,
-            inputClassName: 'flex-1 border-white',
+            inputClassName: 'flex-1 border-white group-hover:bg-blue-100 group-hover:border-blue-100',
             tdClassName: 'flex',
         },
         {
@@ -29,7 +29,7 @@ const SupplierSettingsTable = ({
             value: supplier.order_cycle,
             selectedDays: supplier.selected_days,
             defaultDays: supplier.selected_days, // ส่งค่า selected_days ไป
-            inputClassName: 'flex-1',
+            inputClassName: 'flex-1 group-hover:bg-blue-100 group-hover:border-blue-100',
 
             onSelectChange: (value) => handleInputChange(supplier.supplier_id, 'order_cycle', value),
             onDaysChange: (days) => handleInputChange(supplier.supplier_id, 'selected_days', days),
@@ -39,7 +39,7 @@ const SupplierSettingsTable = ({
             label: 'sort_order',
             value: supplier.sort_order,
             onChange: (e) => handleInputChange(supplier.supplier_id, 'sort_order', e.target.value),
-            inputClassName: 'flex-1  border-white',
+            inputClassName: 'flex-1  border-white group-hover:bg-blue-100 group-hover:border-blue-100',
             tdClassName: 'flex',
         },
     ];

@@ -1,7 +1,7 @@
 // components/DraggableItem.js
 import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { Bars3Icon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, ChevronUpIcon,ArrowsUpDownIcon } from '@heroicons/react/24/solid';
 import InputField from './InputField';  // นำเข้า InputField
 
 const ItemTypes = {
@@ -51,12 +51,20 @@ const DraggableItem = ({
         <>
             <tr
                 ref={ref}
-                className={`border-b ${isDragging ? 'dragging animate-pulse' : ''} ${dropClass}`}
+                className={`group border-b  ${isDragging ? 'dragging animate-pulse' : ''} ${dropClass}`}
                 style={{ cursor: 'grab' }}
-            >
+            >    
+                 <td className={`${tdClass} border-r-0 w-5 relative group-hover:bg-blue-100`}>
+                    {/* ไอคอนซ่อนอยู่ในสถานะปกติ และแสดงเมื่อ hover */}
+                    <ArrowsUpDownIcon
+                        className="h-5 w-5 items-center text-gray-400 hidden group-hover:block group-hover:text-blue-500  hover:cursor-move absolute left-0 top-1/2 transform -translate-y-1/2 transition duration-200"
+                    />
+
+                </td>
                 {columns.map((column, idx) => (
-                    <td key={idx} className={`${tdClass} ${column.tdClassName || ''}`}>
-                        {/* {idx === 0 && <Bars3Icon className="h-5 w-5 text-gray-400 mr-3 float-left" />} */}
+                   
+                    <td key={idx} className={`${tdClass} ${column.tdClassName || ''} `}>
+                        {/* {idx === 0 && <ArrowsUpDownIcon className="h-5 w-5 items-center text-gray-400 mr-2 ml-1  hover:cursor-move " />} */}
 
                         {column.type === 'custom' ? (
                             column.render()
