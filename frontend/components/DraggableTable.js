@@ -1,4 +1,5 @@
 // components/DraggableTable.js
+import React from 'react';
 import DraggableItem from './DraggableItem';
 
 const DraggableTable = ({
@@ -13,13 +14,15 @@ const DraggableTable = ({
     formatDateToThai,
     className // รับ className สำหรับตาราง
 }) => {
+    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
+
     return (
-        <div className={`overflow-x-auto bg-white ${className}`}>
+        <div>
             <table className="min-w-full border-separate border-spacing-0">
-                <thead>
+                <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
                     <tr className="bg-gray-200">
                         {headers.map((header, index) => (
-                            <th key={index} className="py-2 text-left text-gray-600 font-medium border-r border-gray-300">
+                            <th key={index} className={`${thClass}`}>
                                 {header}
                             </th>
                         ))}
@@ -30,13 +33,13 @@ const DraggableTable = ({
                         const columns = mapItemToColumns(item);
                         return (
                             <DraggableItem
-                                key={item.id}
+                                key={`${item.id}-${index}`} // ใช้ item.id และ index ร่วมกันเพื่อสร้าง key ที่เป็นเอกลักษณ์
                                 item={item}
                                 index={index}
                                 columns={columns}
                                 moveItem={onMoveItem}
                                 isExpanded={expandedItems[item.id] || false}
-                                toggleExpand={toggleExpand}
+                                toggleExpand={() => toggleExpand(item.id)}
                                 expandedContent={expandedContent}
                                 onCellChange={onCellChange}
                                 formatDateToThai={formatDateToThai}

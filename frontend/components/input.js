@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 
-const InputField = ({ initialValue }) => {
+const Input = ({ initialValue }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [value, setValue] = useState(initialValue);
     const [hasFocus, setHasFocus] = useState(false); // ควบคุมการแสดงกรอบเมื่อคลิก
@@ -72,4 +72,4 @@ const InputField = ({ initialValue }) => {
     );
 };
 
-export default InputField;
+export default Input;

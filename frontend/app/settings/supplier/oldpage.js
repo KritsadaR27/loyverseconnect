@@ -3,25 +3,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchSuppliers, saveSupplierSettings } from '../../utils/api/supplier';
 import { fetchItemsStockData, saveItemFields } from '../../utils/api/inventory';
-import SidebarLayout from '../../../components/layouts/SidebarLayout';
-import SupplierSettingsActionBar from './components/SupplierSettingsActionBar';
-import SupplierSettingsTable from './components/SupplierSettingsTable';
+import Navigation from '../../../components/Navigation';
+import DateFilter from '../../../components/DateFilter';
+import DraggableTable from '../../../components/DraggableTable'; // เพิ่มการ import คอมโพเนนต์
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend'; // Import backend
+import { XMarkIcon } from '@heroicons/react/24/outline'; // Import icon จาก Heroicons v2
 
 const SupplierSettings = () => {
     const [groupedItems, setGroupedItems] = useState({}); // Store items grouped by supplier
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [expandedItems, setExpandedItems] = useState({}); // Track multiple expanded items
+    const [expandedSupplier, setExpandedSupplier] = useState(null); // Track which supplier's items are expanded
+    const [loadingItems, setLoadingItems] = useState(true);
     const inputRefs = useRef({});
     const [highlightedSupplierId, setHighlightedSupplierId] = useState(null);
 
+    const filteredSuppliers = suppliers.filter(supplier => groupedItems[supplier.supplier_id] && groupedItems[supplier.supplier_id].length > 0);
+    console.log("filteredSuppliers", filteredSuppliers);
+    console.log("suppliers", suppliers);
+    const [expandedItems, setExpandedItems] = useState({}); // Track multiple expanded items
     const toggleExpand = (supplierId) => {
         setExpandedItems((prevExpandedItems) => ({
             ...prevExpandedItems,
             [supplierId]: !prevExpandedItems[supplierId], // Toggle expand for the supplier
         }));
     };
-
     const loadSuppliers = async () => {
         const data = await fetchSuppliers();
         console.log("Suppliers fetched:", data);
@@ -36,9 +43,12 @@ const SupplierSettings = () => {
             order_cycle: supplier.order_cycle || "",    // Set default empty if missing
             selected_days: supplier.selected_days || [], // Set default empty array if missing
         })));
+        setLoading(false);
     };
 
     const loadItems = async () => {
+        setLoadingItems(true);
+
         const itemsData = await fetchItemsStockData();
         console.log("Items fetched:", itemsData);
 
@@ -75,15 +85,12 @@ const SupplierSettings = () => {
 
         setGroupedItems(formattedGroupedItems);
         console.log("Grouped Items by Supplier with Stores:", formattedGroupedItems);
+        setLoadingItems(false);
     };
 
     useEffect(() => {
-        const loadData = async () => {
-            await loadSuppliers();
-            await loadItems();
-            setLoading(false);
-        };
-        loadData();
+        loadSuppliers();
+        loadItems();
     }, []);
 
     const handleSave = async () => {
@@ -140,35 +147,85 @@ const SupplierSettings = () => {
         setSuppliers(updatedSuppliers); // อัปเดต state ด้วย array ใหม่
     };
 
+    const mapSupplierToColumns = (supplier) => [
+        supplier.supplier_name || "ไม่ระบุ",
+        <DateFilter
+            label="เลือกรอบการสั่ง"
+            defaultOption={supplier.order_cycle}
+            defaultDays={supplier.selected_days}
+            onSelectChange={(value) => handleInputChange(supplier.supplier_id, 'order_cycle', value)}
+            onDaysChange={(days) => handleInputChange(supplier.supplier_id, 'selected_days', days)}
+        />,
+        <input
+            ref={el => inputRefs.current[supplier.supplier_id] = el}
+            type="number"
+            value={supplier.sort_order || 0}
+            onChange={(e) => handleInputChange(supplier.supplier_id, 'sort_order', e.target.value)}
+            onFocus={() => handleFocus(supplier.supplier_id)}
+            onBlur={handleBlur}
+            className={`p-2 border ${highlightedSupplierId === supplier.supplier_id ? 'border-blue-500 bg-yellow-100' : 'border-gray-300'} rounded w-full`}
+            placeholder="Sort Order"
+        />,
+        <button
+            onClick={() => toggleExpand(supplier.supplier_id)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+        >
+            {expandedSupplier === supplier.supplier_id ? 'ซ่อนรายการสินค้า' : 'ดูรายการสินค้า'}
+        </button>
+    ];
+
     if (loading) {
         return <div>Loading...</div>;
     }
 
-    const filteredSuppliers = suppliers.filter(supplier => groupedItems[supplier.supplier_id] && groupedItems[supplier.supplier_id].length > 0);
-
     return (
-        <SidebarLayout
-            headerTitle="ตั้งค่าซัพพลายเออร์"
-            actionBar={
-                <SupplierSettingsActionBar handleSave={handleSave} />
-            }
-        >
-            {filteredSuppliers.length > 0 ? (
-                <SupplierSettingsTable
-                    suppliers={filteredSuppliers}
-                    groupedItems={groupedItems}
-                    expandedItems={expandedItems}
-                    toggleExpand={toggleExpand}
-                    handleInputChange={handleInputChange}
-                    handleFocus={handleFocus}
-                    handleBlur={handleBlur}
-                    inputRefs={inputRefs}
-                    highlightedSupplierId={highlightedSupplierId}
-                />
-            ) : (
-                <div>No suppliers available</div>
-            )}
-        </SidebarLayout>
+        <div>
+            <Navigation />
+            <div className="container min-w-full mx-auto p-4 bg-gray-100">
+                <h2 className="text-2xl font-bold mb-4">ตั้งค่าซัพพลายเออร์</h2>
+
+                {suppliers.length > 0 && ( // Render only when filteredSuppliers has data
+
+                    <DndProvider backend={HTML5Backend}>
+                        <DraggableTable
+                            headers={['ชื่อซัพพลายเออร์', 'รอบการสั่งซื้อ', 'ลำดับ', 'รายการสินค้า']}
+                            items={suppliers}
+                            mapItemToColumns={mapSupplierToColumns}
+                            onMoveItem={(from, to) => console.log(`Moved from ${from} to ${to}`)}
+
+                            expandedItems={expandedItems}  // Pass updated expandedItems
+
+                            toggleExpand={toggleExpand}
+                        // expandedContent={(supplier) => (
+                        //     <table className="bg-yellow-100 w-full">
+                        //         <thead>
+                        //             <tr>
+                        //                 <th className="py-2 px-4 text-left">ชื่อสินค้า</th>
+                        //                 <th className="py-2 px-4 text-left">ชื่อเรียกผู้ขาย</th>
+                        //             </tr>
+                        //         </thead>
+                        //         <tbody>
+                        //             {(groupedItems[supplier.supplier_id] || []).map(item => (
+                        //                 <tr key={`${supplier.supplier_id}-${item.item_id}`} className="py-1 border-b">
+                        //                     <td className="py-2 px-4">{item.item_name}</td>
+                        //                     <td className="py-2 px-4">{item.item_supplier_call}</td>
+                        //                 </tr>
+                        //             ))}
+                        //         </tbody>
+                        //     </table>
+                        // )}
+                        />
+                    </DndProvider>
+                )}
+
+                <button
+                    onClick={handleSave}
+                    className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
+                >
+                    บันทึกการตั้งค่า
+                </button>
+            </div>
+        </div>
     );
 };
 
