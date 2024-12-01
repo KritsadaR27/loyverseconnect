@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DateFilter from './DateFilter';
+import MultiSelect from './MultiSelect';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
 
 const InputField = ({
@@ -18,7 +19,8 @@ const InputField = ({
     onDaysChange,
     icon, // เพิ่ม prop สำหรับไอคอน
     onClick, // เพิ่ม prop สำหรับ onClick
-    className // เพิ่ม prop สำหรับ className
+    className, // เพิ่ม prop สำหรับ className
+    readOnly // เพิ่ม prop สำหรับ readOnly
 }) => {
     const valueFormatted = value instanceof Date ? formatDateToThai(value) : value;
 
@@ -50,94 +52,62 @@ const InputField = ({
     };
 
     switch (type) {
-        case 'datepicker':
+        case 'select':
             return (
-                <DatePicker
-                    selected={value}
+                <select value={value} onChange={onChange}  className={`border  p-1 ${className}`}>
+                    {options.map((option, index) => (
+                        <option key={index} value={option}>
+                            {option}
+                        </option>
+                    ))}
+                </select>
+            );
+        case 'number':
+            return (
+                <input
+                    type="number"
+                    value={value}
                     onChange={onChange}
-                    dateFormat="dd/MM/yyyy"
-                    className="border rounded p-2"
-                    placeholderText="เลือกวันที่"
+                    className={`border  p-1 ${className}`}
+
                 />
             );
         case 'datefilter':
             return (
                 <DateFilter
-                    dateCycle={dateCycle}
-                    selectedDays={selectedDays}
+                    defaultOption={value}
+                    defaultDays={selectedDays}
                     onSelectChange={onSelectChange}
                     onDaysChange={onDaysChange}
+                    className={className}
+
                 />
             );
-        case 'inputtext':
+        case 'multiselect':
             return (
-                isEditing ? (
-                    <input
-                        type="text"
-                        value={displayValue}
-                        onChange={handleInputTextChange}
-                        onBlur={handleInputTextBlur}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") handleInputTextBlur();
-                            else handleInputTextKeyDown();
-                        }}
-                        autoFocus
-                        className="border rounded p-1"
-                    />
-                ) : (
-                    <span
-                        onClick={handleInputTextClick}
-                        onKeyDown={handleInputTextKeyDown} // เริ่มการแก้ไขเมื่อพิมพ์ครั้งแรก
-                        tabIndex={0}
-                        style={{
-                            display: "inline-block",
-                            padding: "10px",
-                            border: "1px solid blue",
-                            cursor: "pointer",
-                        }}
-                    >
-                        {displayValue}
-                    </span>
-                )
+                <MultiSelect
+                    title={className}
+                    items={options.map(option => ({ name: option }))}
+                    selectedItems={selectedDays}
+                    toggleItem={onDaysChange}
+                    onClear={() => onDaysChange([])}
+                    onSelectAll={() => onDaysChange(options)}
+                    className={className}
+
+                />
             );
-        case 'single-select':
-            return (
-                <select value={value} onChange={onChange} className="border rounded p-1">
-                    {options.map((option, index) => (
-                        <option key={index} value={option}>
-                            {option}
-                        </option>
-                    ))}
-                </select>
-            );
-        case 'longtext':
-            return <textarea value={valueFormatted} onChange={onChange} className="border rounded p-1 w-full" />;
-        case 'multiple-select':
-            return (
-                <select multiple value={value} onChange={onChange} className="border rounded p-1">
-                    {options.map((option, index) => (
-                        <option key={index} value={option}>
-                            {option}
-                        </option>
-                    ))}
-                </select>
-            );
-        case 'checkbox':
-            return <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />;
-        case 'button':
-            return (
-                <button onClick={onClick} className={className}>
-                    {icon && <span className="mr-2">{icon}</span>}
-                    {value}
-                </button>
-            );
-        case 'create-time':
-        case 'last-update-time':
-        case 'create-by':
-        case 'last-update-by':
-            return <span>{valueFormatted}</span>;
+        case 'text':
         default:
-            return <input type="text" value={valueFormatted} onChange={onChange} className="border rounded p-1" />;
+            return (
+                <input
+                    type="text"
+                    value={value}
+                    onChange={onChange}
+                    readOnly={readOnly}
+                    className={`border  p-1 ${className}`}
+
+                />
+            );
     }
 };
 

@@ -1,5 +1,7 @@
 // components/DraggableTable.js
 import React from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import DraggableItem from './DraggableItem';
 
 const DraggableTable = ({
@@ -7,7 +9,7 @@ const DraggableTable = ({
     items,
     mapItemToColumns,
     onMoveItem,
-    expandedItems,
+    expandedItems = {}, // ตั้งค่าเริ่มต้นให้กับ expandedItems
     toggleExpand,
     expandedContent,
     onCellChange,
@@ -17,7 +19,7 @@ const DraggableTable = ({
     const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
 
     return (
-        <div>
+        <DndProvider backend={HTML5Backend}>
             <table className="min-w-full border-separate border-spacing-0">
                 <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
                     <tr className="bg-gray-200">
@@ -33,13 +35,13 @@ const DraggableTable = ({
                         const columns = mapItemToColumns(item);
                         return (
                             <DraggableItem
-                                key={`${item.id}-${index}`} // ใช้ item.id และ index ร่วมกันเพื่อสร้าง key ที่เป็นเอกลักษณ์
+                                key={item.supplier_id || item.item_id}
                                 item={item}
                                 index={index}
                                 columns={columns}
                                 moveItem={onMoveItem}
-                                isExpanded={expandedItems[item.id] || false}
-                                toggleExpand={() => toggleExpand(item.id)}
+                                isExpanded={expandedItems[item.supplier_id || item.item_id] || false}
+                                toggleExpand={() => toggleExpand(item.supplier_id || item.item_id)}
                                 expandedContent={expandedContent}
                                 onCellChange={onCellChange}
                                 formatDateToThai={formatDateToThai}
@@ -48,7 +50,7 @@ const DraggableTable = ({
                     })}
                 </tbody>
             </table>
-        </div>
+        </DndProvider>
     );
 };
 

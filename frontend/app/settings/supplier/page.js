@@ -74,100 +74,60 @@ const SupplierSettings = () => {
         );
 
         setGroupedItems(formattedGroupedItems);
-        console.log("Grouped Items by Supplier with Stores:", formattedGroupedItems);
-    };
-
-    useEffect(() => {
-        const loadData = async () => {
-            await loadSuppliers();
-            await loadItems();
-            setLoading(false);
-        };
-        loadData();
-    }, []);
-
-    const handleSave = async () => {
-        const suppliersToSend = suppliers.map(supplier => ({
-            supplier_id: supplier.supplier_id || "default_supplier_id",
-            order_cycle: supplier.order_cycle || "",
-            sort_order: Number(supplier.sort_order) || 0, // Forcefully convert to number, fallback to 0 if NaN
-            selected_days: supplier.selected_days || []
-        }));
-
-        const itemsToSend = Object.keys(groupedItems).flatMap(supplierId => {
-            return groupedItems[supplierId].map(item => ({
-                item_id: item.item_id,
-                item_supplier_call: item.item_supplier_call || "" // If none, will be empty string
-            }));
-        });
-
-        console.log("Items to send:", itemsToSend);
-
-        try {
-            const supplierResult = await saveSupplierSettings(suppliersToSend);
-            const itemResult = await saveItemFields(itemsToSend);
-
-            console.log("itemResult", itemResult);
-
-            if (supplierResult.success && itemResult.message === "Item supplier settings saved successfully") {
-                alert('บันทึกข้อมูลซัพพลายเออร์และรายการสินค้าซัพพลายเออร์เรียบร้อยแล้ว!');
-            } else {
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล!');
-            }
-        } catch (error) {
-            console.error("Error saving item fields:", error);
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล!');
-        }
-    };
-
-    // ฟังก์ชันที่ใช้ในการทำให้ช่อง input โดดเด่น (highlighted)
-    const handleFocus = (supplierId) => {
-        setHighlightedSupplierId(supplierId);
-        if (inputRefs.current[supplierId]) {
-            inputRefs.current[supplierId].select();
-        }
-    };
-
-    const handleBlur = () => {
-        setHighlightedSupplierId(null); // เมื่อไม่อยู่ในช่องให้หยุดการไฮไลต์
     };
 
     const handleInputChange = (supplierId, field, value) => {
-        // ใช้ map เพื่อสร้าง array ใหม่ โดยอัปเดตเฉพาะ supplier ที่ตรงกับ supplierId
-        const updatedSuppliers = suppliers.map(supplier =>
-            supplier.supplier_id === supplierId ? { ...supplier, [field]: value } : supplier
+        setSuppliers((prevSuppliers) =>
+            prevSuppliers.map((supplier) =>
+                supplier.supplier_id === supplierId
+                    ? { ...supplier, [field]: value }
+                    : supplier
+            )
         );
-        setSuppliers(updatedSuppliers); // อัปเดต state ด้วย array ใหม่
     };
 
-    if (loading) {
-        return <div>Loading...</div>;
-    }
+    const handleItemInputChange = (itemId, field, value) => {
+        setGroupedItems((prevGroupedItems) => {
+            const updatedGroupedItems = { ...prevGroupedItems };
+            Object.keys(updatedGroupedItems).forEach((supplierId) => {
+                const items = updatedGroupedItems[supplierId];
+                const itemIndex = items.findIndex((item) => item.item_id === itemId);
+                if (itemIndex !== -1) {
+                    items[itemIndex] = { ...items[itemIndex], [field]: value };
+                }
+            });
+            return updatedGroupedItems;
+        });
+    };
 
-    const filteredSuppliers = suppliers.filter(supplier => groupedItems[supplier.supplier_id] && groupedItems[supplier.supplier_id].length > 0);
+    const moveSupplier = (fromIndex, toIndex) => {
+        setSuppliers((prevSuppliers) => {
+            const updatedSuppliers = [...prevSuppliers];
+            const [movedSupplier] = updatedSuppliers.splice(fromIndex, 1);
+            updatedSuppliers.splice(toIndex, 0, movedSupplier);
+            return updatedSuppliers;
+        });
+    };
+
+    useEffect(() => {
+        loadSuppliers();
+        loadItems();
+    }, []);
 
     return (
-        <SidebarLayout
-            headerTitle="ตั้งค่าซัพพลายเออร์"
-            actionBar={
-                <SupplierSettingsActionBar handleSave={handleSave} />
-            }
-        >
-            {filteredSuppliers.length > 0 ? (
-                <SupplierSettingsTable
-                    suppliers={filteredSuppliers}
-                    groupedItems={groupedItems}
-                    expandedItems={expandedItems}
-                    toggleExpand={toggleExpand}
-                    handleInputChange={handleInputChange}
-                    handleFocus={handleFocus}
-                    handleBlur={handleBlur}
-                    inputRefs={inputRefs}
-                    highlightedSupplierId={highlightedSupplierId}
-                />
-            ) : (
-                <div>No suppliers available</div>
-            )}
+        <SidebarLayout headerTitle="Supplier Settings">
+            <SupplierSettingsActionBar />
+            <SupplierSettingsTable
+                suppliers={suppliers}
+                groupedItems={groupedItems}
+                expandedItems={expandedItems}
+                toggleExpand={toggleExpand}
+                handleInputChange={handleInputChange}
+                handleItemInputChange={handleItemInputChange}
+                moveSupplier={moveSupplier}
+                inputRefs={inputRefs}
+                highlightedSupplierId={highlightedSupplierId}
+            />
         </SidebarLayout>
     );
 };

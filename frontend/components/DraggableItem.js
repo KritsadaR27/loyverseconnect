@@ -11,7 +11,7 @@ const ItemTypes = {
 const DraggableItem = ({
     item,
     index,
-    columns,
+    columns = [], // ตั้งค่าเริ่มต้นให้กับ columns
     moveItem,
     isExpanded,
     toggleExpand,
@@ -55,39 +55,24 @@ const DraggableItem = ({
                 style={{ cursor: 'grab' }}
             >
                 {columns.map((column, idx) => (
-                    <td key={idx} className={`${tdClass} ${column.className || ''}`}>
-                        {idx === 0 && <Bars3Icon className="h-5 w-5 text-gray-400 mr-3 float-left" />}
+                    <td key={idx} className={`${tdClass} ${column.tdClassName || ''}`}>
+                        {/* {idx === 0 && <Bars3Icon className="h-5 w-5 text-gray-400 mr-3 float-left" />} */}
 
-                        {/* ใช้ InputField สำหรับการแสดงผลข้อมูล */}
-                        <InputField
-                            type={column.type}  // type จาก columns
-                            value={column.value}
-                            onChange={(e) => onCellChange(item.id, column.label, e.target.value)}
-                            options={column.options}  // ถ้ามี options เช่น สำหรับ select
-                            formatDateToThai={formatDateToThai}
-                            dateCycle={column.dateCycle}
-                            selectedDays={column.selectedDays}
-                            onSelectChange={column.onSelectChange}
-                            onDaysChange={column.onDaysChange}
-                            icon={column.icon} // เพิ่ม prop สำหรับไอคอน
-                            onClick={column.onClick} // เพิ่ม prop สำหรับ onClick
-                            className={column.className} // เพิ่ม prop สำหรับ className
-                        />
-                        {idx === 0 && (
-                            <button onClick={toggleExpand} className="ml-2">
-                                {isExpanded ? <ChevronUpIcon className="h-5 w-5 text-gray-400" /> : <ChevronDownIcon className="h-5 w-5 text-gray-400" />}
-                            </button>
+                        {column.type === 'custom' ? (
+                            column.render()
+                        ) : (
+                            <InputField
+                                type={column.type}  // type จาก columns
+                                value={column.value}
+                                onChange={column.onChange} // ตรวจสอบว่ามีการเรียกใช้ onCellChange
+                                options={column.options}  // ถ้ามี options เช่น สำหรับ select
+                                readOnly={column.readOnly}
+                                className={column.inputClassName} // ส่ง inputClassName ไปยัง InputField
+                            />
                         )}
                     </td>
                 ))}
             </tr>
-            {isExpanded && (
-                <tr>
-                    <td colSpan={columns.length} className="bg-gray-50 p-3">
-                        {expandedContent(item)}
-                    </td>
-                </tr>
-            )}
         </>
     );
 };
