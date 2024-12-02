@@ -27,12 +27,12 @@ const InventoryTableItemRow = React.memo(({ item, showStoreStocks, sortedStoreNa
             <td className={`${tdClass} w-[360px] text-left py-2`}>{item.item_name}</td>
             <td className={`${tdClass} w-24  text-right py-2`}>{formattedInStock}</td>
             {showStoreStocks && sortedStoreNames.map((storeName) => (
-                <td key={storeName} className={`${tdClass} w-24  text-right py-2`}>
+                <td key={storeName} className={`${tdClass} w-24 bg-yellow-200 text-right py-2`}>
                     {storeSums[storeName]}
                 </td>
             ))}
             {showFriendOrder && (
-                <td className={`${tdClass} w-24  text-right py-2`}>
+                <td className={`${tdClass} w-24  text-right py-2 bg-pink-100`}>
                     {friendOrderSum}
                 </td>
             )}

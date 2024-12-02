@@ -3,6 +3,7 @@ import React from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import DraggableItem from './DraggableItem';
+import { thClass, tdClass } from '../styles/styles'; // นำเข้า styles จาก styles.js
 
 const DraggableTable = ({
     headers,
@@ -16,13 +17,12 @@ const DraggableTable = ({
     formatDateToThai,
     className // รับ className สำหรับตาราง
 }) => {
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
 
     return (
         <DndProvider backend={HTML5Backend}>
-            <table className="min-w-full border-separate border-spacing-0">
+            <table className="min-w-full border-separate border-spacing-0 ">
                 <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
-                    <tr className="bg-gray-200">
+                    <tr className="bg-gray-200 ">
                         <th className={`${thClass} w-5 border-r-0`}></th>
                         {headers.map((header, index) => (
                             <th key={index} className={`${thClass}`}>

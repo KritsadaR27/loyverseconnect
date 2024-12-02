@@ -39,7 +39,7 @@ const SupplierSettingsTable = ({
             label: 'sort_order',
             value: supplier.sort_order,
             onChange: (e) => handleInputChange(supplier.supplier_id, 'sort_order', e.target.value),
-            inputClassName: 'flex-1  border-white group-hover:bg-blue-100 group-hover:border-blue-100',
+            inputClassName: 'flex-1 border-white  group-hover:bg-blue-100 group-hover:border-blue-100',
             tdClassName: 'flex',
         },
     ];
@@ -62,7 +62,7 @@ const SupplierSettingsTable = ({
     return (
         <div>
             <DraggableTable
-                headers={['Supplier Name', 'Order Cycle and Days', 'Sort Order']}
+                headers={['ผู้จำหน่าย', 'รอบการสั่ง', 'เรียงลำดับ']}
                 items={suppliers}
                 mapItemToColumns={mapSupplierToColumns}
                 onMoveItem={moveSupplier}

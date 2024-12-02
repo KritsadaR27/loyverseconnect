@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { formatDateToThai } from '../../../utils/dateUtils';
 import { formatNumber, formatCurrency } from '../../../utils/NumberFormat';
 import { normalizeStoreName } from '../../../utils/StoreName';
+import { thClass, tdClass } from '../../../../styles/styles'; // นำเข้า styles จาก styles.js
 
 const calculateSum = (items, key) => {
     const sum = items.reduce((acc, item) => acc + (item[key] || 0), 0);
@@ -28,8 +29,6 @@ const ReceiptsTable = ({ items, selectedStores, selectedEmployees }) => {
         console.log("Items in ReceiptsTable:", items); // ตรวจสอบข้อมูลที่ถูกส่งไปยังคอมโพเนนต์
     }, [items]);
 
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
-    const tdClass = "p-2 border-r border-b border-gray-300 text-gray-700";
 
     const toggleExpandRow = (index) => {
         setIsExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -43,7 +42,7 @@ const ReceiptsTable = ({ items, selectedStores, selectedEmployees }) => {
 
     return (
         <div>
-            <table ref={tableRef} className="min-w-full bg-white border border-gray-300">
+            <table ref={tableRef} className="min-w-full bg-white">
                 <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
                     <tr>
                         <th className={`${thClass} w-48`}>วันที่</th>

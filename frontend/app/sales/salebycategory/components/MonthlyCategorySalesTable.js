@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { formatNumber, formatCurrency } from '../../../utils/NumberFormat';
+import { thClass, tdClass } from '../../../../styles/styles'; // นำเข้า styles จาก styles.js
 
 const MonthlyCategorySalesTable = ({ salesData, categories, displayMode }) => {
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
-    const tdClass = "p-2 border-r border-b border-gray-300 text-gray-700";
 
     const sortedCategories = [
         "หมูปิ้งนมสด",
@@ -51,10 +50,11 @@ const MonthlyCategorySalesTable = ({ salesData, categories, displayMode }) => {
     return (
         <table className="min-w-full bg-white border">
             <thead className="bg-gray-100 shadow-lg sticky top-0 z-10">
+
                 <tr className="border">
                     <th className={`${thClass} w-48`}>เดือน</th>
                     {sortedCategories.map((category) => (
-                        <th key={category}>{category}</th>
+                        <th  className={`${thClass} w-48`} key={category}>{category}</th>
                     ))}
                 </tr>
             </thead>

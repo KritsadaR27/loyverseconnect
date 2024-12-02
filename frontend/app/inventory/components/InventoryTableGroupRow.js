@@ -2,10 +2,7 @@
 
 import React, { useMemo } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-// frontend/app/inventory/components/InventoryTableGroupRow.js
-import { formatNumber, formatCurrency } from '../../utils/NumberFormat';
-import { normalizeStoreName, calculateStoreSum } from '../../utils/StoreName';
-
+import { formatNumber, formatCurrency, normalizeStoreName, calculateStoreSum } from '../utils/utils';
 
 const InventoryTableGroupRow = React.memo(({ group, groupItems, isExpanded, toggleExpandGroup, showStoreStocks, sortedStoreNames, storeStocks, showFriendOrder, tdClass }) => {
     const totalInStock = useMemo(() => groupItems.reduce((acc, item) => acc + (item.in_stock || 0), 0), [groupItems]);
@@ -68,11 +65,11 @@ const InventoryTableGroupRow = React.memo(({ group, groupItems, isExpanded, togg
                     <td className={`${tdClass} w-24  text-right py-2 `}>{formatNumber(item.in_stock)}</td>
                     {showStoreStocks && sortedStoreNames.map((storeName) => (
                         <React.Fragment key={storeName}>
-                            <td className={`${tdClass} w-24  text-right py-2 `}>
+                            <td className={`${tdClass} w-24  text-right py-2 bg-yellow-100`}>
                                 {formatNumber(storeStocks[item.item_id]?.find(store => normalizeStoreName(store.store_name) === storeName)?.in_stock || 0)}
                             </td>
                             {showFriendOrder && storeName === "ปทุมธานี" && (
-                                <td className={`${tdClass} w-24  text-right py-2 `}>
+                                <td className={`${tdClass} w-24  text-right py-2 bg-pink-200`}>
                                     {formatNumber((storeStocks[item.item_id]?.find(store => normalizeStoreName(store.store_name) === "โกดังปทุม")?.in_stock || 0) + (storeStocks[item.item_id]?.find(store => normalizeStoreName(store.store_name) === "ปทุมธานี")?.in_stock || 0))}
                                 </td>
                             )}

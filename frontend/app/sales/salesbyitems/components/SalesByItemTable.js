@@ -4,10 +4,9 @@ import React from 'react';
 import { formatDateToThai } from '../../../utils/dateUtils';
 import { formatNumber, formatCurrency } from '../../../utils/NumberFormat';
 import { normalizeStoreName } from '../../../utils/StoreName';
+import { thClass, tdClass } from '../../../../styles/styles'; // นำเข้า styles จาก styles.js
 
 const SalesByItemTable = ({ sales }) => {
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
-    const tdClass = "p-2 border-r border-b border-gray-300 text-gray-700";
 
     return (
         <div>

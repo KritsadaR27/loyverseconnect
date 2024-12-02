@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { formatNumber } from '../../../utils/NumberFormat';
+import { thClass, tdClass } from '../../../../styles/styles'; // นำเข้า styles จาก styles.js
 
 const SalesByDayTable = ({ pivotData }) => {
-    const thClass = "p-2 font-semibold text-gray-700 text-left bg-gray-100 shadow-md border-r border-gray-300 resize-handle";
-    const tdClass = "p-2 border-r border-b border-gray-300 text-gray-700";
 
     const columnCount = pivotData.dates ? pivotData.dates.length + 1 : 1;
     const tableWidth = (columnCount - 1) * 150 + 350; // คำนวณความกว้างของ table

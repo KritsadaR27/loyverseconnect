@@ -44,8 +44,8 @@ const DraggableItem = ({
 
     drag(drop(ref));
 
-    const dropClass = isOver ? 'bg-blue-100 border-b-2 border-indigo-500 animate-pulse' : '';
-    const tdClass = "border-r border-b border-gray-300 text-gray-700 p-0"; // ลบ padding
+    const dropClass = isOver ? 'border-b-2 border-indigo-500 animate-pulse' : '';
+    const tdClass = "border-r border-b border-gray-300 text-gray-700 p-0 whitespace-nowrap"; 
 
     return (
         <>

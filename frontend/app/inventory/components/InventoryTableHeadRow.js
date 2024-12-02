@@ -22,12 +22,12 @@ const InventoryTableHeadRow = ({ thClass, showStoreStocks, sortedStoreNames, sho
             <th className={`${thClass} w-24`}>รวม</th>
             {showStoreStocks && sortedStoreNames.map((storeName) => (
                 <React.Fragment key={storeName}>
-                    <th className={`${thClass} w-24 bg-yellow-300`}>{storeName}</th>
+                    <th className={` w-24 bg-yellow-300 ${thClass}`} style={{ backgroundColor: 'rgb(253, 224, 71)' }}>{storeName}</th>
                     {showFriendOrder && storeName === "ปทุมธานี" && (
-                        <th className={`${thClass} w-24 bg-pink-500 text-white`}>โกดัง+ปทุม</th>
+                        <th className={` w-24 bg-pink-500  text-white ${thClass}`} style={{ backgroundColor: 'rgb(249, 168, 212)', color: 'rgb(100, 50, 70)' }}>โกดัง+ปทุม</th>
                     )}
                 </React.Fragment>
-            ))}
+            ))} 
             <th className={`${thClass} w-24`}>ราคาขาย</th>
             <th className={`${thClass} w-24`}>ต้นทุน</th>
             <th className={`${thClass} w-24`}>มูลค่าขาย</th>

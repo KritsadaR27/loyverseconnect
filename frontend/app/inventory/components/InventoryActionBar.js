@@ -184,12 +184,12 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
       </div>
       {/* Selected Categories and Suppliers */}
       {(selectedCategories.length > 0 || selectedSuppliers.length > 0) && (
-        <div className="flex items-center bg-blue-100 rounded py-2 px-3 border">
+        <div className="flex items-center rounded py-2 px-3 border">
           {selectedCategories.length > 0 && (
             <>
               <span className="bg-yellow-300 p-1 rounded-md">หมวดหมู่:</span>
               {selectedCategories.map((category) => (
-                <div key={category} className="flex items-center bg-blue-500 text-white font-bold mx-1 px-2 py-1 rounded-full text-sm ">
+                <div key={category} className="flex items-center bg-blue-200 text-blue-800 font-bold mx-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ">
                   {category} <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => handleCategoryChange(category)} />
                 </div>
               ))}
@@ -199,7 +199,7 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
             <>
               <span className="bg-yellow-300 p-1 rounded-md ml-3">ผู้จำหน่าย:</span>
               {selectedSuppliers.map((supplier) => (
-                <div key={supplier} className="flex items-center bg-blue-500 text-white font-bold mx-1 px-2 py-1 rounded-full text-sm">
+                <div key={supplier} className="flex items-center bg-blue-200 text-blue-800 font-bold mx-1 px-2 py-1 rounded-full text-xs whitespace-nowrap">
                   {supplier} <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => handleSupplierChange(supplier)} />
                 </div>
               ))}
