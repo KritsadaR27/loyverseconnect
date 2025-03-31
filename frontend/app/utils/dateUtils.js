@@ -1,5 +1,4 @@
-// src/utils/dateUtils.js
-// src/utils/dateUtils.js
+// app/utils/dateUtils.js
 export const formatDateToThai = (date, format = "วัน dd เดือน พ.ศ.", timeZone = 'Asia/Bangkok') => {
     if (typeof date === 'string') {
         date = new Date(date);

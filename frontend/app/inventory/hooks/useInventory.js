@@ -44,7 +44,7 @@ export const useInventory = (initialData, initialStoreStocks, initialMasterData,
         }, {})
         : { "": filteredItems };
 
-    console.log("Grouped Items:", groupedItems);
+    // console.log("Grouped Items:", groupedItems);
 
     return { items: groupedItems, storeStocks, masterData, filterText, filterInventory, groupBy, setGroupBy, selectedCategories, setSelectedCategories, selectedSuppliers, setSelectedSuppliers, error };
 };

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
-export default function MultiSelect({ title, items, selectedItems, toggleItem, onClear, onSelectAll }) {
+
+export default function MultiSelect({ title, items, selectedItems, toggleItem, onClear, onSelectAll ,className,context}) {
     const [showDropdown, setShowDropdown] = useState(false); // จัดการ Show/Hide Dropdown
     const [searchTerm, setSearchTerm] = useState(""); // สำหรับการค้นหา
     const dropdownRef = useRef(null);
@@ -28,16 +29,38 @@ export default function MultiSelect({ title, items, selectedItems, toggleItem, o
         item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const getContextClass = () => {
+        switch (context) {
+            case 'grid':
+                return "h-10";
+            case 'actionbar':
+                return "rounded border ";
+            case 'form':
+                return 'rounded border ';
+            default:
+                return '';
+        }
+    };
+
+
     return (
         <div className="relative" ref={dropdownRef}>
             {/* Button */}
             <button
                 onClick={toggleDropdown}
-                className={`flex items-center px-4 py-1 text-black rounded border ${selectedItems.length > 0 ? 'bg-blue-600 text-white' : 'bg-white'
-                    } ${showDropdown ? 'border-2 border-blue-500' : ''}`}
+                className={`flex items-center px-4 py-1 text-black   
+                    ${className} 
+                    ${getContextClass()} 
+                    ${context === 'grid' && selectedItems.length === 0 ? 'italic text-gray-300 text-xs border-0  w-full px-4 py-1' : ''}
+                    ${context === 'grid' && selectedItems.length > 0 ? 'rounded bg-green-200 mr-2 px-2 py-1 text-green-800 text-sm font-bold' : ''}
+                    ${context !== 'grid' && selectedItems.length === 0 ? ' items-center bg-gray-200 px-4 py-1 rounded border hover:bg-gray-300 transition' : ''}
+                    ${context !== 'grid' && selectedItems.length > 0 ? 'bg-blue-600 text-white' : ''}
+                    ${showDropdown ? 'border-2 border-blue-500' : ''}
+                    
+                `}
             >
                 <span className="hidden sm:inline">
-                    {selectedItems.length > 0 ? `เลือก ${selectedItems.length} ${title}` : `ทุก${title}`}
+                    {selectedItems.length > 0 ? `เลือก ${selectedItems.length} ${title}` : `ทุก ${title}`}
                 </span>
                 {showDropdown ? (
                     <ChevronUpIcon className="h-5 w-5 ml-1 inline" />

@@ -113,7 +113,7 @@ const DateFilter = ({ label, defaultOption = "", defaultDays = [], onSelectChang
             <button
                 onClick={toggleDropdown}
                 className={`flex w-full px-4 
-                     text-black    h-8  py-1 
+                     text-black    h-10  py-1 
                      ${showDropdown ? 'border-2 rounded border-blue-500 group-hover:border-blue-500' : ''} ${className}
                     `}
                      
@@ -122,9 +122,9 @@ const DateFilter = ({ label, defaultOption = "", defaultDays = [], onSelectChang
                     {getButtonLabel()}
                 </span>
                 {showDropdown ? (
-                    <ChevronUpIcon className="h-4 w-4 ml-1  inline text-blue-500" />
+                    <ChevronUpIcon className="h-5 w-5 ml-1  inline text-blue-500" />
                 ) : (
-                    <ChevronDownIcon className="h-4 w-4 ml-1 mt-1 inline " />
+                    <ChevronDownIcon className="h-5 w-5 ml-1 mt-1 inline " />
                 )}
             </button>
 

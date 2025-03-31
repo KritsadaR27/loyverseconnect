@@ -10,7 +10,10 @@ const SyncDataPage = () => {
 
     const handleExportToGoogleSheet = async () => {
         try {
-            const response = await fetch('http://localhost:8082/api/export-to-google-sheet', {
+            const apiHost = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8082' 
+            : 'http://192.168.1.43:8082';
+            const response = await fetch(`${apiHost}/api/export-to-google-sheet`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -19,14 +22,15 @@ const SyncDataPage = () => {
             console.log(response); // Debugging response
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                const errorText = await response.text(); // รับข้อความข้อผิดพลาดจากเซิร์ฟเวอร์
+                throw new Error(`Network response was not ok: ${errorText}`);
             }
             const message = await response.text(); // รับข้อความตอบกลับ
             console.log('Data exported to Google Sheet:', message);
             alert('ข้อมูลถูกส่งไปยัง Google Sheets เรียบร้อยแล้ว!');
         } catch (error) {
             console.error('Error exporting to Google Sheet:', error);
-            alert('เกิดข้อผิดพลาดในการส่งข้อมูลไปยัง Google Sheets');
+            alert(`เกิดข้อผิดพลาดในการส่งข้อมูลไปยัง Google Sheets: ${error.message}`);
         }
     };
 

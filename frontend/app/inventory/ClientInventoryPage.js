@@ -8,10 +8,10 @@ import InventoryTable from "./components/InventoryTable";
 import InventoryActionBar from "./components/InventoryActionBar";
 
 const ClientInventoryPage = ({ initialData, storeStocks, masterData, error }) => {
-    console.log("Initial data:", initialData); // Log ข้อมูลที่ได้รับจาก SSR
-    console.log("Store stocks:", storeStocks); // Log ข้อมูล store stocks
-    console.log("Master data:", masterData); // Log ข้อมูล master data
-    console.log("Error:", error); // Log ข้อผิดพลาด
+    // console.log("Initial data:", initialData); // Log ข้อมูลที่ได้รับจาก SSR
+    // console.log("Store stocks:", storeStocks); // Log ข้อมูล store stocks
+    // console.log("Master data:", masterData); // Log ข้อมูล master data
+    // console.log("Error:", error); // Log ข้อผิดพลาด
 
     const { items, filterText, filterInventory, groupBy, setGroupBy, selectedCategories, setSelectedCategories, selectedSuppliers, setSelectedSuppliers } = useInventory(initialData, storeStocks, masterData, error); // ใช้ Client-side hook
 

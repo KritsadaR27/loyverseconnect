@@ -35,41 +35,37 @@ func LoyverseWebhookHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) 
 	// ตรวจสอบประเภทของเหตุการณ์และจัดการตามประเภทนั้น ๆ
 	switch webhookPayload.Event {
 	case "receipts.update":
+		log.Println("Received receipts.update event")
 		if err := repository.SaveReceipts(db, webhookPayload.Receipts); err != nil {
 			log.Println("Error saving receipts:", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		log.Println("Webhook Receipts updated successfully 555.")
+		log.Println("Webhook Receipts updated successfully.")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Receipts updated successfully"))
 
 	case "inventory_levels.update":
+		log.Println("Received inventory_levels.update event")
 		if err := repository.SaveInventoryLevels(db, webhookPayload.InventoryData); err != nil {
 			log.Println("Error saving inventory levels:", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		log.Println("Webhook Inventory levels updated successfully 555.")
-		// ตรวจสอบว่าเวลาปัจจุบันอยู่ระหว่าง 6 โมงเย็นถึง 6 โมงเช้าหรือไม่
-		// currentTime := time.Now()
-		// if currentTime.Hour() >= 18 || currentTime.Hour() < 6 {
-		// 	// เรียก API ที่ต้องการส่งข้อมูลไป Google Sheets
-		// 	if err := exportToGoogleSheet(); err != nil {
-		// 		log.Println("Error exporting to Google Sheets:", err)
-		// 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		// 		return
-		// 	}
-		// 	// อัปเดตเวลาเมื่อส่งข้อมูลแล้ว
-
-		// 	log.Println("Exported inventory levels to Google Sheets successfully.")
-		// }
+		log.Println("Webhook Inventory levels updated successfully.")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Inventory levels updated successfully"))
 
 	case "items.update":
+		log.Println("Received items.update event")
 		if err := repository.SaveItems(db, webhookPayload.Items); err != nil {
 			log.Println("Error saving items:", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		log.Println("Items updated successfully.")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Items updated successfully"))
 
 	case "customers.update":
 		if err := repository.SaveCustomers(db, webhookPayload.Customers); err != nil {

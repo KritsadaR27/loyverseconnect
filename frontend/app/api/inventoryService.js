@@ -6,7 +6,7 @@ const INVENTORY_API_URL =
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
     try {
-        console.log(`Fetching data from: ${url}`); // Log URL ที่กำลัง fetch
+        // console.log(`Fetching data from: ${url}`); // Log URL ที่กำลัง fetch
         const response = await fetch(url, { cache: "no-store" });
 
         if (!response.ok) {
@@ -14,10 +14,10 @@ const fetchData = async (url, errorMessage) => {
         }
 
         const data = await response.json();
-        console.log(`Data fetched successfully from: ${url}`); // Log เมื่อ fetch สำเร็จ
+        // console.log(`Data fetched successfully from: ${url}`); // Log เมื่อ fetch สำเร็จ
         return data;
     } catch (error) {
-        console.error(`Error fetching data from: ${url}`, error.message); // Log ข้อผิดพลาด
+        // console.error(`Error fetching data from: ${url}`, error.message); // Log ข้อผิดพลาด
         throw new Error(error.message);
     }
 };
@@ -31,7 +31,7 @@ export const fetchMasterData = async () => {
             fetchData(`${INVENTORY_API_URL}/stores`, "Failed to fetch stores."),
             fetchData(`${INVENTORY_API_URL}/suppliers`, "Failed to fetch suppliers.")
         ]);
-        console.log("Master data fetched successfully."); // Log เมื่อ fetch สำเร็จ
+        // console.log("Master data fetched successfully."); // Log เมื่อ fetch สำเร็จ
 
         // เปลี่ยนชื่อฟิลด์ supplier_name เป็น name
         const suppliers = data[2].map(supplier => ({

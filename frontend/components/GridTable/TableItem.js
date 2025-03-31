@@ -1,14 +1,15 @@
-// components/DraggableItem.js
+// components/table/TableItem.js
 import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ArrowsUpDownIcon } from '@heroicons/react/24/solid';
-import GridInputField from './GridInputField';  // นำเข้า GridInputField
+import GridInputField from '../GridInputField';  // นำเข้า GridInputField
+import { gridHoverClass } from '../../styles/styles'; // นำเข้า styles จาก styles.js
 
 const ItemTypes = {
     ITEM: 'item',
 };
 
-const DraggableItem = ({
+const TableItem = ({
     item,
     index,
     columns = [], // ตั้งค่าเริ่มต้นให้กับ columns
@@ -19,7 +20,7 @@ const DraggableItem = ({
     onCellChange,
     formatDateToThai,
     isSelected,
-    onSelectItem
+    onSelectRow
 }) => {
     const ref = React.useRef(null);
 
@@ -53,25 +54,30 @@ const DraggableItem = ({
         <>
             <tr
                 ref={ref}
-                className={`group border-b  ${isDragging ? 'dragging animate-pulse' : ''} ${dropClass} ${isSelected ? 'bg-blue-100' : ''}`}
+                className={`
+                    group border-b 
+                    ${gridHoverClass}
+                    ${isDragging ? 'dragging animate-pulse' : ''} 
+                    ${dropClass} ${isSelected ? 'bg-blue-100' : ''}
+                    
+                    `}
                 style={{ cursor: 'grab' }}
-
             >    
-                <td className={`${tdClass} border-r-0 w-5 relative group-hover:bg-blue-100`}>
+                <td className={`${tdClass} ${gridHoverClass} border-r-0 w-5 relative`}>
                     <ArrowsUpDownIcon
                         className="h-5 w-5 items-center text-gray-400 hidden group-hover:block group-hover:text-blue-500 hover:cursor-move absolute left-0 top-1/2 transform -translate-y-1/2 transition duration-200"
                     />
                 </td>
-                <td className={`${tdClass} border-r-0 w-5 relative group-hover:bg-blue-100`}>
+                <td className={`${tdClass} ${gridHoverClass} border-r-0 w-5 relative`}>
                     <input
                         className="items-center absolute top-2 left-1/2 transform -translate-x-1/2"
                         type="checkbox"
                         checked={isSelected}
-                        onChange={(e) => onSelectItem(item.id, index, e.shiftKey)}
+                        onChange={(e) => onSelectRow(item.id, index, e.shiftKey)}
                     />
                 </td>
                 {columns.map((column, idx) => (
-                    <td key={idx} className={`${tdClass} ${column.tdClassName || ''} `}>
+                    <td key={idx} className={`${tdClass} ${gridHoverClass} ${column.tdClassName || ''}`}>
                         {column.type === 'custom' ? (
                             column.render()
                         ) : (
@@ -81,7 +87,8 @@ const DraggableItem = ({
                                 onChange={column.onChange} // ตรวจสอบว่ามีการเรียกใช้ onCellChange
                                 options={column.options}  // ถ้ามี options เช่น สำหรับ select
                                 readOnly={column.readOnly}
-                                className={`${column.inputClassName} ${isSelected ? 'bg-blue-100' : ''}`}// ส่ง inputClassName ไปยัง InputField
+                                className={`${column.inputClassName} ${isSelected ? 'bg-blue-100' : ''}`} // ส่ง inputClassName ไปยัง InputField
+                                
                             />
                         )}
                     </td>
@@ -91,4 +98,4 @@ const DraggableItem = ({
     );
 };
 
-export default DraggableItem;
+export default TableItem;
