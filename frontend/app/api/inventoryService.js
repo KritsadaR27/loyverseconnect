@@ -1,7 +1,7 @@
 const INVENTORY_API_URL =
     typeof window === "undefined"
         ? "http://host.docker.internal:8082/api"
-        : process.env.NEXT_PUBLIC_INVENTORY_API_URL;
+        : process.env.REACT_APP_INVENTORY_BASE_URL;
 
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
