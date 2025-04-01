@@ -12,7 +12,7 @@ const SyncDataPage = () => {
         try {
             const apiHost = window.location.hostname === 'localhost' 
             ? 'http://localhost:8082' 
-            : 'http://192.168.1.43:8082';
+            : 'http://inventory-management:8082';
             const response = await fetch(`${apiHost}/api/export-to-google-sheet`, {
                 method: 'POST',
                 headers: {
