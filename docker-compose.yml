@@ -39,12 +39,14 @@ services:
       dockerfile: backend/internal/InventoryManagement/Dockerfile  # ระบุ Dockerfile โดยตรง
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - GOOGLE_APPLICATION_CREDENTIALS="/backend/internal/InventoryManagement/credentials.json"
+      # - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json 
+      - GCP_PROJECT_ID=ynabim  # ใส่ชื่อ project ของคุณ
+
     ports:
       - "8082:8082"
     
-    volumes:
-      - ./backend/internal/InventoryManagement/credentials.json:/root/credentials.json
+    # volumes:
+      # - ./backend/internal/InventoryManagement/credentials.json:/root/credentials.json
 
     depends_on:
       # db:

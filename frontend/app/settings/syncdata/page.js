@@ -27,7 +27,7 @@ const SyncDataPage = () => {
             }
             const message = await response.text(); // รับข้อความตอบกลับ
             console.log('Data exported to Google Sheet:', message);
-            alert('ข้อมูลถูกส่งไปยัง Google Sheets เรียบร้อยแล้ว!');
+            alert('ข้อมูลถูกส่งไปยัง Google Sheets เรียบร้อยแล้ว!!');
         } catch (error) {
             console.error('Error exporting to Google Sheet:', error);
             alert(`เกิดข้อผิดพลาดในการส่งข้อมูลไปยัง Google Sheets: ${error.message}`);

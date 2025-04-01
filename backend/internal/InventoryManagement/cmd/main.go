@@ -2,16 +2,23 @@
 package main
 
 import (
-	"backend/internal/InventoryManagement/config"
-	"backend/internal/InventoryManagement/infrastructure/external"
-	"backend/internal/InventoryManagement/middleware"
-	"backend/internal/InventoryManagement/router"
+	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"backend/internal/InventoryManagement/config"
+	"backend/internal/InventoryManagement/middleware"
+	"backend/internal/InventoryManagement/router"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"github.com/gorilla/websocket"
+	"google.golang.org/api/option"
+	"google.golang.org/api/sheets/v4"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 // WebSocket upgrader
@@ -41,7 +48,55 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ดึง Secret จาก Google Secret Manager
+func getSecret(secretName string) (string, error) {
+	ctx := context.Background()
+
+	// สร้าง Secret Manager client
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to create secret manager client: %v", err)
+	}
+	defer client.Close()
+
+	// ดึง secret version ล่าสุด
+	projectID := os.Getenv("GCP_PROJECT_ID")
+	if projectID == "" {
+		log.Fatal("GCP_PROJECT_ID env is not set")
+	}
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretName),
+	}
+
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed to access secret version: %v", err)
+	}
+
+	// คืนค่า secret payload
+	return string(result.Payload.Data), nil
+}
+
 func main() {
+	// ดึง Secret ชื่อ "sheetcredentials"
+	secretValue, err := getSecret("sheetcredentials")
+	if err != nil {
+		log.Fatalf("Error accessing secret: %v", err)
+	}
+
+	// แปลง Secret เป็น JSON
+	var credentials map[string]interface{}
+	if err := json.Unmarshal([]byte(secretValue), &credentials); err != nil {
+		log.Fatalf("Error unmarshalling secret: %v", err)
+	}
+
+	// สร้าง Google Sheets Client
+	ctx := context.Background()
+	sheetsService, err := sheets.NewService(ctx, option.WithCredentialsJSON([]byte(secretValue)))
+	if err != nil {
+		log.Fatalf("Failed to initialize Google Sheets client: %v", err)
+	}
+
 	// เชื่อมต่อกับฐานข้อมูล
 	db, err := config.ConnectDB()
 	if err != nil {
@@ -49,15 +104,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// เริ่มต้น Google Sheets Client
-	sheetsClient, err := external.NewGoogleSheetsClient("./credentials.json", "143oyrxaUhx48sDXv144YMwPhqPa02rbSMtfU3fjAHfs", "itemstockdata!A:E")
-	if err != nil {
-		log.Fatalf("Failed to initialize Google Sheets client: %v", err)
-	}
-
 	// สร้าง router และเพิ่ม WebSocket endpoint
 	mux := http.NewServeMux()
-	router.RegisterRoutes(mux, db, sheetsClient)
+	router.RegisterRoutes(mux, db, sheetsService)
 	mux.HandleFunc("/ws/item-stock", handleWebSocket) // เพิ่ม WebSocket endpoint
 
 	// เพิ่ม middleware สำหรับ CORS
