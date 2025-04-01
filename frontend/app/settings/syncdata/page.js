@@ -8,12 +8,13 @@ const SyncDataPage = () => {
     const [status, setStatus] = useState("");
     const [userRole, setUserRole] = useState(null);
 
+    // ใช้ environment variables แทนการ hardcode URLs
+    const inventoryApiUrl = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
+    const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
+
     const handleExportToGoogleSheet = async () => {
         try {
-            const apiHost = window.location.hostname === 'localhost' 
-            ? 'http://localhost:8082' 
-            : 'http://inventory-management:8082';
-            const response = await fetch(`${apiHost}/api/export-to-google-sheet`, {
+            const response = await fetch(`${inventoryApiUrl}/api/export-to-google-sheet`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -37,12 +38,12 @@ const SyncDataPage = () => {
     // ตั้งค่า userRole เป็น 'super' เพื่อทดสอบ
     useEffect(() => {
         setUserRole("super"); // สมมติ role เป็น 'super' สำหรับการทดสอบ
-        // Fetch current settings
-        fetch("http://localhost:8080/api/get-settings")
+        // Fetch current settings - ใช้ environment variable
+        fetch(`${purchaseOrderApiUrl}/api/get-settings`)
             .then((res) => res.json())
             .then((data) => setSettings(data))
             .catch((err) => console.error("Failed to fetch settings:", err));
-    }, []);
+    }, [purchaseOrderApiUrl]);
 
     // ตรวจสอบสิทธิ์ของผู้ใช้
     if (userRole !== "super") {
@@ -56,7 +57,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับบันทึกการตั้งค่า
     const handleSave = async () => {
         try {
-            const response = await fetch("http://localhost:8080/api/update-settings", {
+            const response = await fetch(`${purchaseOrderApiUrl}/api/update-settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
@@ -77,7 +78,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับซิงค์แต่ละประเภท
     const handleSync = async (endpoint) => {
         try {
-            const response = await fetch(endpoint, { method: "POST" });
+            const response = await fetch(`${purchaseOrderApiUrl}${endpoint}`, { method: "POST" });
             if (response.ok) {
                 setStatus(`Data synced successfully from ${endpoint}`);
             } else {
@@ -122,19 +123,19 @@ const SyncDataPage = () => {
             <div className="bg-white p-6 rounded-xl shadow-md space-y-4 w-full max-w-lg">
                 <h3 className="text-xl font-semibold mb-4">Manual Data Sync</h3>
                 <button
-                    onClick={() => handleSync("http://localhost:8080/api/sync-master-data")}
+                    onClick={() => handleSync("/api/sync-master-data")}
                     className="bg-blue-500 text-white px-4 py-2 rounded-md w-full hover:bg-blue-600 transition duration-200"
                 >
                     Sync Master Data
                 </button>
                 <button
-                    onClick={() => handleSync("http://localhost:8080/api/sync-receipts")}
+                    onClick={() => handleSync("/api/sync-receipts")}
                     className="bg-green-500 text-white px-4 py-2 rounded-md w-full hover:bg-green-600 transition duration-200"
                 >
                     Sync Receipts
                 </button>
                 <button
-                    onClick={() => handleSync("http://localhost:8080/api/sync-inventory-levels")}
+                    onClick={() => handleSync("/api/sync-inventory-levels")}
                     className="bg-purple-500 text-white px-4 py-2 rounded-md w-full hover:bg-purple-600 transition duration-200"
                 >
                     Sync Inventory Levels
@@ -143,7 +144,7 @@ const SyncDataPage = () => {
                     onClick={handleExportToGoogleSheet}
                     className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
                 >
-                    ส่งข้อมูลไปยัง Google Sheets :t
+                    ส่งข้อมูลไปยัง Google Sheets
                 </button>
             </div>
 

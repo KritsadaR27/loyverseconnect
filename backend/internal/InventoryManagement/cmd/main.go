@@ -52,6 +52,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 func getSecret(secretName string) (string, error) {
 	ctx := context.Background()
 
+	// ดึง Project ID จาก environment variable
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID == "" {
+		return "", fmt.Errorf("GOOGLE_CLOUD_PROJECT environment variable is not set")
+	}
+
 	// สร้าง Secret Manager client
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
@@ -60,14 +66,9 @@ func getSecret(secretName string) (string, error) {
 	defer client.Close()
 
 	// ดึง secret version ล่าสุด
-	projectID := os.Getenv("GCP_PROJECT_ID")
-	if projectID == "" {
-		log.Fatal("GCP_PROJECT_ID env is not set")
-	}
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretName),
 	}
-
 	result, err := client.AccessSecretVersion(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("failed to access secret version: %v", err)

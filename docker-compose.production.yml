@@ -4,15 +4,14 @@ services:
     build:
       context: ./frontend  # ระบุ context สำหรับการ build
       dockerfile: Dockerfile  # ใช้ Dockerfile ที่กำหนด
-    volumes:
-      - ./frontend:/app  # Map โค้ด frontend เฉพาะในโฟลเดอร์ frontend ไปยัง container
-      - /app/node_modules  # ป้องกันไม่ให้ map `node_modules`
     environment:
-      - CHOKIDAR_USEPOLLING=true  # เปิด polling สำหรับ hot reload
-      - WATCHPACK_POLLING=true  # เพิ่ม polling สำหรับ Webpack
       - REACT_APP_INVENTORY_BASE_URL=${REACT_APP_INVENTORY_BASE_URL}
       - REACT_APP_SUPPLIER_BASE_URL=${REACT_APP_SUPPLIER_BASE_URL}
       - REACT_APP_PURCHASE_ORDER_BASE_URL=${REACT_APP_PURCHASE_ORDER_BASE_URL}
+    # ไม่ควรใช้ volume mapping ใน production
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
     env_file:
       - .env.production  # โหลด environment variables จากไฟล์ .env.production
     ports:
@@ -44,6 +43,9 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       # - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json 
       - GCP_PROJECT_ID=ynabim  # ใส่ชื่อ project ของคุณ
+      - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
+      - GOOGLE_CLOUD_PROJECT=ynabim
+
     env_file:
       - .env.production  # โหลด environment variables จากไฟล์ .env.production
     ports:
