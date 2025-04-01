@@ -1,5 +1,5 @@
-const RECEIPT_API_URL = process.env.REACT_APP_RECEIPT_BASE_URL || "http://localhost:8084/api";
-const INVENTORY_API_URL = process.env.REACT_APP_INVENTORY_BASE_URL || "http://localhost:8082/api";
+const RECEIPT_API_URL = process.env.NEXT_PUBLIC_RECEIPT_BASE_URL || "http://localhost:8084/api";
+const INVENTORY_API_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://localhost:8082/api";
 import { normalizeStoreName } from '../utils/StoreName';
 
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป

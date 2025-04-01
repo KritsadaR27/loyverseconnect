@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const SALES_API_URL = process.env.REACT_APP_SALE_BASE_URL || "http://localhost:8084/api";
+const SALES_API_URL = process.env.NEXT_PUBLIC_SALE_BASE_URL || "http://localhost:8084/api";
 
 export const fetchSalesByItem = async (offset = 0, pageSize = 100) => {
     try {
