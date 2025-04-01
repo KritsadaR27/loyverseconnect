@@ -9,8 +9,8 @@ const SyncDataPage = () => {
     const [userRole, setUserRole] = useState(null);
 
     // ใช้ environment variables แทนการ hardcode URLs
-    const inventoryApiUrl = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
-    const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
+    const inventoryApiUrl = process.env.REACT_APP_INVENTORY_BASE_URL || 'http://localhost:8082';
+    const purchaseOrderApiUrl = process.env.REACT_APP_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
 
     const handleExportToGoogleSheet = async () => {
         try {
