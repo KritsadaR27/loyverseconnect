@@ -1,7 +1,7 @@
 // frontend/app/utils/api/supplier.js
 import { sendRequest } from './sendRequest';
 
-const supplierBaseURL = process.env.REACT_APP_SUPPLIER_BASE_URL || 'http://localhost:8083';
+const supplierBaseURL = process.env.NEXT_PUBLIC_SUPPLIER_BASE_URL || 'http://localhost:8083';
 
 export const fetchSuppliers = async () => {
     try {

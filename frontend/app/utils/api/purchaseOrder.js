@@ -1,5 +1,5 @@
 // src/utils/api/purchaseOrder.js
-const purchaseOrderBaseURL = process.env.REACT_APP_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
+const purchaseOrderBaseURL = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
 
 export const saveOrderItems = async (supplierName, orderDate, status, updatedBy, itemOrder) => {
     try {

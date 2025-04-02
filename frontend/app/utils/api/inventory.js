@@ -1,7 +1,7 @@
 // frontend/app/utils/api/inventory.js
 import { sendRequest } from './sendRequest';
 
-const inventoryBaseURL = process.env.REACT_APP_INVENTORY_BASE_URL || 'http://localhost:8082';
+const inventoryBaseURL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
 
 export const fetchItemsStockData = async () => {
     try {
