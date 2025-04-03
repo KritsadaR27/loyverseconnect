@@ -1,111 +1,213 @@
+version: '3.8'
 services:
-
+  # Frontend Service
   frontend:
     build:
-      context: ./frontend  # ระบุ context สำหรับการ build
-      dockerfile: Dockerfile  # ใช้ Dockerfile ที่กำหนด
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+      - NODE_ENV=production
     environment:
-      - REACT_APP_INVENTORY_BASE_URL=${REACT_APP_INVENTORY_BASE_URL}
-      - REACT_APP_SUPPLIER_BASE_URL=${REACT_APP_SUPPLIER_BASE_URL}
-      - REACT_APP_PURCHASE_ORDER_BASE_URL=${REACT_APP_PURCHASE_ORDER_BASE_URL}
-    # ไม่ควรใช้ volume mapping ใน production
-    # volumes:
-    #   - ./frontend:/app
-    #   - /app/node_modules
+      - NEXT_PUBLIC_INVENTORY_BASE_URL=${NEXT_PUBLIC_INVENTORY_BASE_URL}
+      - NEXT_PUBLIC_SUPPLIER_BASE_URL=${NEXT_PUBLIC_SUPPLIER_BASE_URL}
+      - NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=${NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL}
+      - NEXT_PUBLIC_SALE_BASE_URL=${NEXT_PUBLIC_SALE_BASE_URL}
+      - NEXT_PUBLIC_RECEIPT_BASE_URL=${NEXT_PUBLIC_RECEIPT_BASE_URL}
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
+      - .env.production
     ports:
-      - "3000:3000"  # เปิดพอร์ต 3000
+      - "3000:3000"
+    restart: unless-stopped
     depends_on:
-      - loyverse-connect  # รอให้ backend พร้อมใช้งาน
-
+      - loyverse-connect
+      - inventory-management
+      - supplier-management
+      - sale-management
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      
+  # Loyverse Connect Service - เพิ่มบริการที่ขาดหายไป
   loyverse-connect:
     build:
-      context: . 
-      dockerfile: backend/external/loyverse/Dockerfile  # ระบุ Dockerfile โดยตรง
+      context: ./backend/internal/LoyverseConnect
+      dockerfile: Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - LOYVERSE_API_TOKEN=${LOYVERSE_API_TOKEN}
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
-    ports:
-      - "8080:8080"
+      - .env.production
+    restart: unless-stopped
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     depends_on:
-      # db:
-      #   condition: service_healthy
       - db
-
+      
+  # Inventory Management Service
   inventory-management:
     build:
       context: . 
-      dockerfile: backend/internal/InventoryManagement/Dockerfile  # ระบุ Dockerfile โดยตรง
+      dockerfile: backend/internal/InventoryManagement/Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      # - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json 
-      - GCP_PROJECT_ID=ynabim  # ใส่ชื่อ project ของคุณ
+      - GCP_PROJECT_ID=ynabim
       - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
       - GOOGLE_CLOUD_PROJECT=ynabim
-
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
+      - .env.production
     ports:
       - "8082:8082"
-    
-    # volumes:
-      # - ./backend/internal/InventoryManagement/credentials.json:/root/credentials.json
-
+    restart: unless-stopped
     depends_on:
-      # db:
-      #   condition: service_healthy
       - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   
+  # Supplier Management Service
   supplier-management:
     build:
       context: .
       dockerfile: backend/internal/SupplierManagement/Dockerfile
-    container_name: supplier-management
+    # ลบ container_name เพื่อรองรับการ scale
     environment:
       - PORT=8083
       - DATABASE_URL=${DATABASE_URL}
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
+      - .env.production
     ports:
       - "8083:8083"
+    restart: unless-stopped
     depends_on:
       - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Sale Management Service
   sale-management:
     build:
       context: .
       dockerfile: backend/internal/SaleManagement/Dockerfile
-    container_name: sale-management
+    # ลบ container_name เพื่อรองรับการ scale
     environment:
       - PORT=8084
       - DATABASE_URL=${DATABASE_URL}
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
+      - .env.production
     ports:
       - "8084:8084"
+    restart: unless-stopped
     depends_on:
       - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      
+  # Database Service
   db:
-    image: postgres:13  # ใช้ image ของ PostgreSQL เวอร์ชัน 13
+    image: postgres:13
     environment:
-      POSTGRES_USER: loyuser  # กำหนดผู้ใช้ฐานข้อมูล
-      POSTGRES_PASSWORD: password  # กำหนดรหัสผ่าน 
-      POSTGRES_DB: loyverse_cache  # กำหนดชื่อฐานข้อมูล
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     env_file:
-      - .env.production  # โหลด environment variables จากไฟล์ .env.production
+      - .env.production
     ports:
       - "5433:5432"
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U loyuseraa"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # กำหนด volume สำหรับข้อมูล
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: a
+      retries: 5
 
+# กำหนด volumes
 volumes:
-  postgres_data: {}  # กำหนด volume สำหรับ PostgreSQL
+  postgres_data:
+    driver: local
 
+# กำหนด networks
+networks:
+  lungruay-network:
+    driver: bridge

@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -79,47 +78,56 @@ func getSecret(secretName string) (string, error) {
 }
 
 func main() {
-	// ดึง Secret ชื่อ "sheetcredentials"
-	secretValue, err := getSecret("sheetcredentials")
-	if err != nil {
-		log.Fatalf("Error accessing secret: %v", err)
-	}
+	var (
+		sheetsService *sheets.Service
+		err           error
+	)
 
-	// แปลง Secret เป็น JSON
-	var credentials map[string]interface{}
-	if err := json.Unmarshal([]byte(secretValue), &credentials); err != nil {
-		log.Fatalf("Error unmarshalling secret: %v", err)
-	}
-
-	// สร้าง Google Sheets Client
 	ctx := context.Background()
-	sheetsService, err := sheets.NewService(ctx, option.WithCredentialsJSON([]byte(secretValue)))
-	if err != nil {
-		log.Fatalf("Failed to initialize Google Sheets client: %v", err)
+
+	// กรณีใช้งานใน Production (เช่น GCP + Secret Manager)
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID != "" {
+		log.Println("🌐 Using Google Secret Manager...")
+		secretValue, err := getSecret("sheetcredentials")
+		if err != nil {
+			log.Fatalf("❌ Error accessing secret: %v", err)
+		}
+
+		sheetsService, err = sheets.NewService(ctx, option.WithCredentialsJSON([]byte(secretValue)))
+		if err != nil {
+			log.Fatalf("❌ Failed to initialize Google Sheets client: %v", err)
+		}
+	} else {
+		log.Println("🧪 Using local credentials.json...")
+		sheetsService, err = sheets.NewService(ctx, option.WithCredentialsFile("/root/credentials.json")) // ✅ ตรงกับ path ที่ mount
+		if err != nil {
+			log.Fatalf("❌ Failed to initialize local Sheets client: %v", err)
+		}
 	}
 
-	// เชื่อมต่อกับฐานข้อมูล
+	// เชื่อมต่อฐานข้อมูล
 	db, err := config.ConnectDB()
 	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
+		log.Fatalf("❌ Failed to connect to the database: %v", err)
 	}
 	defer db.Close()
 
-	// สร้าง router และเพิ่ม WebSocket endpoint
+	// สร้าง router
 	mux := http.NewServeMux()
 	router.RegisterRoutes(mux, db, sheetsService)
-	mux.HandleFunc("/ws/item-stock", handleWebSocket) // เพิ่ม WebSocket endpoint
+	mux.HandleFunc("/ws/item-stock", handleWebSocket)
 
-	// เพิ่ม middleware สำหรับ CORS
+	// middleware
 	handler := middleware.CORS(mux)
 
-	// ตั้งค่า port และเริ่มต้นเซิร์ฟเวอร์
+	// server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8082"
 	}
-	log.Printf("Starting server on port %s", port)
+	log.Printf("🚀 Starting server on port %s", port)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("❌ Failed to start server: %v", err)
 	}
 }

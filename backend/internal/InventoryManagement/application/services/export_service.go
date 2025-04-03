@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"backend/internal/InventoryManagement/domain/interfaces"
 
@@ -18,13 +19,19 @@ type ExportService struct {
 }
 
 func NewExportService(itemInterface interfaces.ItemInterface, sheetsClient *sheets.Service) *ExportService {
+	spreadsheetID := os.Getenv("GOOGLE_SHEETS_SPREADSHEET_ID")
+	if spreadsheetID == "" {
+		spreadsheetID = "143oyrxaUhx48sDXv144YMwPhqPa02rbSMtfU3fjAHfs" // ค่า default
+	}
+
 	return &ExportService{
 		itemInterface: itemInterface,
 		sheetsClient:  sheetsClient,
-		spreadsheetID: "143oyrxaUhx48sDXv144YMwPhqPa02rbSMtfU3fjAHfs", // คุณสามารถย้ายไป env หรือ secret ได้
+		spreadsheetID: spreadsheetID,
 		sheetRange:    "itemstockdata!A:E",
 	}
 }
+
 func (s *ExportService) ExportItemStockDataToGoogleSheet() error {
 	ctx := context.Background()
 

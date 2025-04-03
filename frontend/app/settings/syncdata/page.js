@@ -9,15 +9,22 @@ const SyncDataPage = () => {
     const [userRole, setUserRole] = useState(null);
 
     // ใช้ environment variables แทนการ hardcode URLs
-    const inventoryApiUrl = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
-    const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL;
-
+    const inventoryApiUrl = typeof window === "undefined"
+        ? "http://host.docker.internal:8082"
+        : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
+    const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
+    console.log("inventoryApiUrl:", inventoryApiUrl);
+    console.log("purchaseOrderApiUrl:", purchaseOrderApiUrl);
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("NEXT_PUBLIC_INVENTORY_BASE_URL:", process.env.NEXT_PUBLIC_INVENTORY_BASE_URL);
+    // ฟังก์ชันสำหรับส่งข้อมูลไปยัง Google Sheets
     const handleExportToGoogleSheet = async () => {
         try {
             const response = await fetch(`${inventoryApiUrl}/api/export-to-google-sheet`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Origin': window.location.origin,
                 },
             });
             console.log(response); // Debugging response

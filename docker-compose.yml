@@ -1,99 +1,110 @@
 services:
-
   frontend:
     build:
-      context: ./frontend  # ระบุ context สำหรับการ build
-      dockerfile: Dockerfile  # ใช้ Dockerfile ที่กำหนด
+      context: ./frontend
+      dockerfile: Dockerfile
     volumes:
-      - ./frontend:/app  # Map โค้ด frontend เฉพาะในโฟลเดอร์ frontend ไปยัง container
-      - /app/node_modules  # ป้องกันไม่ให้ map `node_modules`
+      - ./frontend:/app
+      - /app/node_modules
     environment:
-      - CHOKIDAR_USEPOLLING=true  # เปิด polling สำหรับ hot reload
-      - WATCHPACK_POLLING=true  # เพิ่ม polling สำหรับ Webpack
-      - REACT_APP_INVENTORY_BASE_URL=${REACT_APP_INVENTORY_BASE_URL}
-      - REACT_APP_SUPPLIER_BASE_URL=${REACT_APP_SUPPLIER_BASE_URL}
-      - REACT_APP_PURCHASE_ORDER_BASE_URL=${REACT_APP_PURCHASE_ORDER_BASE_URL}
-
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_INVENTORY_BASE_URL=${NEXT_PUBLIC_INVENTORY_BASE_URL}
+      - NEXT_PUBLIC_SUPPLIER_BASE_URL=${NEXT_PUBLIC_SUPPLIER_BASE_URL}
+      - NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=${NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL}
+      - NEXT_PUBLIC_SALE_BASE_URL=${NEXT_PUBLIC_SALE_BASE_URL}
+      - NEXT_PUBLIC_RECEIPT_BASE_URL=${NEXT_PUBLIC_RECEIPT_BASE_URL}
+    env_file:
+      - .env.local
     ports:
-      - "3000:3000"  # เปิดพอร์ต 3000
+      - "3000:3000"
     depends_on:
-      - loyverse-connect  # รอให้ backend พร้อมใช้งาน
+      - loyverse-connect
 
   loyverse-connect:
     build:
-      context: . 
-      dockerfile: backend/external/loyverse/Dockerfile  # ระบุ Dockerfile โดยตรง
+      context: ./backend/internal/LoyverseConnect
+      dockerfile: Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - LOYVERSE_API_TOKEN=${LOYVERSE_API_TOKEN}
+    env_file:
+      - .env.local
     ports:
       - "8080:8080"
     depends_on:
-      # db:
-      #   condition: service_healthy
-      - db
+      db:
+        condition: service_healthy
 
   inventory-management:
     build:
       context: . 
-      dockerfile: backend/internal/InventoryManagement/Dockerfile  # ระบุ Dockerfile โดยตรง
+      dockerfile: backend/internal/InventoryManagement/Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      # - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json 
-      - GCP_PROJECT_ID=ynabim  # ใส่ชื่อ project ของคุณ
-
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+      - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
+    env_file:
+      - .env.local
     ports:
       - "8082:8082"
-    
-    # volumes:
-      # - ./backend/internal/InventoryManagement/credentials.json:/root/credentials.json
-
+    volumes:
+      - ./backend/internal/InventoryManagement/credentials.json:/app/credentials.json
     depends_on:
-      # db:
-      #   condition: service_healthy
-      - db
-  
+      db:
+        condition: service_healthy
+
   supplier-management:
     build:
       context: .
       dockerfile: backend/internal/SupplierManagement/Dockerfile
-    container_name: supplier-management
     environment:
       - PORT=8083
       - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env.local
     ports:
       - "8083:8083"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   sale-management:
     build:
       context: .
       dockerfile: backend/internal/SaleManagement/Dockerfile
-    container_name: sale-management
     environment:
       - PORT=8084
       - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env.local
     ports:
       - "8084:8084"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
   db:
-    image: postgres:13  # ใช้ image ของ PostgreSQL เวอร์ชัน 13
+    image: postgres:13
     environment:
-      POSTGRES_USER: loyuser  # กำหนดผู้ใช้ฐานข้อมูล
-      POSTGRES_PASSWORD: password  # กำหนดรหัสผ่าน 
-      POSTGRES_DB: loyverse_cache  # กำหนดชื่อฐานข้อมูล
+      POSTGRES_USER: loyuser
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: loyverse_cache
+    env_file:
+      - .env.local
     ports:
       - "5433:5432"
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U loyuseraa"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loyuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # กำหนด volume สำหรับข้อมูล
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data: {}  # กำหนด volume สำหรับ PostgreSQL
+  postgres_data: {}
 
+networks:
+  default:
+    driver: bridge
