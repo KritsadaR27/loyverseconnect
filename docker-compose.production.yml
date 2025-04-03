@@ -44,8 +44,8 @@ services:
   # Loyverse Connect Service - เพิ่มบริการที่ขาดหายไป
   loyverse-connect:
     build:
-      context: ./backend/internal/LoyverseConnect
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/external/loyverse/Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - LOYVERSE_API_TOKEN=${LOYVERSE_API_TOKEN}
@@ -64,8 +64,6 @@ services:
         limits:
           cpus: '0.5'
           memory: 512M
-    depends_on:
-      - db
       
   # Inventory Management Service
   inventory-management:
@@ -199,7 +197,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
-      timeout: a
+      timeout: 5s
       retries: 5
 
 # กำหนด volumes

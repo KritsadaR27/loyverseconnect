@@ -13,8 +13,10 @@ const SyncDataPage = () => {
         ? "http://host.docker.internal:8082"
         : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
     const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
+    const loyverseConnectApiUrl = process.env.NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL || 'http://localhost:8080';
     console.log("inventoryApiUrl:", inventoryApiUrl);
     console.log("purchaseOrderApiUrl:", purchaseOrderApiUrl);
+    console.log("loyverseConnectApiUrl:", loyverseConnectApiUrl);
     console.log("Environment:", process.env.NODE_ENV);
     console.log("NEXT_PUBLIC_INVENTORY_BASE_URL:", process.env.NEXT_PUBLIC_INVENTORY_BASE_URL);
     // ฟังก์ชันสำหรับส่งข้อมูลไปยัง Google Sheets
@@ -46,11 +48,11 @@ const SyncDataPage = () => {
     useEffect(() => {
         setUserRole("super"); // สมมติ role เป็น 'super' สำหรับการทดสอบ
         // Fetch current settings - ใช้ environment variable
-        fetch(`${purchaseOrderApiUrl}/api/get-settings`)
+        fetch(`${loyverseConnectApiUrl}/api/get-settings`)
             .then((res) => res.json())
             .then((data) => setSettings(data))
             .catch((err) => console.error("Failed to fetch settings:", err));
-    }, [purchaseOrderApiUrl]);
+    }, [loyverseConnectApiUrl]);
 
     // ตรวจสอบสิทธิ์ของผู้ใช้
     if (userRole !== "super") {
@@ -64,7 +66,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับบันทึกการตั้งค่า
     const handleSave = async () => {
         try {
-            const response = await fetch(`${purchaseOrderApiUrl}/api/update-settings`, {
+            const response = await fetch(`${loyverseConnectApiUrl}/api/update-settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
@@ -85,7 +87,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับซิงค์แต่ละประเภท
     const handleSync = async (endpoint) => {
         try {
-            const response = await fetch(`${purchaseOrderApiUrl}${endpoint}`, { method: "POST" });
+            const response = await fetch(`${loyverseConnectApiUrl}${endpoint}`, { method: "POST" });
             if (response.ok) {
                 setStatus(`Data synced successfully from ${endpoint}`);
             } else {
