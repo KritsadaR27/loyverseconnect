@@ -1,8 +1,9 @@
+// const INVENTORY_API_URL =
+//     typeof window === "undefined"
+//         ? "http://host.docker.internal:8082/api"
+//         : `${process.env.NEXT_PUBLIC_INVENTORY_BASE_URL}/api`; // เพิ่ม /api ให้ชัดเจน
 const INVENTORY_API_URL =
-    typeof window === "undefined"
-        ? "http://host.docker.internal:8082/api"
-        : `${process.env.NEXT_PUBLIC_INVENTORY_BASE_URL}/api`; // เพิ่ม /api ให้ชัดเจน
-
+process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://host.docker.internal:8082/api"; // ใช้ environment variable สำหรับ URL
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
     try {
@@ -54,6 +55,7 @@ export const fetchMasterData = async () => {
 export const fetchItemsStockData = async () => {
     try {
         console.log("Fetching item stock data...");
+        console.log(`Fetching data from: ${INVENTORY_API_URL}/item-stock`);
         const rawItems = await fetchData(
             `${INVENTORY_API_URL}/item-stock`,
             "Failed to fetch item stock data."
