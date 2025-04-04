@@ -6,15 +6,24 @@ RUN apt-get update && apt-get install -y git curl
 
 WORKDIR /app
 
-# Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อน
-COPY go.mod go.sum ./
+# Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อ
+
+
+
+COPY ./backend/internal/ChatManagement/go.mod ./backend/internal/ChatManagement/go.sum ./
+
 RUN go mod download
 
 # ติดตั้ง gorilla/websocket
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ ChatManagement
-COPY . /app
+
+
+
+COPY ./backend/internal/ChatManagement /app
+
+
 # Build the binary
 RUN CGO_ENABLED=0 go build -o chat-management /app/cmd/main.go
 

@@ -7,14 +7,23 @@ RUN apt-get update && apt-get install -y git curl
 WORKDIR /app
 
 # Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อน
+<<<<<<< HEAD
 COPY go.mod go.sum ./
+=======
+COPY ./backend/internal/DeliveryManagement/go.mod ./backend/internal/DeliveryManagement/go.sum ./
+>>>>>>> 9ebf0bcb9b9f2ff902690320a75b130fb7218dd8
 RUN go mod download
 
 # ติดตั้ง gorilla/websocket
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ DeliveryManagement
+<<<<<<< HEAD
 COPY . /app
+=======
+COPY ./backend/internal/DeliveryManagement /app
+
+>>>>>>> 9ebf0bcb9b9f2ff902690320a75b130fb7218dd8
 # Build the binary
 RUN CGO_ENABLED=0 go build -o delivery-management /app/cmd/main.go
 

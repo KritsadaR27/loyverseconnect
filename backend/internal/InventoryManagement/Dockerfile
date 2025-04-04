@@ -16,7 +16,7 @@ RUN go get -u github.com/gorilla/websocket
 # Copy โค้ดทั้งหมดที่เหลือของ InventoryManagement
 COPY . /app
 # Build the binary
-RUN CGO_ENABLED=0 go build -o inventory-management /app/cmd/main.go
+RUN CGO_ENABLED=0 go build -o inventory-management ./internal/InventoryManagement/cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
