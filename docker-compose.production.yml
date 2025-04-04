@@ -44,7 +44,7 @@ services:
   # Loyverse Connect Service - เพิ่มบริการที่ขาดหายไป
   loyverse-connect:
     build:
-      context: .backend/external/loyverse
+      context: ./backend/external/loyverse
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
