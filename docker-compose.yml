@@ -83,7 +83,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+  purchase-order-management:
+    build:
+      context: .
+      dockerfile: backend/internal/POManagement/Dockerfile
+    environment:
+      - PORT=8085
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env.local
+    ports:
+      - "8085:8085"
+    depends_on:
+      db:
+        condition: service_healthy
+  
   db:
     image: postgres:13
     environment:

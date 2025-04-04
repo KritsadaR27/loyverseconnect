@@ -167,7 +167,40 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      
+  # Purchase Order Management Service
+  purchase-order-management:
+    build:
+      context: .
+      dockerfile: backend/internal/POManagement/Dockerfile
+    # ลบ container_name เพื่อรองรับการ scale
+    environment:
+      - PORT=8085
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env.production
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Database Service
   db:
     image: postgres:13
