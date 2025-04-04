@@ -17,7 +17,7 @@ RUN go get -u github.com/gorilla/websocket
 COPY ./backend/internal/OrderManagement /app
 
 # Build the binary
-RUN CGO_ENABLED=0 go build -o inventory-management /app/cmd/main.go
+RUN CGO_ENABLED=0 go build -o order-management /app/cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
@@ -28,10 +28,10 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 
 # Copy binary จาก builder stage
-COPY --from=builder /app/inventory-management .
+COPY --from=builder /app/order-management .
 
 # Copy credentials.json ถ้ามีการเชื่อมต่อ Google Sheets
 COPY ./backend/internal/OrderManagement/credentials.json /root/credentials.json
 
 # เริ่มต้นแอปพลิเคชัน
-CMD ["./inventory-management"]
+CMD ["./order-management"]

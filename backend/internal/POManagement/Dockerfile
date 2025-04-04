@@ -7,17 +7,17 @@ RUN apt-get update && apt-get install -y git curl
 WORKDIR /app
 
 # Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อน
-COPY ./backend/internal/InventoryManagement/go.mod ./backend/internal/InventoryManagement/go.sum ./
+COPY ./backend/internal/POManagement/go.mod ./backend/internal/POManagement/go.sum ./
 RUN go mod download
 
 # ติดตั้ง gorilla/websocket
 RUN go get -u github.com/gorilla/websocket
 
-# Copy โค้ดทั้งหมดที่เหลือของ InventoryManagement
-COPY ./backend/internal/InventoryManagement /app
+# Copy โค้ดทั้งหมดที่เหลือของ POManagement
+COPY ./backend/internal/POManagement /app
 
 # Build the binary
-RUN CGO_ENABLED=0 go build -o inventory-management ./internal/InventoryManagement/cmd/main.go
+RUN CGO_ENABLED=0 go build -o po-management /app/cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
@@ -28,10 +28,10 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 
 # Copy binary จาก builder stage
-COPY --from=builder /app/inventory-management .
+COPY --from=builder /app/po-management .
 
 # Copy credentials.json ถ้ามีการเชื่อมต่อ Google Sheets
-COPY ./backend/internal/InventoryManagement/credentials.json /root/credentials.json
+COPY ./backend/internal/POManagement/credentials.json /root/credentials.json
 
 # เริ่มต้นแอปพลิเคชัน
-CMD ["./inventory-management"]
+CMD ["./po-management"]
