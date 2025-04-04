@@ -3,30 +3,30 @@ package router
 
 import (
 	"backend/external/loyverse/handlers"
+	"backend/external/loyverse/middleware" // Import middleware
 	"database/sql"
 	"net/http"
 )
 
 // RegisterRoutes ตั้งค่า routes สำหรับ loyverse API
 func RegisterRoutes(mux *http.ServeMux, db *sql.DB) {
-	// API endpoints สำหรับการซิงค์ข้อมูล
-	mux.HandleFunc("/api/sync-master-data", handlers.SyncMasterDataHandler)
-	mux.HandleFunc("/api/sync-receipts", handlers.SyncReceiptsHandler)
-	mux.HandleFunc("/api/sync-inventory-levels", handlers.SyncInventoryLevelsHandler)
+	// Wrap routes ด้วย middleware CORS
+	mux.Handle("/api/sync-master-data", middleware.CORS(http.HandlerFunc(handlers.SyncMasterDataHandler)))
+	mux.Handle("/api/sync-receipts", middleware.CORS(http.HandlerFunc(handlers.SyncReceiptsHandler)))
+	mux.Handle("/api/sync-inventory-levels", middleware.CORS(http.HandlerFunc(handlers.SyncInventoryLevelsHandler)))
 
-	// Webhook endpoint สำหรับรับข้อมูลจาก Loyverse โดยใช้ closure เพื่อส่ง db
-	mux.HandleFunc("/webhook/loyverse", func(w http.ResponseWriter, r *http.Request) {
+	// Webhook endpoint
+	mux.Handle("/webhook/loyverse", middleware.CORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handlers.LoyverseWebhookHandler(db, w, r)
-	})
+	})))
 
-	mux.HandleFunc("/api/update-settings", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/update-settings", middleware.CORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handlers.UpdateSettingsHandler(db).ServeHTTP(w, r)
-	})
+	})))
 
-	mux.HandleFunc("/api/get-settings", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/get-settings", middleware.CORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handlers.GetSettingsHandler(db).ServeHTTP(w, r)
-	})
+	})))
 
-	mux.HandleFunc("/api/masterdata", handlers.GetMasterDataHandler)
-
+	mux.Handle("/api/masterdata", middleware.CORS(http.HandlerFunc(handlers.GetMasterDataHandler)))
 }
