@@ -13,14 +13,21 @@ RUN go mod download
 # ติดตั้ง gorilla/websocket
 RUN go get -u github.com/gorilla/websocket
 
-# Copy โค้ดทั้งหมดที่เหลือของ InventoryManagement
+# Copy โค้ดทั้งหมด
 COPY . .
 
-# Check where main.go is located
+# ตรวจสอบว่าไฟล์ main.go อยู่ที่ไหน และแสดง directory structure
 RUN find /app -name "main.go"
+RUN ls -la /app
+RUN ls -la /app/backend/internal/InventoryManagement/cmd 2>/dev/null || echo "Directory not found"
 
-# Build the binary
-RUN CGO_ENABLED=0 go build -o inventory-management ./cmd/main.go
+# Build the binary with correct path
+# หากพบไฟล์ main.go ใน /app/backend/internal/InventoryManagement/cmd/
+RUN CGO_ENABLED=0 go build -o inventory-management ./backend/internal/InventoryManagement/cmd/main.go || \
+    # หากพบไฟล์ main.go ใน /app/cmd/
+    CGO_ENABLED=0 go build -o inventory-management ./cmd/main.go || \
+    # หากพบไฟล์ main.go ใน root directory
+    CGO_ENABLED=0 go build -o inventory-management main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
@@ -34,7 +41,8 @@ WORKDIR /root/
 COPY --from=builder /app/inventory-management .
 
 # Copy credentials.json ถ้ามีการเชื่อมต่อ Google Sheets
-COPY ./backend/internal/InventoryManagement/credentials.json /root/credentials.json
+# ใช้ --from=builder เพื่อให้แน่ใจว่าไฟล์มีอยู่ จาก context ที่ได้ COPY มาแล้ว
+COPY --from=builder /app/backend/internal/InventoryManagement/credentials.json /root/credentials.json 2>/dev/null || echo "No credentials file found"
 
 # เริ่มต้นแอปพลิเคชัน
 CMD ["./inventory-management"]
