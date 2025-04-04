@@ -11,7 +11,7 @@ RUN go mod download
 # Copy the source code into the container
 COPY . /app
 # Build the Go binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o supplier-management cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o supplier-management ./cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
