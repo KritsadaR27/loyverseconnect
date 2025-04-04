@@ -6,21 +6,18 @@ RUN apt-get update && apt-get install -y git curl
 
 WORKDIR /app
 
-# Copy go.mod และ go.sum เพื่อดาวน์โหลด dependencies ก่อน
-COPY go.mod go.sum ./
+# Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อน
+COPY ./backend/internal/InventoryManagement/go.mod ./backend/internal/InventoryManagement/go.sum ./
 RUN go mod download
 
 # ติดตั้ง gorilla/websocket
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ InventoryManagement
-COPY . .
+COPY ./backend/internal/InventoryManagement /app
 
-# Debug: ตรวจสอบว่าไฟล์ main.go อยู่ที่ไหน
-RUN find /app -name "main.go"
-
-# Build the binary (ปรับ path ให้ตรงกับตำแหน่งจริงของ main.go)
-RUN CGO_ENABLED=0 go build -o inventory-management ./backend/internal/InventoryManagement/cmd/main.go
+# Build the binary
+RUN CGO_ENABLED=0 go build -o inventory-management /app/cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
