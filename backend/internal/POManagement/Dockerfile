@@ -31,7 +31,7 @@ WORKDIR /root/
 COPY --from=builder /app/po-management .
 
 # Copy credentials.json ถ้ามีการเชื่อมต่อ Google Sheets
-COPY ./backend/internal/POManagement/credentials.json /root/credentials.json
+# COPY ./backend/internal/POManagement/credentials.json /root/credentials.json
 
 # เริ่มต้นแอปพลิเคชัน
 CMD ["./po-management"]
