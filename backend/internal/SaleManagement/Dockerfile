@@ -1,21 +1,18 @@
 # Stage 1: Build the Go binary
 FROM golang:1.23 AS builder
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy go.mod and go.sum
-COPY go.mod go.sum ./
+# Copy go.mod and go.sum to download dependencies
+COPY backend/internal/SaleManagement/go.mod backend/internal/SaleManagement/go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY . .
+# Copy the source code into the container
+COPY backend/internal/SaleManagement /app
 
-# Debug: ตรวจสอบโครงสร้างไฟล์
-RUN ls -la
-RUN find /app -type f -name "main.go"
-
-# Build with correct path (หลังจากรู้ path ที่ถูกต้องแล้ว)
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o sale-management ./backend/internal/SaleManagement/cmd/main.go
+# Build the Go binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o sale-management cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest
@@ -32,7 +29,7 @@ WORKDIR /root/
 # Copy the binary from the builder stage
 COPY --from=builder /app/sale-management .
 
-# Expose port
+# Expose port (modify if necessary)
 EXPOSE 8084
 
 # Run the binary
