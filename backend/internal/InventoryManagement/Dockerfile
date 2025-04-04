@@ -14,9 +14,13 @@ RUN go mod download
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ InventoryManagement
-COPY . /app
+COPY . .
+
+# Check where main.go is located
+RUN find /app -name "main.go"
+
 # Build the binary
-RUN CGO_ENABLED=0 go build -o inventory-management ./internal/InventoryManagement/cmd/main.go
+RUN CGO_ENABLED=0 go build -o inventory-management ./cmd/main.go
 
 # Stage 2: Create the final runtime image
 FROM alpine:latest

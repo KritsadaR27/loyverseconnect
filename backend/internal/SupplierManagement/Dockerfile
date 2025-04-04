@@ -9,7 +9,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source code into the container
-COPY . /app
+COPY . .
+# Check where main.go is located
+RUN find /app -name "main.go"
 # Build the Go binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o supplier-management ./cmd/main.go
 
