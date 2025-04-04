@@ -5,7 +5,7 @@ FROM golang:1.23 AS builder
 WORKDIR /app
 
 # Copy go.mod and go.sum to download dependencies
-COPY backend/internal/SaleManagement/go.mod backend/internal/SaleManagement/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source code into the container
@@ -31,6 +31,6 @@ COPY --from=builder /app/sale-management .
 
 # Expose port (modify if necessary)
 EXPOSE 8084
- 
+
 # Run the binary
 CMD ["./sale-management"]

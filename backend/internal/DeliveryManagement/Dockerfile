@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y git curl
 WORKDIR /app
 
 # Copy go.mod and go.sum เพื่อดาวน์โหลด dependencies ก่อน
-COPY ./backend/internal/OrderManagement/go.mod ./backend/internal/OrderManagement/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 # ติดตั้ง gorilla/websocket
