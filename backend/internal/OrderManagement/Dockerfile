@@ -14,8 +14,7 @@ RUN go mod download
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ OrderManagement
-COPY ./backend/internal/OrderManagement /app
-
+COPY . /app
 # Build the binary
 RUN CGO_ENABLED=0 go build -o order-management /app/cmd/main.go
 

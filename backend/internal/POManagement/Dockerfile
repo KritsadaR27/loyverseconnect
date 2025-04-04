@@ -14,8 +14,7 @@ RUN go mod download
 RUN go get -u github.com/gorilla/websocket
 
 # Copy โค้ดทั้งหมดที่เหลือของ POManagement
-COPY ./backend/internal/POManagement /app
-
+COPY . /app
 # Build the binary
 RUN CGO_ENABLED=0 go build -o po-management /app/cmd/main.go
 
