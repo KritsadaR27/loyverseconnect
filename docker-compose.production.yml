@@ -68,8 +68,8 @@ services:
   # Inventory Management Service
   inventory-management:
     build:
-      context: . 
-      dockerfile: backend/internal/InventoryManagement/Dockerfile
+      context: ./backend/internal/InventoryManagement 
+      dockerfile: Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - GCP_PROJECT_ID=ynabim
@@ -103,8 +103,8 @@ services:
   # Supplier Management Service
   supplier-management:
     build:
-      context: .
-      dockerfile: backend/internal/SupplierManagement/Dockerfile
+      context: ./backend/internal/SupplierManagement
+      dockerfile: Dockerfile
     # ลบ container_name เพื่อรองรับการ scale
     environment:
       - PORT=8083
@@ -137,8 +137,8 @@ services:
   # Sale Management Service
   sale-management:
     build:
-      context: .
-      dockerfile: backend/internal/SaleManagement/Dockerfile
+      context: ./backend/internal/SaleManagement
+      dockerfile: Dockerfile
     # ลบ container_name เพื่อรองรับการ scale
     environment:
       - PORT=8084
@@ -170,8 +170,8 @@ services:
   # Purchase Order Management Service
   purchase-order-management:
     build:
-      context: .
-      dockerfile: backend/internal/POManagement/Dockerfile
+      context: ./backend/internal/POManagement
+      dockerfile: Dockerfile
     # ลบ container_name เพื่อรองรับการ scale
     environment:
       - PORT=8085
