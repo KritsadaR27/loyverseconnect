@@ -5,6 +5,7 @@ import (
 	"backend/internal/InventoryManagement/application/handlers"
 	"backend/internal/InventoryManagement/application/services"
 	"backend/internal/InventoryManagement/infrastructure/data"
+	"backend/internal/InventoryManagement/middleware"
 	"database/sql"
 	"net/http"
 
@@ -25,7 +26,7 @@ func RegisterItemRoutes(mux *http.ServeMux, db *sql.DB) {
 	itemHandler := handlers.NewItemStockHandler(itemService)
 
 	// Route to get all item stock data
-	mux.HandleFunc("/api/item-stock", itemHandler.GetItemStockHandler)
+	mux.Handle("/item-stock", middleware.CORS(http.HandlerFunc(itemHandler.GetItemStockHandler)))
 
 	// Route to get store-specific stock data for a given item ID
 	mux.HandleFunc("/api/item-stock/store", itemHandler.GetItemStockByStoreHandler)
