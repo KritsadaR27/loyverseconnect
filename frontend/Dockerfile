@@ -1,40 +1,25 @@
-# ใช้ Node.js base image
+# Dockerfile สำหรับ Next.js Production
+
+# ✅ ใช้ Node.js base image
 FROM node:18-alpine
 
-# กำหนดไดเรกทอรีทำงานเป็น /app
+# ✅ กำหนดไดเรกทอรีทำงาน
 WORKDIR /app
 
-# คัดลอกไฟล์ package.json
+# ✅ คัดลอก dependencies ก่อนเพื่อใช้ cache
 COPY package*.json ./
 
-# ติดตั้ง dependencies
+# ✅ ติดตั้ง dependencies
 RUN npm install --legacy-peer-deps
 
-# รับค่า ENV (สำคัญสำหรับ Next.js)
-ARG NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL
-ARG NEXT_PUBLIC_INVENTORY_BASE_URL
-ARG NEXT_PUBLIC_SUPPLIER_BASE_URL
-ARG NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL
-ARG NEXT_PUBLIC_SALE_BASE_URL
-ARG NEXT_PUBLIC_RECEIPT_BASE_URL
-
-ENV NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL=$NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL
-ENV NEXT_PUBLIC_INVENTORY_BASE_URL=$NEXT_PUBLIC_INVENTORY_BASE_URL
-ENV NEXT_PUBLIC_SUPPLIER_BASE_URL=$NEXT_PUBLIC_SUPPLIER_BASE_URL
-ENV NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=$NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL
-ENV NEXT_PUBLIC_SALE_BASE_URL=$NEXT_PUBLIC_SALE_BASE_URL
-ENV NEXT_PUBLIC_RECEIPT_BASE_URL=$NEXT_PUBLIC_RECEIPT_BASE_URL
-
-# คัดลอก source code ทั้งหมด
+# ✅ คัดลอกไฟล์โปรเจกต์ทั้งหมด
 COPY . .
 
-# Build Next.js (ใช้ env ตอนนี้)
+# ✅ Build production
 RUN npm run build
 
-# เปิดพอร์ต
+# ✅ เปิดพอร์ต 3000
 EXPOSE 3000
 
-# ใช้ production server
+# ✅ สั่งรันแอปแบบ production
 CMD ["npm", "start"]
-# ใช้ development server
-# CMD ["npm", "run", "dev"]
