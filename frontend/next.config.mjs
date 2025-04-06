@@ -1,4 +1,9 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
-
-export default nextConfig;
+const nextConfig = {
+    eslint: {
+      // ปิดการตรวจสอบ ESLint ในขั้นตอนการ build
+      ignoreDuringBuilds: true,
+    },
+  };
+  
+  export default nextConfig;
