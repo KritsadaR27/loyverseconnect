@@ -4,12 +4,13 @@ FROM node:18-alpine
 # กำหนดไดเรกทอรีทำงานเป็น /app
 WORKDIR /app
 
-# คัดลอก package.json และ package-lock.json ไปยัง container
+# คัดลอกไฟล์ package.json
 COPY package*.json ./
 
-# ติดตั้ง dependencies โดยข้ามการตรวจสอบ peer dependencies
+# ติดตั้ง dependencies
 RUN npm install --legacy-peer-deps
 
+# รับค่า ENV (สำคัญสำหรับ Next.js)
 ARG NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL
 ARG NEXT_PUBLIC_INVENTORY_BASE_URL
 ARG NEXT_PUBLIC_SUPPLIER_BASE_URL
@@ -24,12 +25,16 @@ ENV NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=$NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL
 ENV NEXT_PUBLIC_SALE_BASE_URL=$NEXT_PUBLIC_SALE_BASE_URL
 ENV NEXT_PUBLIC_RECEIPT_BASE_URL=$NEXT_PUBLIC_RECEIPT_BASE_URL
 
-
-# คัดลอกไฟล์ทั้งหมดจากโฟลเดอร์ frontend ไปยัง /app ใน container
+# คัดลอก source code ทั้งหมด
 COPY . .
 
-# เปิดพอร์ต 3000 เพื่อเข้าถึงแอป
+# Build Next.js (ใช้ env ตอนนี้)
+RUN npm run build
+
+# เปิดพอร์ต
 EXPOSE 3000
 
-# เรียกใช้แอปพลิเคชันในโหมด development
-CMD ["npm", "run", "dev"]
+# ใช้ production server
+CMD ["npm", "start"]
+# ใช้ development server
+# CMD ["npm", "run", "dev"]
