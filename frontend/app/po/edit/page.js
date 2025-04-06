@@ -232,7 +232,17 @@ const POEdit = () => {
             }
         ];
     };
-
+// เพิ่ม component นี้ในไฟล์ app/po/edit/page.js ก่อนจุดที่มีการใช้งาน
+const CustomDateInput = React.forwardRef(({ value, onClick }, ref) => (
+    <button
+      className="bg-white border border-gray-300 rounded p-2"
+      onClick={onClick}
+      ref={ref}
+    >
+      {value}
+    </button>
+  ));
+  CustomDateInput.displayName = 'CustomDateInput';
 
     return (
         <div className="flex  min-h-screen">

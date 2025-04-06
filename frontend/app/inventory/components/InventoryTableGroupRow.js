@@ -1,3 +1,4 @@
+// frontend/app/inventory/components/InventoryTableGroupRow.js
 "use client";
 
 import React, { useMemo } from "react";

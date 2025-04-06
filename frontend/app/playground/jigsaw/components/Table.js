@@ -1,6 +1,7 @@
+// /app/playground/jigsaw/components/Table.js
+
 "use client";
 
-// /app/playground/jigsaw/components/Table.js
 import React, { forwardRef } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 
