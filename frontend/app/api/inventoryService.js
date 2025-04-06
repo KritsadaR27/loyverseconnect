@@ -3,7 +3,7 @@
 //         ? "http://host.docker.internal:8082/api"
 //         : `${process.env.NEXT_PUBLIC_INVENTORY_BASE_URL}/api`; // เพิ่ม /api ให้ชัดเจน
 const INVENTORY_API_URL =
-process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://host.docker.internal:8082/api"; // ใช้ environment variable สำหรับ URL
+process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://host.docker.internal:8082"; // ใช้ environment variable สำหรับ URL
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
     try {
@@ -28,9 +28,9 @@ export const fetchMasterData = async () => {
     try {
         console.log("Fetching master data...");
         const data = await Promise.all([
-            fetchData(`${INVENTORY_API_URL}/categories`, "Failed to fetch categories."),
-            fetchData(`${INVENTORY_API_URL}/stores`, "Failed to fetch stores."),
-            fetchData(`${INVENTORY_API_URL}/suppliers`, "Failed to fetch suppliers.")
+            fetchData(`${INVENTORY_API_URL}/api/categories`, "Failed to fetch categories."),
+            fetchData(`${INVENTORY_API_URL}/api/stores`, "Failed to fetch stores."),
+            fetchData(`${INVENTORY_API_URL}/api/suppliers`, "Failed to fetch suppliers.")
         ]);
         // console.log("Master data fetched successfully."); // Log เมื่อ fetch สำเร็จ
 
@@ -55,9 +55,9 @@ export const fetchMasterData = async () => {
 export const fetchItemsStockData = async () => {
     try {
         console.log("Fetching item stock data...");
-        console.log(`Fetching data from: ${INVENTORY_API_URL}/item-stock`);
+        console.log(`Fetching data from: ${INVENTORY_API_URL}/api/item-stock`);
         const rawItems = await fetchData(
-            `${INVENTORY_API_URL}/item-stock`,
+            `${INVENTORY_API_URL}/api/item-stock`,
             "Failed to fetch item stock data."
         );
 
