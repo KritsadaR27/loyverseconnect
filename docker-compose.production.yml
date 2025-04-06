@@ -7,14 +7,15 @@ services:
       dockerfile: Dockerfile
       args:
       - NODE_ENV=production
+    env_file:
+      - .env.production
     environment:
       - NEXT_PUBLIC_INVENTORY_BASE_URL=${NEXT_PUBLIC_INVENTORY_BASE_URL}
       - NEXT_PUBLIC_SUPPLIER_BASE_URL=${NEXT_PUBLIC_SUPPLIER_BASE_URL}
       - NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=${NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL}
       - NEXT_PUBLIC_SALE_BASE_URL=${NEXT_PUBLIC_SALE_BASE_URL}
       - NEXT_PUBLIC_RECEIPT_BASE_URL=${NEXT_PUBLIC_RECEIPT_BASE_URL}
-    env_file:
-      - .env.production
+    
     ports:
       - "3000:3000"
     restart: unless-stopped
