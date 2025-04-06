@@ -6,7 +6,13 @@ import "net/http"
 // CORS Middleware เพื่อจัดการ cross-origin resource sharing
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000") // ตั้งเป็น * เพื่ออนุญาตทุก origin ถ้าต้องการ
+		origin := r.Header.Get("Origin")
+
+		// ตรวจสอบ origin ที่อนุญาต
+		if origin == "http://localhost:3000" || origin == "https://app.lungruay.com" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 

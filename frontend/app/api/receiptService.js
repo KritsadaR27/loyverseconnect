@@ -35,9 +35,9 @@ export const fetchReceipts = async (offset = 0, pageSize = 100) => {
 export const fetchMasterData = async () => {
     try {
         const [categories, rawStores, rawSuppliers] = await Promise.all([
-            fetchData(`${INVENTORY_API_URL}/categories`, "Failed to fetch categories."),
-            fetchData(`${INVENTORY_API_URL}/stores`, "Failed to fetch stores."),
-            fetchData(`${INVENTORY_API_URL}/suppliers`, "Failed to fetch suppliers."),
+            fetchData(`${INVENTORY_API_URL}/api/categories`, "Failed to fetch categories."),
+            fetchData(`${INVENTORY_API_URL}/api/stores`, "Failed to fetch stores."),
+            fetchData(`${INVENTORY_API_URL}/api/suppliers`, "Failed to fetch suppliers."),
         ]);
 
         const stores = rawStores.map(store => ({

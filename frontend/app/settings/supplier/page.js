@@ -1,3 +1,4 @@
+// frontend/app/settings/supplier/page.js
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';

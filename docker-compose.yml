@@ -20,6 +20,9 @@ services:
       - "3000:3000"
     depends_on:
       - loyverse-connect
+    networks:
+      - app-network
+    
 
   loyverse-connect:
     build:
@@ -53,6 +56,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    container_name: inventory-management
+    networks:
+      - app-network
+    
 
   supplier-management:
     build:
@@ -68,6 +75,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    container_name: supplier-management
+    networks:
+      - app-network
 
   sale-management:
     build:
@@ -97,7 +107,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  
+  # docker-compose.yml (เพิ่มเติม)
+  airtable-connect:
+    build:
+      context: .
+      dockerfile: backend/external/airtable-connect/Dockerfile
+    container_name: airtable-connect
+    environment:
+      - PORT=8085
+      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+      - LINE_NOTIFY_TOKEN_DELIVERY=${LINE_NOTIFY_TOKEN_DELIVERY}
+      - LINE_NOTIFY_TOKEN_ORDERS=${LINE_NOTIFY_TOKEN_ORDERS}
+    ports:
+      - "8085:8085"
+    depends_on:
+      - db
   db:
     image: postgres:13
     environment:

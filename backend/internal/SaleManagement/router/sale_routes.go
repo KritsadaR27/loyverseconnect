@@ -6,6 +6,7 @@ import (
 	"backend/internal/SaleManagement/application/handlers"
 	"backend/internal/SaleManagement/application/services"
 	"backend/internal/SaleManagement/infrastructure/data"
+	"backend/internal/SaleManagement/middleware" // Import Middleware
 	"database/sql"
 	"net/http"
 )
@@ -19,9 +20,9 @@ func RegisterSaleRoutes(mux *http.ServeMux, db *sql.DB) {
 	service := services.NewSalesService(repo)
 	handler := handlers.NewSalesHandler(service)
 
-	mux.HandleFunc("/api/receipts", receiptHandler.ListReceipts)       // ลิสใบเสร็จ
-	mux.HandleFunc("/api/sales/items", receiptHandler.ListSalesByItem) // รายการขายตามสินค้า
-	mux.HandleFunc("/api/sales/days", receiptHandler.ListSalesByDay)   // จำนวนขายตามวัน
-	mux.HandleFunc("/api/sales/monthly-category", handler.GetMonthlyCategorySales)
-
+	// ใช้ Middleware CORS กับทุก Route
+	mux.Handle("/api/receipts", middleware.CORS(http.HandlerFunc(receiptHandler.ListReceipts)))
+	mux.Handle("/api/sales/items", middleware.CORS(http.HandlerFunc(receiptHandler.ListSalesByItem)))
+	mux.Handle("/api/sales/days", middleware.CORS(http.HandlerFunc(receiptHandler.ListSalesByDay)))
+	mux.Handle("/api/sales/monthly-category", middleware.CORS(http.HandlerFunc(handler.GetMonthlyCategorySales)))
 }

@@ -1,13 +1,13 @@
-// const INVENTORY_API_URL =
-//     typeof window === "undefined"
-//         ? "http://host.docker.internal:8082/api"
-//         : `${process.env.NEXT_PUBLIC_INVENTORY_BASE_URL}/api`; // เพิ่ม /api ให้ชัดเจน
-const INVENTORY_API_URL =
-process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://host.docker.internal:8082"; // ใช้ environment variable สำหรับ URL
+// ใช้แยกตามฝั่ง
+const isServer = typeof window === "undefined";
+const INVENTORY_API_URL = isServer
+  ? process.env.INVENTORY_API_URL
+  : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
     try {
-        // console.log(`Fetching data from: ${url}`); // Log URL ที่กำลัง fetch
+        console.log(`Fetching data from: ${url}`); // Log URL ที่กำลัง fetch
         const response = await fetch(url, { cache: "no-store" });
 
         if (!response.ok) {
@@ -15,10 +15,10 @@ const fetchData = async (url, errorMessage) => {
         }
 
         const data = await response.json();
-        // console.log(`Data fetched successfully from: ${url}`); // Log เมื่อ fetch สำเร็จ
+        console.log(`Data fetched successfully from: ${url}`); // Log เมื่อ fetch สำเร็จ
         return data;
     } catch (error) {
-        // console.error(`Error fetching data from: ${url}`, error.message); // Log ข้อผิดพลาด
+        console.error(`Error fetching data from: ${url}`, error.message); // Log ข้อผิดพลาด
         throw new Error(error.message);
     }
 };
@@ -27,23 +27,33 @@ const fetchData = async (url, errorMessage) => {
 export const fetchMasterData = async () => {
     try {
         console.log("Fetching master data...");
-        const data = await Promise.all([
+        const [categories, stores, suppliers] = await Promise.allSettled([
             fetchData(`${INVENTORY_API_URL}/api/categories`, "Failed to fetch categories."),
             fetchData(`${INVENTORY_API_URL}/api/stores`, "Failed to fetch stores."),
             fetchData(`${INVENTORY_API_URL}/api/suppliers`, "Failed to fetch suppliers.")
         ]);
-        // console.log("Master data fetched successfully."); // Log เมื่อ fetch สำเร็จ
+
+        // ตรวจสอบผลลัพธ์ของแต่ละ API
+        if (categories.status === "rejected") {
+            console.error(categories.reason.message);
+        }
+        if (stores.status === "rejected") {
+            console.error(stores.reason.message);
+        }
+        if (suppliers.status === "rejected") {
+            console.error(suppliers.reason.message);
+        }
 
         // เปลี่ยนชื่อฟิลด์ supplier_name เป็น name
-        const suppliers = data[2].map(supplier => ({
+        const supplierData = suppliers.status === "fulfilled" ? suppliers.value.map(supplier => ({
             ...supplier,
             name: supplier.supplier_name
-        }));
+        })) : [];
 
         return {
-            categories: data[0],
-            stores: data[1],
-            suppliers: suppliers
+            categories: categories.status === "fulfilled" ? categories.value : [],
+            stores: stores.status === "fulfilled" ? stores.value : [],
+            suppliers: supplierData
         };
     } catch (error) {
         console.error("Error fetching master data:", error.message);
