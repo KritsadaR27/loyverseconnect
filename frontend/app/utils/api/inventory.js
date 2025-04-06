@@ -30,7 +30,7 @@ export const saveItemFields = async (itemFields) => {
 };
 
 
-const fetchSalesByDay = async (startDate, endDate, setPivotData) => {
+export const fetchSalesByDay = async (startDate, endDate, setPivotData) => {
     try {
         const response = await axios.get("http://localhost:8084/api/sales/days", {
             params: {

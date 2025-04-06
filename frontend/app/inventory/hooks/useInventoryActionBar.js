@@ -87,7 +87,7 @@ const useInventoryActionBar = (setSelectedCategories, setSelectedSuppliers, togg
             if (response.ok) {
                 setAlert({ message: `ซิงค์ข้อมูลสต๊อกเรียบร้อยแล้วจ้า`, type: 'success' });
             } else {
-                setAlert({ message: `ซิงค์ไม่สำเ���็จ กรุณาติดต่อคนทำ`, type: 'error' });
+                setAlert({ message: `ซิงค์ไม่สำเร็จ กรุณาติดต่อคนทำ`, type: 'error' });
             }
         } catch (error) {
             setAlert({ message: "Error: Could not complete sync", type: 'error' });
