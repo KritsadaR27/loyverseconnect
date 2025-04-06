@@ -26,12 +26,13 @@ func RegisterItemRoutes(mux *http.ServeMux, db *sql.DB) {
 	itemHandler := handlers.NewItemStockHandler(itemService)
 
 	// Route to get all item stock data
-	mux.Handle("/item-stock", middleware.CORS(http.HandlerFunc(itemHandler.GetItemStockHandler)))
+	mux.Handle("/api/item-stock", middleware.CORS(http.HandlerFunc(itemHandler.GetItemStockHandler)))
 
 	// Route to get store-specific stock data for a given item ID
-	mux.HandleFunc("/api/item-stock/store", itemHandler.GetItemStockByStoreHandler)
+	mux.Handle("/api/item-stock/store", middleware.CORS(http.HandlerFunc(itemHandler.GetItemStockByStoreHandler)))
+
 	// Route to save item supplier settings
-	mux.HandleFunc("/api/item-supplier-settings", itemHandler.SaveItemSupplierSettingHandler) // ฟังก์ชันใหม่
+	mux.Handle("/api/item-supplier-settings", middleware.CORS(http.HandlerFunc(itemHandler.SaveItemSupplierSettingHandler)))
 }
 
 // RegisterExportRoutes registers the route for exporting data to Google Sheets
@@ -41,14 +42,14 @@ func RegisterExportRoutes(mux *http.ServeMux, db *sql.DB, sheetsClient *sheets.S
 
 	exportHandler := handlers.NewExportHandler(exportService)
 
-	mux.HandleFunc("/api/export-to-google-sheet", exportHandler.ExportToGoogleSheetHandler)
+	mux.Handle("/api/export-to-google-sheet", middleware.CORS(http.HandlerFunc(exportHandler.ExportToGoogleSheetHandler)))
 }
 
 // RegisterMasterDataRoutes registers routes related to master data
 func RegisterMasterDataRoutes(mux *http.ServeMux, db *sql.DB) {
-	mux.HandleFunc("/api/categories", handlers.GetCategoriesHandler(db))
-	mux.HandleFunc("/api/items", handlers.GetItemsHandler(db))
-	mux.HandleFunc("/api/paymenttypes", handlers.GetPaymentTypesHandler(db))
-	mux.HandleFunc("/api/stores", handlers.GetStoresHandler(db))
-	mux.HandleFunc("/api/suppliers", handlers.GetSuppliersHandler(db))
+	mux.Handle("/api/categories", middleware.CORS(http.HandlerFunc(handlers.GetCategoriesHandler(db))))
+	mux.Handle("/api/items", middleware.CORS(http.HandlerFunc(handlers.GetItemsHandler(db))))
+	mux.Handle("/api/paymenttypes", middleware.CORS(http.HandlerFunc(handlers.GetPaymentTypesHandler(db))))
+	mux.Handle("/api/stores", middleware.CORS(http.HandlerFunc(handlers.GetStoresHandler(db))))
+	mux.Handle("/api/suppliers", middleware.CORS(http.HandlerFunc(handlers.GetSuppliersHandler(db))))
 }
