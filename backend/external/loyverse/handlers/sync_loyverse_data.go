@@ -63,6 +63,7 @@ func SyncReceipts(dbConn *sql.DB) error {
 	// กำหนดค่าการดึงข้อมูลแบบ Batch
 	limit := 250
 	cursor := ""
+	totalProcessed := 0 // ตัวแปรสำหรับนับจำนวนใบเสร็จที่ถูกประมวลผลทั้งหมด
 
 	for {
 		// ดึงข้อมูลใบเสร็จทีละ batch
@@ -77,7 +78,15 @@ func SyncReceipts(dbConn *sql.DB) error {
 			log.Println("Error saving receipts:", err)
 			return err
 		}
+
+		// อัปเดตจำนวนใบเสร็จที่ถูกประมวลผล
+		startIndex := totalProcessed + 1
+		totalProcessed += len(receipts)
+		endIndex := totalProcessed
+
+		// แสดง log สำหรับ batch นี้
 		log.Printf("Saved %d receipts to database", len(receipts))
+		log.Printf("Batch %d-%d receipts saved successfully.", startIndex, endIndex)
 
 		// ตรวจสอบว่าเป็น batch สุดท้ายหรือไม่
 		if nextCursor == "" {
@@ -86,7 +95,7 @@ func SyncReceipts(dbConn *sql.DB) error {
 		cursor = nextCursor // อัปเดต cursor สำหรับ batch ถัดไป
 	}
 
-	log.Println("Receipts synced successfully")
+	log.Printf("All %d receipts saved successfully.", totalProcessed)
 	return nil
 }
 
