@@ -8,35 +8,38 @@ const SyncDataPage = () => {
     const [status, setStatus] = useState("");
     const [userRole, setUserRole] = useState(null);
 
-    // ใช้ environment variables แทนการ hardcode URLs
-    const inventoryApiUrl = typeof window === "undefined"
-        ? "http://host.docker.internal:8082"
-        : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
-    const purchaseOrderApiUrl = process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8080';
-    const loyverseConnectApiUrl = process.env.NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL || 'http://localhost:8080';
-    console.log("inventoryApiUrl:", inventoryApiUrl);
-    console.log("purchaseOrderApiUrl:", purchaseOrderApiUrl);
-    console.log("loyverseConnectApiUrl:", loyverseConnectApiUrl);
-    console.log("Environment:", process.env.NODE_ENV);
-    console.log("NEXT_PUBLIC_INVENTORY_BASE_URL:", process.env.NEXT_PUBLIC_INVENTORY_BASE_URL);
+    // แยก URL ระหว่าง server และ client
+    const isServer = typeof window === "undefined";
+    const INVENTORY_API_URL = isServer
+        ? process.env.INVENTORY_API_URL
+        : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+    const PURCHASE_ORDER_API_URL = isServer
+        ? process.env.PURCHASE_ORDER_API_URL
+        : process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL;
+    const LOYVERSE_CONNECT_API_URL = isServer
+        ? process.env.LOYVERSE_CONNECT_API_URL
+        : process.env.NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL;
+
+    console.log("INVENTORY_API_URL:", INVENTORY_API_URL);
+    console.log("PURCHASE_ORDER_API_URL:", PURCHASE_ORDER_API_URL);
+    console.log("LOYVERSE_CONNECT_API_URL:", LOYVERSE_CONNECT_API_URL);
+
     // ฟังก์ชันสำหรับส่งข้อมูลไปยัง Google Sheets
     const handleExportToGoogleSheet = async () => {
         try {
-            const response = await fetch(`${inventoryApiUrl}/api/export-to-google-sheet`, {
+            const response = await fetch(`${INVENTORY_API_URL}/api/export-to-google-sheet`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Origin': window.location.origin,
                 },
             });
-            console.log(response); // Debugging response
 
             if (!response.ok) {
-                const errorText = await response.text(); // รับข้อความข้อผิดพลาดจากเซิร์ฟเวอร์
+                const errorText = await response.text();
                 throw new Error(`Network response was not ok: ${errorText}`);
             }
-            const message = await response.text(); // รับข้อความตอบกลับ
-            console.log('Data exported to Google Sheet:', message);
+            const message = await response.text();
             alert('ข้อมูลถูกส่งไปยัง Google Sheets เรียบร้อยแล้ว!!');
         } catch (error) {
             console.error('Error exporting to Google Sheet:', error);
@@ -47,12 +50,11 @@ const SyncDataPage = () => {
     // ตั้งค่า userRole เป็น 'super' เพื่อทดสอบ
     useEffect(() => {
         setUserRole("super"); // สมมติ role เป็น 'super' สำหรับการทดสอบ
-        // Fetch current settings - ใช้ environment variable
-        fetch(`${loyverseConnectApiUrl}/api/get-settings`)
+        fetch(`${LOYVERSE_CONNECT_API_URL}/api/get-settings`)
             .then((res) => res.json())
             .then((data) => setSettings(data))
             .catch((err) => console.error("Failed to fetch settings:", err));
-    }, [loyverseConnectApiUrl]);
+    }, [LOYVERSE_CONNECT_API_URL]);
 
     // ตรวจสอบสิทธิ์ของผู้ใช้
     if (userRole !== "super") {
@@ -66,7 +68,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับบันทึกการตั้งค่า
     const handleSave = async () => {
         try {
-            const response = await fetch(`${loyverseConnectApiUrl}/api/update-settings`, {
+            const response = await fetch(`${LOYVERSE_CONNECT_API_URL}/api/update-settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
@@ -87,7 +89,7 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับซิงค์แต่ละประเภท
     const handleSync = async (endpoint) => {
         try {
-            const response = await fetch(`${loyverseConnectApiUrl}${endpoint}`, { method: "POST" });
+            const response = await fetch(`${LOYVERSE_CONNECT_API_URL}${endpoint}`, { method: "POST" });
             if (response.ok) {
                 setStatus(`Data synced successfully from ${endpoint}`);
             } else {
