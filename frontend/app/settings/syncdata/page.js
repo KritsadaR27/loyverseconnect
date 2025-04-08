@@ -89,7 +89,10 @@ const SyncDataPage = () => {
     // ฟังก์ชันสำหรับซิงค์แต่ละประเภท
     const handleSync = async (endpoint) => {
         try {
-            const response = await fetch(`${LOYVERSE_CONNECT_API_URL}${endpoint}`, { method: "POST" });
+            const response = await fetch(`${LOYVERSE_CONNECT_API_URL}${endpoint}`, { 
+                method: "POST",
+                credentials: "include", 
+            });
             if (response.ok) {
                 setStatus(`Data synced successfully from ${endpoint}`);
             } else {
