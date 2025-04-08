@@ -1,8 +1,9 @@
 // ใช้แยกตามฝั่ง
-const isServer = typeof window === "undefined";
-const INVENTORY_API_URL = isServer
-  ? process.env.INVENTORY_API_URL
-  : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+// const isServer = typeof window === "undefined";
+// const INVENTORY_API_URL = isServer
+//   ? process.env.INVENTORY_API_URL
+//   : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+const INVENTORY_API_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
 
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
 const fetchData = async (url, errorMessage) => {
