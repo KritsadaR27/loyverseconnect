@@ -54,7 +54,8 @@ const InventoryActionBar = ({ filterText, filterInventory, groupBy, setGroupBy, 
   };
 
   const handleSyncClick = () => {
-    handleSync("http://localhost:8080/api/sync-inventory-levels");
+    const apiUrl = process.env.NEXT_PUBLIC_LOYVERSE_CONNECT_BASE_URL;
+    handleSync(`${apiUrl}/api/sync-inventory-levels`);
   };
 
   const filteredCategories = categories.filter(category =>
