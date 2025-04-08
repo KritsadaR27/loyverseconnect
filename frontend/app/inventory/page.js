@@ -1,4 +1,6 @@
 // src/app/inventory/page.js
+export const dynamic = 'force-dynamic';
+
 import React from "react";
 import ClientInventoryPage from "./ClientInventoryPage";
 import { fetchItemsStockData, fetchMasterData } from "./../api/inventoryService";
