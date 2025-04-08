@@ -92,6 +92,9 @@ const SyncDataPage = () => {
             const response = await fetch(`${LOYVERSE_CONNECT_API_URL}${endpoint}`, { 
                 method: "POST",
                 credentials: "include", 
+                headers: {
+                    "Content-Type": "application/json",
+                },
             });
             if (response.ok) {
                 setStatus(`Data synced successfully from ${endpoint}`);

@@ -1,12 +1,15 @@
 // frontend/app/api/salesService.js
 
 import axios from 'axios';
-
-const SALES_API_URL = process.env.NEXT_PUBLIC_SALE_BASE_URL || "http://localhost:8084/api";
+const isServer = typeof window === "undefined";
+const SALES_API_URL = isServer
+    ? process.env.SALES_API_URL
+    : process.env.NEXT_PUBLIC_SALE_BASE_URL;
+// const SALES_API_URL = process.env.NEXT_PUBLIC_SALE_BASE_URL;
 
 export const fetchSalesByItem = async (offset = 0, pageSize = 100) => {
     try {
-        const response = await axios.get(`${SALES_API_URL}/sales/items`, {
+        const response = await axios.get(`${SALES_API_URL}/api/sales/items`, {
             params: { offset, pageSize }
         });
         return response.data;
@@ -18,7 +21,7 @@ export const fetchSalesByItem = async (offset = 0, pageSize = 100) => {
 
 export const fetchSalesByDay = async (startDate, endDate) => {
     try {
-        const response = await axios.get(`${SALES_API_URL}/sales/days`, {
+        const response = await axios.get(`${SALES_API_URL}/api/sales/days`, {
             params: {
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
@@ -37,7 +40,7 @@ export const fetchMonthlyCategorySales = async (startDate, endDate) => {
         const startInBangkok = new Date(startDate).toLocaleString('sv-SE', { timeZone }).split(" ")[0];
         const endInBangkok = new Date(endDate).toLocaleString('sv-SE', { timeZone }).split(" ")[0];
 
-        const response = await axios.get(`${SALES_API_URL}/sales/monthly-category`, {
+        const response = await axios.get(`${SALES_API_URL}/api/sales/monthly-category`, {
             params: {
                 startDate: startInBangkok,
                 endDate: endInBangkok,

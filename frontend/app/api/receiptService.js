@@ -1,5 +1,12 @@
-const RECEIPT_API_URL = process.env.NEXT_PUBLIC_RECEIPT_BASE_URL || "http://localhost:8084/api";
-const INVENTORY_API_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || "http://localhost:8082/api";
+const isServer = typeof window === "undefined";
+const INVENTORY_API_URL = isServer
+  ? process.env.INVENTORY_API_URL
+  : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+const RECEIPT_API_URL = isServer
+    ? process.env.RECEIPT_API_URL
+    : process.env.NEXT_PUBLIC_RECEIPT_BASE_URL;
+// const RECEIPT_API_URL = process.env.NEXT_PUBLIC_RECEIPT_BASE_URL;
+// const INVENTORY_API_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
 import { normalizeStoreName } from '../utils/StoreName';
 
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
