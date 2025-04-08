@@ -3,6 +3,8 @@
 // const INVENTORY_API_URL = isServer
 //   ? process.env.INVENTORY_API_URL
 //   : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+export const dynamic = 'force-dynamic';
+
 const INVENTORY_API_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
 
 // ฟังก์ชันสำหรับ fetch ข้อมูลทั่วไป
