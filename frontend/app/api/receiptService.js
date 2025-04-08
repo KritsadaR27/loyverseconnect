@@ -23,7 +23,7 @@ const fetchData = async (url, errorMessage) => {
 // ฟังก์ชัน fetch ข้อมูล Receipts
 export const fetchReceipts = async (offset = 0, pageSize = 100) => {
     try {
-        const url = `${RECEIPT_API_URL}/receipts?offset=${offset}&pageSize=${pageSize}`;
+        const url = `${RECEIPT_API_URL}/api/receipts?offset=${offset}&pageSize=${pageSize}`;
         return await fetchData(url, "Failed to fetch receipts.");
     } catch (error) {
         console.error("Error fetching receipts:", error.message);
