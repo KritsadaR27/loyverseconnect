@@ -119,7 +119,7 @@ services:
   line-connect:
     build:
       context: .
-      dockerfile: backend/internal/LineConnect/Dockerfile
+      dockerfile: backend/external/LineConnect/Dockerfile
     ports:
       - "8085:8085"
     environment:
@@ -134,7 +134,7 @@ services:
   airtable-connect:
     build:
       context: .
-      dockerfile: backend/internal/AirtableConnect/Dockerfile
+      dockerfile: backend/external/AirtableConnect/Dockerfile
     ports:
       - "8086:8086"
     environment:

@@ -67,7 +67,42 @@ services:
         limits:
           cpus: '0.5'
           memory: 512M
-      
+
+   # Airtable Connect Service
+  airtable-connect:
+    build:
+      context: .
+      dockerfile: backend/external/AirtableConnect/Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AIRTABLE_ACCESS_TOKEN=${AIRTABLE_ACCESS_TOKEN}
+      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+      - PORT=8086
+      - TZ=Asia/Bangkok
+    ports:
+      - "8086:8086"
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/api/airtable/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3   
   # Inventory Management Service
   inventory-management:
     build:
@@ -99,6 +134,41 @@ services:
           memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+   # LINE Connect Service
+  line-connect:
+    build:
+      context: .
+      dockerfile: backend/external/LineConnect/Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_TOKEN=${LINE_CHANNEL_TOKEN}
+      - PORT=8085
+      - TZ=Asia/Bangkok
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - lungruay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/api/line/groups"]
       interval: 30s
       timeout: 10s
       retries: 3

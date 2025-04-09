@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -54,6 +55,10 @@ func (s *AirtableService) CreateTable(req models.TableRequest) (models.Table, er
 	if err := json.Unmarshal([]byte(req.Mapping), &mapping); err != nil {
 		return models.Table{}, fmt.Errorf("invalid mapping JSON: %v", err)
 	}
+	syncInterval, err := strconv.Atoi(req.SyncInterval)
+	if err != nil {
+		return models.Table{}, fmt.Errorf("invalid sync interval: %v", err)
+	}
 
 	table := models.Table{
 		Name:          req.Name,
@@ -62,7 +67,7 @@ func (s *AirtableService) CreateTable(req models.TableRequest) (models.Table, er
 		Mapping:       req.Mapping,
 		CreateSQL:     req.CreateSQL,
 		SourceSQL:     req.SourceSQL,
-		SyncInterval:  req.SyncInterval,
+		SyncInterval:  syncInterval,
 		SyncDirection: req.SyncDirection,
 		Active:        true,
 		LastSyncTime:  time.Now().UTC(),
@@ -98,13 +103,17 @@ func (s *AirtableService) UpdateTable(id int, req models.TableRequest) (models.T
 	if err := json.Unmarshal([]byte(req.Mapping), &mapping); err != nil {
 		return models.Table{}, fmt.Errorf("invalid mapping JSON: %v", err)
 	}
+	syncInterval, err := strconv.Atoi(req.SyncInterval)
+	if err != nil {
+		return models.Table{}, fmt.Errorf("invalid sync interval: %v", err)
+	}
 
 	// Update fields
 	table.Name = req.Name
 	table.AirtableID = req.AirtableID
 	table.Description = req.Description
 	table.Mapping = req.Mapping
-	table.SyncInterval = req.SyncInterval
+	table.SyncInterval = syncInterval
 	table.SyncDirection = req.SyncDirection
 
 	// Only update SQL if provided

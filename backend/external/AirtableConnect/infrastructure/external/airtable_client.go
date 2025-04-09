@@ -4,6 +4,7 @@ package external
 import (
 	"backend/external/AirtableConnect/domain/interfaces"
 	"backend/external/AirtableConnect/domain/models"
+	"fmt"
 	"log"
 	"time"
 
@@ -50,62 +51,79 @@ func (c *AirtableClientImpl) GetRecords(baseID, tableName string) ([]models.Reco
 // CreateRecord creates a new record in an Airtable table
 func (c *AirtableClientImpl) CreateRecord(baseID, tableName string, fields map[string]interface{}) (models.Record, error) {
 	table := c.client.GetTable(baseID, tableName)
-	record, err := table.CreateRecord(airtable.Record{
-		Fields: fields,
-	}).Do()
+
+	recordsToSend := &airtable.Records{
+		Records: []*airtable.Record{
+			{
+				Fields: fields,
+			},
+		},
+	}
+
+	createdRecords, err := table.AddRecords(recordsToSend)
 	if err != nil {
 		log.Printf("Error in CreateRecord: %v, Fields: %v", err, fields)
 		return models.Record{}, err
 	}
 
-	// Convert Airtable record to our model
-	created, _ := time.Parse(time.RFC3339, record.CreatedTime)
+	if len(createdRecords.Records) == 0 {
+		return models.Record{}, fmt.Errorf("no records created")
+	}
+
+	createdRecord := createdRecords.Records[0]
+	createdTime, _ := time.Parse(time.RFC3339, createdRecord.CreatedTime)
 
 	return models.Record{
-		ID:          record.ID,
-		Fields:      record.Fields,
-		CreatedTime: created,
+		ID:          createdRecord.ID,
+		Fields:      createdRecord.Fields,
+		CreatedTime: createdTime,
 	}, nil
 }
 
 // UpdateRecord updates an existing record in an Airtable table
 func (c *AirtableClientImpl) UpdateRecord(baseID, tableName, recordID string, fields map[string]interface{}) (models.Record, error) {
 	table := c.client.GetTable(baseID, tableName)
-	record, err := table.UpdateRecord(airtable.Record{
-		ID:     recordID,
-		Fields: fields,
-	}).Do()
-	if err != nil {
+
+	toUpdate := &airtable.Records{
+		Records: []*airtable.Record{
+			{
+				ID:     recordID,
+				Fields: fields,
+			},
+		},
+	}
+
+	updated, err := table.UpdateRecords(toUpdate)
+	if err != nil || len(updated.Records) == 0 {
 		log.Printf("Failed to update record in Airtable: %v", err)
 		return models.Record{}, err
 	}
 
-	// Convert Airtable record to our model
-	created, _ := time.Parse(time.RFC3339, record.CreatedTime)
+	createdTime, _ := time.Parse(time.RFC3339, updated.Records[0].CreatedTime)
 
 	return models.Record{
-		ID:          record.ID,
-		Fields:      record.Fields,
-		CreatedTime: created,
+		ID:          updated.Records[0].ID,
+		Fields:      updated.Records[0].Fields,
+		CreatedTime: createdTime,
 	}, nil
 }
 
 // DeleteRecord deletes a record from an Airtable table
 func (c *AirtableClientImpl) DeleteRecord(baseID, tableName, recordID string) error {
 	table := c.client.GetTable(baseID, tableName)
-	_, err := table.DeleteRecord(recordID).Do()
+
+	_, err := table.DeleteRecords([]string{recordID})
 	if err != nil {
 		log.Printf("Failed to delete record from Airtable: %v", err)
-		return err
 	}
-	return nil
+	return err
 }
 
-func exampleUsage() {
-	fields := map[string]interface{}{
-		"Name":  "John Doe",
-		"Email": "john.doe@example.com",
-	}
-	// Example usage of fields (e.g., calling CreateRecord)
-	// _ = fields
-}
+// func exampleUsage() {
+// 	fields := map[string]interface{}{
+// 		"Name":  "John Doe",
+// 		"Email": "john.doe@example.com",
+// 	}
+// 	// Example usage of fields (e.g., calling CreateRecord)
+// 	// _ = fields
+// }

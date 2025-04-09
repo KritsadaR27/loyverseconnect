@@ -20,10 +20,12 @@ type Table struct {
 
 // TableRequest is the model for table creation/update requests
 type TableRequest struct {
-	Name        string `json:"name"`
-	AirtableID  string `json:"airtable_id"`
-	Description string `json:"description"`
-	Mapping     string `json:"mapping"`
-	CreateSQL   string `json:"create_sql,omitempty"`
-	SourceSQL   string `json:"source_sql,omitempty"`
+	Name          string `json:"name"`
+	AirtableID    string `json:"airtable_id"`
+	Description   string `json:"description"`
+	Mapping       string `json:"mapping"`
+	CreateSQL     string `json:"create_sql,omitempty"`
+	SourceSQL     string `json:"source_sql,omitempty"`
+	SyncInterval  string `json:"sync_interval"`
+	SyncDirection string `json:"sync_direction"`
 }

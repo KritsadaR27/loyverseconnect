@@ -86,6 +86,47 @@ func (r *RecordRepository) SaveRecords(tableName string, records []models.Record
 }
 
 // GetRecords retrieves records from the local database
+func (r *RecordRepository) GetRecords(tableName string, limit, offset int) ([]models.Record, error) {
+	query := fmt.Sprintf(
+		"SELECT airtable_id, fields, created_at FROM %s ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+		tableName,
+	)
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("error querying records: %v", err)
+	}
+	defer rows.Close()
+
+	var records []models.Record
+	for rows.Next() {
+		var record models.Record
+		var fieldsJSON []byte
+		var createdAt time.Time
+
+		err := rows.Scan(&record.ID, &fieldsJSON, &createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning record: %v", err)
+		}
+
+		// Unmarshal fields from JSON
+		var fields map[string]interface{}
+		if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
+			return nil, fmt.Errorf("error unmarshaling fields: %v", err)
+		}
+
+		record.Fields = fields
+		record.CreatedTime = createdAt
+		records = append(records, record)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return records, nil
+}
+
+// GetRecordByID retrieves a specific record by ID
 func (r *RecordRepository) GetRecordByID(tableName, recordID string) (models.Record, error) {
 	query := fmt.Sprintf(
 		"SELECT airtable_id, fields, created_at FROM %s WHERE airtable_id = $1",
@@ -113,6 +154,7 @@ func (r *RecordRepository) GetRecordByID(tableName, recordID string) (models.Rec
 	return record, nil
 }
 
+// GetRecordCount gets the count of records in a table
 func (r *RecordRepository) GetRecordCount(tableName string) (int, error) {
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 
@@ -125,10 +167,102 @@ func (r *RecordRepository) GetRecordCount(tableName string) (int, error) {
 	return count, nil
 }
 
-type TableRepository struct {
-	db *sql.DB
+// ExecuteSourceSQL executes a custom SQL query and returns the records
+func (r *RecordRepository) ExecuteSourceSQL(sourceSQL string) ([]map[string]interface{}, error) {
+	// Execute the source SQL
+	rows, err := r.db.Query(sourceSQL)
+	if err != nil {
+		return nil, fmt.Errorf("error executing source SQL: %v", err)
+	}
+	defer rows.Close()
+
+	// Get column names
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("error getting column names: %v", err)
+	}
+
+	// Prepare result set
+	var results []map[string]interface{}
+
+	// For each row
+	for rows.Next() {
+		// Create a slice of interface{} to hold the values
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+
+		// Initialize interfaces to hold scan results
+		for i := range columns {
+			valuePtrs[i] = &values[i]
+		}
+
+		// Scan the row into the interfaces
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, fmt.Errorf("error scanning row: %v", err)
+		}
+
+		// Create a map to hold the row data
+		row := make(map[string]interface{})
+
+		// For each column
+		for i, colName := range columns {
+			// Get the value
+			val := values[i]
+
+			// Convert any specific types as needed
+			switch v := val.(type) {
+			case []byte:
+				// Try to unmarshal as JSON if it's a JSONB field
+				var jsonData interface{}
+				if err := json.Unmarshal(v, &jsonData); err == nil {
+					row[colName] = jsonData
+				} else {
+					// Otherwise treat as string
+					row[colName] = string(v)
+				}
+			case time.Time:
+				// Format time as RFC3339 string
+				row[colName] = v.Format(time.RFC3339)
+			default:
+				// Use value as is
+				row[colName] = v
+			}
+		}
+
+		// Add the row to the results
+		results = append(results, row)
+	}
+
+	// Check for any errors in iteration
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return results, nil
 }
 
-func NewTableRepository(db *sql.DB) *TableRepository {
-	return &TableRepository{db: db}
+// ExecuteCustomSQL executes a custom SQL statement (for CREATE TABLE, etc.)
+func (r *RecordRepository) ExecuteCustomSQL(sql string) error {
+	_, err := r.db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("error executing custom SQL: %v", err)
+	}
+	return nil
+}
+
+// CheckTableExists checks if a table exists in the database
+func (r *RecordRepository) CheckTableExists(tableName string) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT FROM information_schema.tables 
+			WHERE table_schema = 'public' 
+			AND table_name = $1
+		)
+	`
+	var exists bool
+	err := r.db.QueryRow(query, tableName).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("error checking if table exists: %v", err)
+	}
+	return exists, nil
 }
