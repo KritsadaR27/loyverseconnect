@@ -115,6 +115,38 @@ services:
   #     - "8085:8085"
   #   depends_on:
   #     - db
+
+  line-connect:
+    build:
+      context: .
+      dockerfile: backend/internal/LineConnect/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_TOKEN=${LINE_CHANNEL_TOKEN}
+      - PORT=8085
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  airtable-connect:
+    build:
+      context: .
+      dockerfile: backend/internal/AirtableConnect/Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+      - PORT=8086
+    depends_on:
+      - db
+    restart: unless-stopped
+
+    
   db:
     image: postgres:13
     environment:
