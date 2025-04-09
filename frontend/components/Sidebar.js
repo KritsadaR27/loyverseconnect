@@ -19,6 +19,7 @@ import {
   ChevronDoubleRightIcon,
   UserCircleIcon,
   Cog6ToothIcon,
+  BellAlertIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 
@@ -57,8 +58,6 @@ const menus = [
       { name: "รายการขายตามสินค้า *", link: "/sales/salesbyitems" },
       { name: "ขายตามสินค้าตามวัน *", link: "/sales/salesbyday" },
       { name: "ขายตามหมวดหมู่ *", link: "/sales/salebycategory" },
-
-
     ],
   },
   {
@@ -116,13 +115,29 @@ const menus = [
 
 const utilityMenus = [
   { title: "โปรไฟล์", icon: UserCircleIcon, link: "/profile" },
-  { title: "ตั้งค่า", icon: Cog6ToothIcon, link: "/settings/syncdata" },
+  { 
+    title: "ตั้งค่า", 
+    icon: Cog6ToothIcon, 
+    submenu: [
+      { name: "ตั้งค่าการซิงค์ข้อมูล *", link: "/settings/syncdata" },
+      { name: "ตั้งค่าการแจ้งเตือน LINE *", link: "/settings/linenotification" },
+      { name: "ตั้งค่าซัพพลายเออร์ *", link: "/settings/supplier" },
+    ] 
+  },
 ];
 
 const Sidebar = () => {
 
   const { isCollapsed, toggleSidebar, theme, setTheme } = useSidebarStore();
   const [activeItem, setActiveItem] = useState("");
+  const [expandedMenus, setExpandedMenus] = useState({});
+
+  const toggleExpandMenu = (title) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  };
 
   return (
     <div
@@ -161,27 +176,28 @@ const Sidebar = () => {
       <nav className="flex flex-col mt-4 space-y-2 z-50">
         {menus.map((menu, index) => (
           <div key={index} className="relative group">
-            <Link href="#">
-              <div
-                className={`flex items-center p-3 ${isCollapsed ? "justify-center" : "space-x-2"
-                  } cursor-pointer ${theme.hover}`}
-                onClick={() => setActiveItem(menu.title)}
-              >
-                <menu.icon className="w-6 h-6 text-white" />
-                {!isCollapsed && <span className="text-white">{menu.title}</span>}
-              </div>
-            </Link>
+            <div
+              className={`flex items-center p-3 ${isCollapsed ? "justify-center" : "space-x-2"
+                } cursor-pointer ${theme.hover}`}
+              onClick={() => {
+                toggleExpandMenu(menu.title);
+                setActiveItem(menu.title);
+              }}
+            >
+              <menu.icon className="w-6 h-6 text-white" />
+              {!isCollapsed && <span className="text-white">{menu.title}</span>}
+            </div>
 
             {/* Submenu */}
             {menu.submenu && (
               <div
                 className={`${isCollapsed
-                  ? "absolute left-16 top-0 hidden group-hover:block bg-white rounded shadow-lg p-3 w-56"
-                  : "ml-4 mt-2 ${theme.hover}"
+                  ? "absolute left-16 top-0 hidden group-hover:block bg-white rounded shadow-lg p-3 w-56 z-50"
+                  : expandedMenus[menu.title] ? "ml-4 mt-2" : "hidden"
                   }`}
               >
                 <div
-                  className={`  ${isCollapsed
+                  className={`${isCollapsed
                     ? "text-black"
                     : "text-white"
                     }`}
@@ -195,9 +211,7 @@ const Sidebar = () => {
                         {item.name}
                       </div>
                     </Link>
-
                   ))}
-
                 </div>
               </div>
             )}
@@ -206,35 +220,82 @@ const Sidebar = () => {
       </nav>
 
       {/* Utility Menus */}
-      <div className="mt-auto border-t border-gray-200">
-        <nav className="flex flex-col mt-2 space-y-2">
+      <div className="mt-auto border-t border-gray-200 pt-2">
+        <nav className="flex flex-col space-y-2">
           {utilityMenus.map((menu, index) => (
-            <Link href={menu.link} key={index}>
-              <div
-                className={`flex items-center p-3 ${activeItem === menu.title
-                  ? "text-black font-semibold"
-                  : "text-white"
-                  } hover:bg-gray-800`}
-                onClick={() => setActiveItem(menu.title)}
-              >
-                <menu.icon className="w-6 h-6" />
-                {!isCollapsed && <span>{menu.title}</span>}
-              </div>
-            </Link>
+            <div key={index} className="relative group">
+              {menu.submenu ? (
+                <>
+                  <div
+                    className={`flex items-center p-3 ${activeItem === menu.title
+                      ? "text-black font-semibold"
+                      : "text-white"
+                      } hover:bg-gray-800 cursor-pointer`}
+                    onClick={() => {
+                      toggleExpandMenu(menu.title);
+                      setActiveItem(menu.title);
+                    }}
+                  >
+                    <menu.icon className="w-6 h-6" />
+                    {!isCollapsed && <span className="ml-2">{menu.title}</span>}
+                  </div>
+                  
+                  {/* Settings Submenu */}
+                  <div
+                    className={`${isCollapsed
+                      ? "absolute left-16 bottom-0 hidden group-hover:block bg-white rounded shadow-lg p-3 w-56 z-50"
+                      : expandedMenus[menu.title] ? "ml-4 mt-2" : "hidden"
+                      }`}
+                  >
+                    <div
+                      className={`${isCollapsed
+                        ? "text-black"
+                        : "text-white"
+                        }`}
+                    >
+                      {menu.submenu.map((item, subIndex) => (
+                        <Link href={item.link} key={subIndex}>
+                          <div
+                            className={`px-4 py-2 border-l ${isCollapsed ? "hover:border-black hover:bg-gray-200" : theme.hover
+                              }`}
+                          >
+                            {item.name}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <Link href={menu.link}>
+                  <div
+                    className={`flex items-center p-3 ${activeItem === menu.title
+                      ? "text-black font-semibold"
+                      : "text-white"
+                      } hover:bg-gray-800`}
+                    onClick={() => setActiveItem(menu.title)}
+                  >
+                    <menu.icon className="w-6 h-6" />
+                    {!isCollapsed && <span className="ml-2">{menu.title}</span>}
+                  </div>
+                </Link>
+              )}
+            </div>
           ))}
         </nav>
       </div>
 
       {/* Theme Selector */}
       <div className="p-3 border-t border-gray-200">
-        {!isCollapsed && <h3 className="text-sm font-semibold mb-2">เปลี่ยนธีมสี</h3>}
+        {!isCollapsed && <h3 className="text-sm font-semibold mb-2 text-white">เปลี่ยนธีมสี</h3>}
         <div className="flex space-x-2">
           {themes.map((t) => (
             <button
               key={t.name}
               onClick={() => setTheme(t)}
-              className={`w-6 h-6 rounded-full border-2 ${theme.name === t.name ? "border-black" : "border-gray-300"
+              className={`w-6 h-6 rounded-full border-2 ${theme.name === t.name ? "border-white" : "border-gray-300"
                 } ${t.color}`}
+              title={t.name}
             />
           ))}
         </div>
