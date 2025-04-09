@@ -7,6 +7,7 @@ import (
 	"backend/external/LineConnect/infrastructure/data"
 	"backend/external/LineConnect/infrastructure/external"
 	"database/sql"
+	"log"
 	"net/http"
 	"strings"
 
@@ -77,15 +78,20 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 		}
 
 		for _, event := range events {
-			// Process LINE webhook events here
-			// This can be expanded based on requirements
-			if event.Type == linebot.EventTypeMessage {
+			switch event.Type {
+			case linebot.EventTypeJoin:
+				// ตอบกลับเพื่อให้ LINE รู้ว่า bot ยัง active อยู่
+				replyToken := event.ReplyToken
+				if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("สวัสดี! Bot เข้าร่วมกลุ่มเรียบร้อยแล้วจ้า 🚀")).Do(); err != nil {
+					log.Println("Error replying to join event:", err)
+				}
+
+			case linebot.EventTypeMessage:
 				switch message := event.Message.(type) {
 				case *linebot.TextMessage:
-					// Handle text message
 					replyToken := event.ReplyToken
 					if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("Received: "+message.Text)).Do(); err != nil {
-						// Log the error but don't return a response to LINE
+						log.Println("Error replying to text message:", err)
 					}
 				}
 			}

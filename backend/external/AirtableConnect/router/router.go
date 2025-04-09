@@ -1,4 +1,6 @@
 // backend/external/AirtableConnect/router/router.go
+// แก้ไขไฟล์เพื่อเพิ่ม route ใหม่
+
 package router
 
 import (
@@ -9,6 +11,7 @@ import (
 	"backend/external/AirtableConnect/infrastructure/external"
 	"database/sql"
 	"net/http"
+	"os"
 
 	"github.com/mehanizm/airtable"
 )
@@ -31,8 +34,18 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	// Create services
 	airtableService := services.NewAirtableService(tableRepo, recordRepo, airtableClientImpl, baseID, db)
 
+	// สร้าง LineAPI URL
+	lineAPIURL := os.Getenv("LINE_CONNECT_URL")
+	if lineAPIURL == "" {
+		lineAPIURL = "http://line-connect:8085/api/line/messages"
+	}
+
+	// สร้าง NotificationService
+	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL)
+
 	// Create handlers
 	syncHandler := handlers.NewSyncHandler(airtableService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService)
 
 	// Register routes for tables
 	mux.HandleFunc("/api/airtable/tables", func(w http.ResponseWriter, r *http.Request) {
@@ -85,5 +98,20 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 		// Status endpoint could be implemented to show sync progress or last sync results
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status": "operational"}`))
+	})
+
+	// ลงทะเบียน route สำหรับการส่งข้อมูลจาก Airtable ไปยัง LINE
+	mux.HandleFunc("/api/airtable/notify/line", notificationHandler.SendAirtableToLine)
+
+	// ลงทะเบียน route สำหรับการจัดการการแจ้งเตือนตามกำหนดเวลา
+	mux.HandleFunc("/api/airtable/schedules", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			notificationHandler.GetSchedules(w, r)
+		case http.MethodPost:
+			notificationHandler.CreateSchedule(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 }

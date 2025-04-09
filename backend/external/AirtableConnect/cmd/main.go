@@ -2,12 +2,17 @@
 package main
 
 import (
+	"backend/external/AirtableConnect/application/services"
 	"backend/external/AirtableConnect/config"
+	"backend/external/AirtableConnect/infrastructure/external"
+	"backend/external/AirtableConnect/infrastructure/scheduler"
 	"backend/external/AirtableConnect/middleware"
 	"backend/external/AirtableConnect/router"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	_ "github.com/lib/pq"
 )
@@ -26,6 +31,30 @@ func main() {
 		log.Fatalf("Failed to initialize Airtable client: %v", err)
 	}
 
+	// Get Airtable base ID
+	baseID, err := config.GetAirtableBaseID()
+	if err != nil {
+		log.Fatalf("Failed to get Airtable base ID: %v", err)
+	}
+
+	// สร้าง Repository
+	airtableClientImpl := external.NewAirtableClient(airtableClient)
+	// notificationRepo := data.NewNotificationRepository(db)
+
+	// สร้าง LineAPI URL
+	lineAPIURL := os.Getenv("LINE_CONNECT_URL")
+	if lineAPIURL == "" {
+		lineAPIURL = "http://line-connect:8085/api/line/messages"
+	}
+
+	// สร้าง Service
+	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL)
+
+	// เริ่ม scheduler สำหรับการแจ้งเตือนตามกำหนดเวลา
+	notificationScheduler := scheduler.NewNotificationScheduler(db, notificationService)
+	notificationScheduler.Start()
+	defer notificationScheduler.Stop()
+
 	// Set up HTTP router
 	mux := http.NewServeMux()
 	router.RegisterRoutes(mux, db, airtableClient)
@@ -39,8 +68,19 @@ func main() {
 		port = "8086" // Default port for Airtable Connect service
 	}
 
-	log.Printf("Starting Airtable Connect server on port %s", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	// สร้าง channel สำหรับรับสัญญาณการหยุดทำงาน
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// เริ่มต้น server ในอีก goroutine
+	go func() {
+		log.Printf("Starting Airtable Connect server on port %s", port)
+		if err := http.ListenAndServe(":"+port, handler); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// รอสัญญาณการหยุดทำงาน
+	<-stop
+	log.Println("Shutting down server...")
 }
