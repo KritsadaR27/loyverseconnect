@@ -10,9 +10,11 @@ import (
 const batchSize = 250 // กำหนด batch size
 // SaveReceipts บันทึกข้อมูลใบเสร็จในฐานข้อมูลแบบ Batch
 func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
+	totalProcessed := 0 // ตัวแปรสำหรับนับจำนวนใบเสร็จที่ถูกประมวลผลทั้งหมด
+
 	for i := 0; i < len(receipts); i += batchSize {
-		batchStart := i + 1
-		batchEnd := i + batchSize
+		batchStart := totalProcessed + 1
+		batchEnd := totalProcessed + batchSize
 		if batchEnd > len(receipts) {
 			batchEnd = len(receipts)
 		}
@@ -100,10 +102,16 @@ func SaveReceipts(db *sql.DB, receipts []models.LoyReceipt) error {
 			log.Println("Error committing transaction:", err)
 			return err
 		}
-		log.Printf("Batch %d-%d receipts saved successfully.", batchStart, batchEnd)
+
+		// อัปเดตจำนวนใบเสร็จที่ถูกประมวลผล
+		totalProcessed += batchEnd - batchStart + 1
+
+		// แสดง log สำหรับ batch นี้
+		log.Printf("Batch %d-%d receipts saved.", batchStart, batchEnd)
 	}
 
-	log.Println("All receipts saved successfully.")
+	// แสดง log สรุปจำนวนใบเสร็จทั้งหมด
+	log.Printf("%d receipts saved successfully.", totalProcessed)
 	return nil
 }
 
@@ -114,6 +122,6 @@ func ClearOldReceiptsData(db *sql.DB) error {
 		log.Println("Error clearing old data:", err)
 		return err
 	}
-	log.Println("Old loyreceipts data cleared successfully.")
+	log.Println("Old loyreceipts data cleared.")
 	return nil
 }
