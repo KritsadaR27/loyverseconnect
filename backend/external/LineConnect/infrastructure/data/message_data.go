@@ -1,8 +1,8 @@
-// backend/internal/LineConnect/infrastructure/data/message_data.go
+// backend/external/LineConnect/infrastructure/data/message_data.go
 package data
 
 import (
-	"backend/internal/LineConnect/domain/models"
+	"backend/external/LineConnect/domain/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -178,11 +178,11 @@ func (r *MessageRepository) ListMessages(limit, offset int, status string) ([]mo
 	return messages, nil
 }
 
-// backend/internal/LineConnect/infrastructure/data/group_data.go
+// backend/external/LineConnect/infrastructure/data/group_data.go
 package data
 
 import (
-	"backend/internal/LineConnect/domain/models"
+	"backend/external/LineConnect/domain/models"
 	"database/sql"
 	"fmt"
 	"time"

@@ -5,11 +5,11 @@ FROM golang:1.23 AS builder
 WORKDIR /app
 
 # Copy go.mod and go.sum to download dependencies
-COPY ./backend/internal/AirtableConnect/go.mod ./backend/internal/AirtableConnect/go.sum ./
+COPY ./backend/external/AirtableConnect/go.mod ./backend/external/AirtableConnect/go.sum ./
 RUN go mod download
 
 # Copy the source code into the container
-COPY ./backend/internal/AirtableConnect /app
+COPY ./backend/external/AirtableConnect /app
 
 # Build the Go binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o airtable-connect cmd/main.go

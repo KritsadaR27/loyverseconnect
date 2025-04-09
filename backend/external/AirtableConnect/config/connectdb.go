@@ -1,4 +1,4 @@
-// backend/internal/AirtableConnect/config/connectdb.go
+// backend/external/AirtableConnect/config/connectdb.go
 package config
 
 import (

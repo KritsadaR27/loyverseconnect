@@ -1,8 +1,8 @@
-// backend/internal/AirtableConnect/infrastructure/data/record_data.go
+// backend/external/AirtableConnect/infrastructure/data/record_data.go
 package data
 
 import (
-	"backend/internal/AirtableConnect/domain/models"
+	"backend/external/AirtableConnect/domain/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"

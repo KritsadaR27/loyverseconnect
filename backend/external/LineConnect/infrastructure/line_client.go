@@ -1,8 +1,8 @@
-// backend/internal/LineConnect/infrastructure/external/line_client.go
+// backend/external/LineConnect/infrastructure/external/line_client.go
 package external
 
 import (
-	"backend/internal/LineConnect/domain/interfaces"
+	"backend/external/LineConnect/domain/interfaces"
 	"log"
 
 	"github.com/line/line-bot-sdk-go/v7/linebot"

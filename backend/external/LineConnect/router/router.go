@@ -1,11 +1,11 @@
-// backend/internal/LineConnect/router/router.go
+// backend/external/LineConnect/router/router.go
 package router
 
 import (
-	"backend/internal/LineConnect/application/handlers"
-	"backend/internal/LineConnect/application/services"
-	"backend/internal/LineConnect/infrastructure/data"
-	"backend/internal/LineConnect/infrastructure/external"
+	"backend/external/LineConnect/application/handlers"
+	"backend/external/LineConnect/application/services"
+	"backend/external/LineConnect/infrastructure/data"
+	"backend/external/LineConnect/infrastructure/external"
 	"database/sql"
 	"net/http"
 	"strings"

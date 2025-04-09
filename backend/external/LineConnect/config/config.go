@@ -1,4 +1,4 @@
-// backend/internal/LineConnect/config/config.go
+// backend/external/LineConnect/config/config.go
 package config
 
 import (

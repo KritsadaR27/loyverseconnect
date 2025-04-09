@@ -1,5 +1,5 @@
 
-// backend/internal/AirtableConnect/domain/models/table.go
+// backend/external/AirtableConnect/domain/models/table.go
 package models
 
 import "time"

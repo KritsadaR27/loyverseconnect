@@ -1,4 +1,4 @@
-// backend/internal/AirtableConnect/middleware/cors.go
+// backend/external/AirtableConnect/middleware/cors.go
 package middleware
 
 import "net/http"

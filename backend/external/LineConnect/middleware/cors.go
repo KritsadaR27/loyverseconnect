@@ -1,4 +1,4 @@
-// backend/internal/LineConnect/middleware/cors.go
+// backend/external/LineConnect/middleware/cors.go
 package middleware
 
 import "net/http"

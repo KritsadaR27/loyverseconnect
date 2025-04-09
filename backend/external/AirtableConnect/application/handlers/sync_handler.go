@@ -1,9 +1,9 @@
-// backend/internal/AirtableConnect/application/handlers/sync_handler.go
+// backend/external/AirtableConnect/application/handlers/sync_handler.go
 package handlers
 
 import (
-	"backend/internal/AirtableConnect/application/services"
-	"backend/internal/AirtableConnect/domain/models"
+	"backend/external/AirtableConnect/application/services"
+	"backend/external/AirtableConnect/domain/models"
 	"encoding/json"
 	"net/http"
 	"strconv"

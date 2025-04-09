@@ -1,10 +1,10 @@
-// backend/internal/LineConnect/cmd/main.go
+// backend/external/LineConnect/cmd/main.go
 package main
 
 import (
-	"backend/internal/LineConnect/config"
-	"backend/internal/LineConnect/middleware"
-	"backend/internal/LineConnect/router"
+	"backend/external/LineConnect/config"
+	"backend/external/LineConnect/middleware"
+	"backend/external/LineConnect/router"
 	"log"
 	"net/http"
 	"os"

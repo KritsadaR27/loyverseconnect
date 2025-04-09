@@ -1,4 +1,4 @@
-module backend/internal/AirtableConnect
+module backend/external/AirtableConnect
 
 go 1.23
 

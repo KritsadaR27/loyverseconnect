@@ -1,7 +1,7 @@
-// backend/internal/LineConnect/domain/interfaces/message_interface.go
+// backend/external/LineConnect/domain/interfaces/message_interface.go
 package interfaces
 
-import "backend/internal/LineConnect/domain/models"
+import "backend/external/LineConnect/domain/models"
 
 // MessageRepository defines the methods for accessing message data
 type MessageRepository interface {
@@ -18,10 +18,10 @@ type MessageRepository interface {
 	ListMessages(limit, offset int, status string) ([]models.Message, error)
 }
 
-// backend/internal/LineConnect/domain/interfaces/group_interface.go
+// backend/external/LineConnect/domain/interfaces/group_interface.go
 package interfaces
 
-import "backend/internal/LineConnect/domain/models"
+import "backend/external/LineConnect/domain/models"
 
 // GroupRepository defines the methods for accessing group data
 type GroupRepository interface {
@@ -41,7 +41,7 @@ type GroupRepository interface {
 	ListGroups() ([]models.Group, error)
 }
 
-// backend/internal/LineConnect/domain/interfaces/line_interface.go
+// backend/external/LineConnect/domain/interfaces/line_interface.go
 package interfaces
 
 import "github.com/line/line-bot-sdk-go/v7/linebot"

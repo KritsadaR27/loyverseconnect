@@ -1,10 +1,10 @@
-// backend/internal/AirtableConnect/cmd/main.go
+// backend/external/AirtableConnect/cmd/main.go
 package main
 
 import (
-	"backend/internal/AirtableConnect/config"
-	"backend/internal/AirtableConnect/middleware"
-	"backend/internal/AirtableConnect/router"
+	"backend/external/AirtableConnect/config"
+	"backend/external/AirtableConnect/middleware"
+	"backend/external/AirtableConnect/router"
 	"log"
 	"net/http"
 	"os"

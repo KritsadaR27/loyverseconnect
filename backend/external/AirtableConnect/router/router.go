@@ -1,12 +1,12 @@
-// backend/internal/AirtableConnect/router/router.go
+// backend/external/AirtableConnect/router/router.go
 package router
 
 import (
-	"backend/internal/AirtableConnect/application/handlers"
-	"backend/internal/AirtableConnect/application/services"
-	"backend/internal/AirtableConnect/config"
-	"backend/internal/AirtableConnect/infrastructure/data"
-	"backend/internal/AirtableConnect/infrastructure/external"
+	"backend/external/AirtableConnect/application/handlers"
+	"backend/external/AirtableConnect/application/services"
+	"backend/external/AirtableConnect/config"
+	"backend/external/AirtableConnect/infrastructure/data"
+	"backend/external/AirtableConnect/infrastructure/external"
 	"database/sql"
 	"net/http"
 

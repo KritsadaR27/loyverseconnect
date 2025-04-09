@@ -1,4 +1,4 @@
-// backend/internal/LineConnect/domain/models/message.go
+// backend/external/LineConnect/domain/models/message.go
 package models
 
 import "time"
@@ -32,7 +32,7 @@ type MessageResponse struct {
 	SentAt    *time.Time `json:"sent_at"`
 }
 
-// backend/internal/LineConnect/domain/models/group.go
+// backend/external/LineConnect/domain/models/group.go
 package models
 
 import "time"

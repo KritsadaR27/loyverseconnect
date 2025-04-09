@@ -5,11 +5,11 @@ FROM golang:1.23 AS builder
 WORKDIR /app
 
 # Copy go.mod and go.sum to download dependencies
-COPY ./backend/internal/LineConnect/go.mod ./backend/internal/LineConnect/go.sum ./
+COPY ./backend/external/LineConnect/go.mod ./backend/external/LineConnect/go.sum ./
 RUN go mod download
 
 # Copy the source code into the container
-COPY ./backend/internal/LineConnect /app
+COPY ./backend/external/LineConnect /app
 
 # Build the Go binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o line-connect cmd/main.go

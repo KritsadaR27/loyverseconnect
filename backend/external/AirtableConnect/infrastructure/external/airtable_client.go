@@ -1,9 +1,9 @@
-// backend/internal/AirtableConnect/infrastructure/external/airtable_client.go
+// backend/external/AirtableConnect/infrastructure/external/airtable_client.go
 package external
 
 import (
-	"backend/internal/AirtableConnect/domain/interfaces"
-	"backend/internal/AirtableConnect/domain/models"
+	"backend/external/AirtableConnect/domain/interfaces"
+	"backend/external/AirtableConnect/domain/models"
 	"log"
 	"time"
 

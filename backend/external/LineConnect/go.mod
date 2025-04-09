@@ -1,4 +1,4 @@
-module backend/internal/LineConnect
+module backend/external/LineConnect
 
 go 1.23
 

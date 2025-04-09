@@ -1,9 +1,9 @@
-// backend/internal/LineConnect/application/services/message_service.go
+// backend/external/LineConnect/application/services/message_service.go
 package services
 
 import (
-	"backend/internal/LineConnect/domain/interfaces"
-	"backend/internal/LineConnect/domain/models"
+	"backend/external/LineConnect/domain/interfaces"
+	"backend/external/LineConnect/domain/models"
 	"log"
 	"time"
 )
@@ -133,12 +133,12 @@ func (s *MessageService) GetMessageHistory(limit, offset int) ([]models.MessageR
 	return responses, nil
 }
 
-// backend/internal/LineConnect/application/services/group_service.go
+// backend/external/LineConnect/application/services/group_service.go
 package services
 
 import (
-	"backend/internal/LineConnect/domain/interfaces"
-	"backend/internal/LineConnect/domain/models"
+	"backend/external/LineConnect/domain/interfaces"
+	"backend/external/LineConnect/domain/models"
 	"time"
 )
 

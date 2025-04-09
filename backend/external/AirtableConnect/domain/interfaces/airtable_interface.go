@@ -1,7 +1,7 @@
-// backend/internal/AirtableConnect/domain/interfaces/airtable_interface.go
+// backend/external/AirtableConnect/domain/interfaces/airtable_interface.go
 package interfaces
 
-import "backend/internal/AirtableConnect/domain/models"
+import "backend/external/AirtableConnect/domain/models"
 
 // AirtableClient defines methods for interacting with the Airtable API
 type AirtableClient interface {

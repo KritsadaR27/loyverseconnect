@@ -1,9 +1,9 @@
-// backend/internal/AirtableConnect/application/services/airtable_service.go
+// backend/external/AirtableConnect/application/services/airtable_service.go
 package services
 
 import (
-	"backend/internal/AirtableConnect/domain/interfaces"
-	"backend/internal/AirtableConnect/domain/models"
+	"backend/external/AirtableConnect/domain/interfaces"
+	"backend/external/AirtableConnect/domain/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"
