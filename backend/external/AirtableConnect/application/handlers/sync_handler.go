@@ -236,3 +236,22 @@ func (h *SyncHandler) SyncAllTables(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
 }
+
+func (h *SyncHandler) GetRecordsFromView(w http.ResponseWriter, r *http.Request) {
+	tableID := r.URL.Query().Get("table_id")
+	viewName := r.URL.Query().Get("view_name")
+
+	if tableID == "" || viewName == "" {
+		http.Error(w, "Missing table_id or view_name", http.StatusBadRequest)
+		return
+	}
+
+	records, err := h.airtableService.GetRecordsFromView(tableID, viewName)
+	if err != nil {
+		http.Error(w, "Failed to get records: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(records)
+}

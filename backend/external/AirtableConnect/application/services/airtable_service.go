@@ -285,3 +285,7 @@ func (s *AirtableService) SyncAllTables() ([]models.SyncResult, error) {
 
 	return results, nil
 }
+
+func (s *AirtableService) GetRecordsFromView(tableID, viewName string) ([]models.Record, error) {
+	return s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
+}

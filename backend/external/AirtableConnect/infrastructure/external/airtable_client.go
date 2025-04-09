@@ -23,12 +23,14 @@ func NewAirtableClient(client *airtable.Client) interfaces.AirtableClient {
 	}
 }
 
-// GetRecords retrieves records from an Airtable table
-func (c *AirtableClientImpl) GetRecords(baseID, tableName string) ([]models.Record, error) {
+// GetRecordsFromView retrieves records from a specific view in an Airtable table
+func (c *AirtableClientImpl) GetRecordsFromView(baseID, tableName, viewName string) ([]models.Record, error) {
 	table := c.client.GetTable(baseID, tableName)
-	records, err := table.GetRecords().Do()
+
+	// ดึงข้อมูลจาก View โดยใช้ query parameters
+	records, err := table.GetRecords().FromView(viewName).Do()
 	if err != nil {
-		log.Printf("Failed to get records from Airtable: %v", err)
+		log.Printf("Failed to get records from Airtable view %s: %v", viewName, err)
 		return nil, err
 	}
 
@@ -37,14 +39,39 @@ func (c *AirtableClientImpl) GetRecords(baseID, tableName string) ([]models.Reco
 		// Convert Airtable record to our model
 		created, _ := time.Parse(time.RFC3339, record.CreatedTime)
 
+		// แปลงชื่อฟิลด์ภาษาไทยเป็นภาษาอังกฤษ
+		normalizedFields := models.NormalizeFields(record.Fields)
+
 		modelRecord := models.Record{
 			ID:          record.ID,
-			Fields:      record.Fields,
+			Fields:      normalizedFields,
 			CreatedTime: created,
 		}
 		result = append(result, modelRecord)
 	}
 
+	return result, nil
+}
+
+// GetRecords retrieves records from an Airtable table
+func (c *AirtableClientImpl) GetRecords(baseID, tableName string) ([]models.Record, error) {
+	table := c.client.GetTable(baseID, tableName)
+
+	records, err := table.GetRecords().Do() // ไม่มี .FromView
+	if err != nil {
+		log.Printf("Failed to get records from Airtable: %v", err)
+		return nil, err
+	}
+
+	var result []models.Record
+	for _, record := range records.Records {
+		created, _ := time.Parse(time.RFC3339, record.CreatedTime)
+		result = append(result, models.Record{
+			ID:          record.ID,
+			Fields:      models.NormalizeFields(record.Fields),
+			CreatedTime: created,
+		})
+	}
 	return result, nil
 }
 

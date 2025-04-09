@@ -16,4 +16,6 @@ type AirtableClient interface {
 
 	// DeleteRecord deletes a record from an Airtable table
 	DeleteRecord(baseID, tableName, recordID string) error
+
+	GetRecordsFromView(baseID, tableName, viewName string) ([]models.Record, error)
 }

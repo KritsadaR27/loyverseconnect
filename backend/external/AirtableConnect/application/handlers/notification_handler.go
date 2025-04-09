@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"backend/external/AirtableConnect/application/services"
+	"backend/external/AirtableConnect/domain/models"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -167,5 +168,24 @@ func (h *NotificationHandler) GetSchedules(w http.ResponseWriter, r *http.Reques
 			LastRun:         time.Now().AddDate(0, 0, -1).Format(time.RFC3339),
 			Active:          true,
 		},
+	})
+}
+
+func (h *NotificationHandler) SendRecordPerBubbleToLine(w http.ResponseWriter, r *http.Request) {
+	var req models.Notification
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	count, err := h.notificationService.SendRecordPerBubbleToLine(req.TableID, req.ViewName, req.Fields, req.GroupIDs)
+	if err != nil {
+		http.Error(w, "Failed to send bubble messages: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":     "Successfully sent bubble messages",
+		"recordCount": count,
 	})
 }

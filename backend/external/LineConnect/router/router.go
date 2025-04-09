@@ -78,6 +78,13 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 		}
 
 		for _, event := range events {
+			log.Printf("🔔 New LINE event: Type=%s, SourceType=%s", event.Type, event.Source.Type)
+			log.Printf("Event Source: %v", event.Source)
+			log.Printf("Event ReplyToken: %s", event.ReplyToken)
+			log.Printf("Event Timestamp: %s", event.Timestamp)
+			log.Printf("Event Message: %v", event.Message)
+			log.Printf("Event Postback: %v", event.Postback)
+			log.Printf("Event Beacon: %v", event.Beacon)
 			switch event.Type {
 			case linebot.EventTypeJoin:
 				// ตอบกลับเพื่อให้ LINE รู้ว่า bot ยัง active อยู่

@@ -5,6 +5,7 @@ import (
 	"backend/external/LineConnect/domain/interfaces"
 	"backend/external/LineConnect/domain/models"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -30,7 +31,7 @@ func NewMessageService(
 
 // SendMessage sends a message to specified LINE groups
 func (s *MessageService) SendMessage(req models.MessageRequest) (*models.MessageResponse, error) {
-	// Create a new message record
+	// สร้าง message record ในฐานข้อมูล
 	message := models.Message{
 		Content:   req.Content,
 		GroupIDs:  req.GroupIDs,
@@ -39,23 +40,23 @@ func (s *MessageService) SendMessage(req models.MessageRequest) (*models.Message
 		CreatedAt: time.Now(),
 	}
 
-	// Save the message to the database
 	messageID, err := s.messageRepo.SaveMessage(message)
 	if err != nil {
 		return nil, err
 	}
-
 	message.ID = messageID
 
-	// Send the message to each group
 	successfulGroups := []models.Group{}
+
+	// แบ่งข้อความถ้ายาวเกิน 5000
+	chunks := splitLongMessage(req.Content)
+
 	for _, groupID := range req.GroupIDs {
 		group, err := s.groupRepo.GetGroupByID(groupID)
 		if err != nil {
 			log.Printf("Failed to get group %s: %v", groupID, err)
 			continue
 		}
-
 		if !group.Active {
 			log.Printf("Group %s is inactive, skipping", groupID)
 			continue
@@ -63,9 +64,13 @@ func (s *MessageService) SendMessage(req models.MessageRequest) (*models.Message
 
 		var sendErr error
 		if req.Type == "text" {
-			sendErr = s.lineClient.SendTextMessage(groupID, req.Content)
+			for _, chunk := range chunks {
+				if err := s.lineClient.SendTextMessage(groupID, chunk); err != nil {
+					sendErr = err
+					log.Printf("❌ Failed to send chunk to group %s: %v", groupID, err)
+				}
+			}
 		} else if req.Type == "image" {
-			// For image messages, content should be the image URL
 			sendErr = s.lineClient.SendImageMessage(groupID, req.Content, req.Content)
 		}
 
@@ -76,30 +81,39 @@ func (s *MessageService) SendMessage(req models.MessageRequest) (*models.Message
 		}
 	}
 
-	// Update message status
+	// Update status
 	sentTime := time.Now()
+	sentTimePtr := &sentTime
 	status := "sent"
 	if len(successfulGroups) == 0 {
 		status = "failed"
 	} else if len(successfulGroups) < len(req.GroupIDs) {
 		status = "partially_sent"
 	}
+	_ = s.messageRepo.UpdateMessageStatus(messageID, status, sentTimePtr)
 
-	err = s.messageRepo.UpdateMessageStatus(messageID, status, &sentTime)
-	if err != nil {
-		log.Printf("Failed to update message status: %v", err)
-	}
-
-	// Return response
 	return &models.MessageResponse{
-		ID:        messageID,
-		Content:   req.Content,
-		Groups:    successfulGroups,
-		Type:      req.Type,
-		Status:    status,
-		CreatedAt: message.CreatedAt,
-		SentAt:    &sentTime,
+		ID:     messageID,
+		Status: status,
 	}, nil
+}
+
+func splitLongMessage(message string) []string {
+	const chunkSize = 4800
+	var chunks []string
+
+	for len(message) > chunkSize {
+		idx := strings.LastIndex(message[:chunkSize], "\n")
+		if idx == -1 {
+			idx = chunkSize
+		}
+		chunks = append(chunks, strings.TrimSpace(message[:idx]))
+		message = strings.TrimSpace(message[idx:])
+	}
+	if len(message) > 0 {
+		chunks = append(chunks, strings.TrimSpace(message))
+	}
+	return chunks
 }
 
 // GetMessageHistory returns the history of sent messages

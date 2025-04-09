@@ -5,6 +5,7 @@ package services
 
 import (
 	"backend/external/AirtableConnect/domain/interfaces"
+	"backend/external/AirtableConnect/domain/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode/utf8"
 )
 
 // LineMessageRequest สำหรับ request ไปยัง LINE API
@@ -46,8 +48,9 @@ func NewNotificationService(
 
 // SendAirtableViewToLine ส่งข้อมูลจาก Airtable view ไปยัง LINE group
 func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName string, fields []string, messageTemplate string, groupIDs []string) (int, error) {
+
 	// ดึงข้อมูลจาก Airtable
-	records, err := s.airtableClient.GetRecords(s.baseID, tableID)
+	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
 		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
 	}
@@ -61,7 +64,11 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 				filteredRecord[field] = value
 			}
 		}
-		filteredRecords = append(filteredRecords, filteredRecord)
+
+		// ✅ Normalize field names (เช่น "ชื่อออเดอร์" → "OrderName")
+		normalized := models.NormalizeFields(filteredRecord)
+
+		filteredRecords = append(filteredRecords, normalized)
 	}
 
 	// สร้างข้อความจาก template
@@ -78,6 +85,14 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 
 	return len(records), nil
 }
+func ensureUTF8(input string) string {
+	// ตัด invalid Unicode ออกเพื่อไม่ให้ template.Parse error
+	if utf8.ValidString(input) {
+		return input
+	}
+	// หรือ: แปลงให้อยู่ในรูปที่ parser รับได้
+	return strings.ToValidUTF8(input, "")
+}
 
 // formatMessage ใช้ template เพื่อจัดรูปแบบข้อความ
 func (s *NotificationService) formatMessage(messageTemplate string, records []map[string]interface{}) (string, error) {
@@ -89,8 +104,13 @@ func (s *NotificationService) formatMessage(messageTemplate string, records []ma
 		"Time":    time.Now().Format("15:04:05"),
 	}
 
+	// ตรวจสอบว่า messageTemplate เป็น UTF-8 หรือไม่
+	// ถ้าไม่ใช่ ให้แปลงเป็น UTF-8
+	// หรือ: ใช้ฟังก์ชัน ensureUTF8 เพื่อให้แน่ใจว่าเป็น UTF-8
+	// ถ้าไม่ใช่ ให้แปลงเป็น UTF-8
 	// Parse และ execute template
-	tmpl, err := template.New("message").Parse(messageTemplate)
+	safeTemplate := ensureUTF8(messageTemplate)
+	tmpl, err := template.New("message").Parse(safeTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -183,4 +203,108 @@ func (s *NotificationService) SendScheduledNotifications(schedules []ScheduledNo
 	}
 
 	return errors
+}
+
+func (s *NotificationService) SendRecordPerBubbleToLine(tableID string, viewName string, fields []string, groupIDs []string) (int, error) {
+	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
+	}
+
+	// Normalize & filter fields
+	var filtered []map[string]interface{}
+	for _, r := range records {
+		rec := make(map[string]interface{})
+		for _, f := range fields {
+			if val, ok := r.Fields[f]; ok {
+				rec[f] = val
+			}
+		}
+		filtered = append(filtered, rec)
+	}
+
+	// Generate messages
+	messages := generateRecordBubbles(filtered)
+	return len(records), s.sendBubblesToLine(messages, groupIDs)
+}
+
+func generateRecordBubbles(records []map[string]interface{}) []string {
+	var messages []string
+	weekday := thaiWeekday(time.Now().Weekday())
+	date := time.Now().Format("02/01/2006")
+	head := fmt.Sprintf("วันนี้ %s %s มีจัดส่ง %d กล่อง", weekday, date, len(records))
+	messages = append(messages, head)
+
+	for i, r := range records {
+		var b strings.Builder
+		fmt.Fprintf(&b, "• กล่องที่ %d\n", i+1)
+		if order, ok := r["OrderName"]; ok {
+			orderStr := fmt.Sprintf("%v", first(order)) // แปลงค่าเป็น string
+			if idx := strings.Index(orderStr, "-"); idx != -1 {
+				orderStr = orderStr[:idx] // ตัดข้อความก่อนเครื่องหมาย "-"
+			}
+			fmt.Fprintf(&b, "%s\n", orderStr)
+		}
+		if name, ok := r["CustomerName"]; ok {
+
+			fmt.Fprintf(&b, "ชื่อลูกค้า : %v\n", first(name))
+		}
+		if point, ok := r["PickupPoint"]; ok {
+			fmt.Fprintf(&b, "ที่อยู่ : %v\n", first(point))
+		}
+		if phone, ok := r["PhoneNumber"]; ok {
+			fmt.Fprintf(&b, "เบอร์โทร : %v\n", first(phone))
+		}
+
+		if order, ok := r["OrderNumber"]; ok {
+			fmt.Fprintf(&b, "เลขออเดอร์ : %v", order)
+		}
+		messages = append(messages, b.String())
+	}
+
+	return messages
+}
+
+func (s *NotificationService) sendBubblesToLine(messages []string, groupIDs []string) error {
+	for _, msg := range messages {
+		req := map[string]interface{}{
+			"content":   msg,
+			"group_ids": groupIDs,
+			"type":      "text",
+		}
+		body, _ := json.Marshal(req)
+		resp, err := http.Post(s.lineAPIURL, "application/json", bytes.NewBuffer(body))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			log.Printf("❌ Failed to send message: %v", err)
+		}
+	}
+	return nil
+}
+
+func thaiWeekday(w time.Weekday) string {
+	switch w {
+	case time.Sunday:
+		return "อาทิตย์"
+	case time.Monday:
+		return "จันทร์"
+	case time.Tuesday:
+		return "อังคาร"
+	case time.Wednesday:
+		return "พุธ"
+	case time.Thursday:
+		return "พฤหัส"
+	case time.Friday:
+		return "ศุกร์"
+	case time.Saturday:
+		return "เสาร์"
+	default:
+		return ""
+	}
+}
+
+func first(val interface{}) interface{} {
+	if arr, ok := val.([]interface{}); ok && len(arr) > 0 {
+		return arr[0]
+	}
+	return val
 }
