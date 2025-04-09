@@ -9,24 +9,27 @@ import (
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
+		allowed := origin == "http://localhost:3000" || origin == "https://app.lungruay.com"
+
 		log.Printf("CORS Middleware: Origin=%s, Method=%s", origin, r.Method)
 
-		if origin == "http://localhost:3000" || origin == "https://app.lungruay.com" {
+		if allowed {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Vary", "Origin") // สำหรับ cache-aware proxies
-		}
-
-		// ตั้งค่าทั่วไป
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if r.Method == http.MethodOptions {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin") // ป้องกัน cache ผิด
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.WriteHeader(http.StatusNoContent)
+		} else if origin != "" {
+			log.Printf("❌ Origin blocked by CORS: %s", origin)
+		}
+
+		// ถ้าเป็น preflight OPTIONS request
+		if r.Method == http.MethodOptions {
+			if allowed {
+				w.WriteHeader(http.StatusNoContent)
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
 			return
 		}
 

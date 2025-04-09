@@ -1,0 +1,25 @@
+# Dockerfile สำหรับ Next.js Production
+
+# ✅ ใช้ Node.js base image
+FROM node:18-alpine
+
+# ✅ กำหนดไดเรกทอรีทำงาน
+WORKDIR /app
+
+# ✅ คัดลอก dependencies ก่อนเพื่อใช้ cache
+COPY package*.json ./
+
+# ✅ ติดตั้ง dependencies
+RUN npm install --legacy-peer-deps
+
+# ✅ คัดลอกไฟล์โปรเจกต์ทั้งหมด
+COPY . .
+
+# # ✅ Build production
+# RUN npm run build
+
+# ✅ เปิดพอร์ต 3000
+EXPOSE 3000
+
+# ✅ สั่งรันแอปแบบ dev
+CMD ["npm", "run", "dev"]

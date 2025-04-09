@@ -2,32 +2,26 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
-      - NEXT_PUBLIC_INVENTORY_BASE_URL=${NEXT_PUBLIC_INVENTORY_BASE_URL}
-      - NEXT_PUBLIC_SUPPLIER_BASE_URL=${NEXT_PUBLIC_SUPPLIER_BASE_URL}
-      - NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL=${NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL}
-      - NEXT_PUBLIC_SALE_BASE_URL=${NEXT_PUBLIC_SALE_BASE_URL}
-      - NEXT_PUBLIC_RECEIPT_BASE_URL=${NEXT_PUBLIC_RECEIPT_BASE_URL}
     env_file:
       - .env.local
     ports:
       - "3000:3000"
     depends_on:
       - loyverse-connect
-    networks:
-      - app-network
+    
     
 
   loyverse-connect:
     build:
-      context: ./backend/internal/LoyverseConnect
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/external/loyverse/Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - LOYVERSE_API_TOKEN=${LOYVERSE_API_TOKEN}
@@ -57,8 +51,7 @@ services:
       db:
         condition: service_healthy
     container_name: inventory-management
-    networks:
-      - app-network
+    
     
 
   supplier-management:
@@ -76,8 +69,7 @@ services:
       db:
         condition: service_healthy
     container_name: supplier-management
-    networks:
-      - app-network
+    
 
   sale-management:
     build:
@@ -93,36 +85,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  purchase-order-management:
-    build:
-      context: .
-      dockerfile: backend/internal/POManagement/Dockerfile
-    environment:
-      - PORT=8085
-      - DATABASE_URL=${DATABASE_URL}
-    env_file:
-      - .env.local
-    ports:
-      - "8085:8085"
-    depends_on:
-      db:
-        condition: service_healthy
-  # docker-compose.yml (เพิ่มเติม)
-  airtable-connect:
-    build:
-      context: .
-      dockerfile: backend/external/airtable-connect/Dockerfile
-    container_name: airtable-connect
-    environment:
-      - PORT=8085
-      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
-      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
-      - LINE_NOTIFY_TOKEN_DELIVERY=${LINE_NOTIFY_TOKEN_DELIVERY}
-      - LINE_NOTIFY_TOKEN_ORDERS=${LINE_NOTIFY_TOKEN_ORDERS}
-    ports:
-      - "8085:8085"
-    depends_on:
-      - db
+  # purchase-order-management:
+  #   build:
+  #     context: .
+  #     dockerfile: backend/internal/POManagement/Dockerfile
+  #   environment:
+  #     - PORT=8085
+  #     - DATABASE_URL=${DATABASE_URL}
+  #   env_file:
+  #     - .env.local
+  #   ports:
+  #     - "8085:8085"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  # # docker-compose.yml (เพิ่มเติม)
+  # airtable-connect:
+  #   build:
+  #     context: .
+  #     dockerfile: backend/external/airtable-connect/Dockerfile
+  #   container_name: airtable-connect
+  #   environment:
+  #     - PORT=8085
+  #     - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+  #     - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+  #     - LINE_NOTIFY_TOKEN_DELIVERY=${LINE_NOTIFY_TOKEN_DELIVERY}
+  #     - LINE_NOTIFY_TOKEN_ORDERS=${LINE_NOTIFY_TOKEN_ORDERS}
+  #   ports:
+  #     - "8085:8085"
+  #   depends_on:
+  #     - db
   db:
     image: postgres:13
     environment:

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin" // หรือ framework อื่นที่คุณใช้
 
-	"your-module-path/internal/POManagement/domain/interfaces"
+	"backend/internal/POManagement/domain/interfaces"
 )
 
 // RegisterPORoutes registers the purchase order routes
