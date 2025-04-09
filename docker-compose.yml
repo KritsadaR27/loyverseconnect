@@ -107,7 +107,7 @@ services:
   #   container_name: airtable-connect
   #   environment:
   #     - PORT=8085
-  #     - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+  #     - AIRTABLE_ACCESS_TOKEN=${AIRTABLE_ACCESS_TOKEN}
   #     - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
   #     - LINE_NOTIFY_TOKEN_DELIVERY=${LINE_NOTIFY_TOKEN_DELIVERY}
   #     - LINE_NOTIFY_TOKEN_ORDERS=${LINE_NOTIFY_TOKEN_ORDERS}
@@ -139,7 +139,7 @@ services:
       - "8086:8086"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      - AIRTABLE_ACCESS_TOKEN=${AIRTABLE_ACCESS_TOKEN}
       - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
       - PORT=8086
     depends_on:

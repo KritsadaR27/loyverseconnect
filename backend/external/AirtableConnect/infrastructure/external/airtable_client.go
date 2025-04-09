@@ -54,7 +54,7 @@ func (c *AirtableClientImpl) CreateRecord(baseID, tableName string, fields map[s
 		Fields: fields,
 	}).Do()
 	if err != nil {
-		log.Printf("Failed to create record in Airtable: %v", err)
+		log.Printf("Error in CreateRecord: %v, Fields: %v", err, fields)
 		return models.Record{}, err
 	}
 
@@ -99,4 +99,13 @@ func (c *AirtableClientImpl) DeleteRecord(baseID, tableName, recordID string) er
 		return err
 	}
 	return nil
+}
+
+func exampleUsage() {
+	fields := map[string]interface{}{
+		"Name":  "John Doe",
+		"Email": "john.doe@example.com",
+	}
+	// Example usage of fields (e.g., calling CreateRecord)
+	// _ = fields
 }

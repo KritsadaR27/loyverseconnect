@@ -86,42 +86,49 @@ func (r *RecordRepository) SaveRecords(tableName string, records []models.Record
 }
 
 // GetRecords retrieves records from the local database
-func (r *RecordRepository) GetRecords(tableName string, limit, offset int) ([]models.Record, error) {
+func (r *RecordRepository) GetRecordByID(tableName, recordID string) (models.Record, error) {
 	query := fmt.Sprintf(
-		"SELECT airtable_id, fields, created_at FROM %s ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+		"SELECT airtable_id, fields, created_at FROM %s WHERE airtable_id = $1",
 		tableName,
 	)
-	rows, err := r.db.Query(query, limit, offset)
+
+	var record models.Record
+	var fieldsJSON []byte
+	var createdAt time.Time
+
+	err := r.db.QueryRow(query, recordID).Scan(&record.ID, &fieldsJSON, &createdAt)
 	if err != nil {
-		return nil, fmt.Errorf("error querying records: %v", err)
-	}
-	defer rows.Close()
-
-	var records []models.Record
-	for rows.Next() {
-		var record models.Record
-		var fieldsJSON []byte
-		var createdAt time.Time
-
-		err := rows.Scan(&record.ID, &fieldsJSON, &createdAt)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning record: %v", err)
-		}
-
-		// Unmarshal fields from JSON
-		var fields map[string]interface{}
-		if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
-			return nil, fmt.Errorf("error unmarshaling fields: %v", err)
-		}
-
-		record.Fields = fields
-		record.CreatedTime = createdAt
-		records = append(records, record)
+		return models.Record{}, fmt.Errorf("error retrieving record: %v", err)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %v", err)
+	// Unmarshal fields from JSON
+	var fields map[string]interface{}
+	if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
+		return models.Record{}, fmt.Errorf("error unmarshaling fields: %v", err)
 	}
 
-	return records, nil
+	record.Fields = fields
+	record.CreatedTime = createdAt
+
+	return record, nil
+}
+
+func (r *RecordRepository) GetRecordCount(tableName string) (int, error) {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+
+	var count int
+	err := r.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error counting records: %v", err)
+	}
+
+	return count, nil
+}
+
+type TableRepository struct {
+	db *sql.DB
+}
+
+func NewTableRepository(db *sql.DB) *TableRepository {
+	return &TableRepository{db: db}
 }
