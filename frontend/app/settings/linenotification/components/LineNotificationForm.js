@@ -10,7 +10,8 @@ const LineNotificationForm = ({
     tableOptions, 
     viewOptions, 
     groupOptions,
-    fieldOptions 
+    fieldOptions,
+    isEdit = false
 }) => {
     const [showFieldsSection, setShowFieldsSection] = useState(true);
     const [showScheduleSection, setShowScheduleSection] = useState(true);
@@ -114,6 +115,27 @@ const LineNotificationForm = ({
 
     return (
         <div className="p-6 max-w-4xl mx-auto bg-white rounded-lg shadow">
+            {/* Notification Name */}
+            <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">
+                    Notification Details
+                </h2>
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Notification Name
+                    </label>
+                    <input
+                        type="text"
+                        value={config.name}
+                        onChange={(e) => setConfig({...config, name: e.target.value})}
+                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter a name for this notification"
+                        required
+                    />
+                </div>
+            </div>
+            
             {/* Data Source Section */}
             <div className="mb-8">
                 <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">

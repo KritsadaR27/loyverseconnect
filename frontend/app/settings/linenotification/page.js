@@ -1,8 +1,8 @@
 // frontend/app/settings/linenotification/page.js
 "use client";
 
-import LineNotificationPage from "./LineNotificationPage";
+import LineNotificationListPage from "./LineNotificationListPage";
 
 export default function Page() {
-  return <LineNotificationPage />;
+  return <LineNotificationListPage />;
 }
