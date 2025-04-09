@@ -3,6 +3,7 @@
 package data
 
 import (
+	"backend/external/AirtableConnect/domain/interfaces"
 	"backend/external/AirtableConnect/domain/models"
 	"database/sql"
 	"encoding/json"
@@ -10,20 +11,18 @@ import (
 	"time"
 )
 
-// NotificationRepository implements the repository for notification data
-type NotificationRepository struct {
+// NotificationRepositoryImpl implements the repository for notification data
+type NotificationRepositoryImpl struct {
 	db *sql.DB
 }
 
 // NewNotificationRepository creates a new instance of NotificationRepository
-func NewNotificationRepository(db *sql.DB) *NotificationRepository {
-	return &NotificationRepository{
-		db: db,
-	}
+func NewNotificationRepository(db *sql.DB) interfaces.NotificationRepository {
+	return &NotificationRepositoryImpl{db: db}
 }
 
 // SaveNotification saves a new notification configuration
-func (r *NotificationRepository) SaveNotification(notification models.Notification) (int, error) {
+func (r *NotificationRepositoryImpl) SaveNotification(notification models.Notification) (int, error) {
 	// แปลงฟิลด์เป็น JSON
 	fieldsJSON, err := json.Marshal(notification.Fields)
 	if err != nil {
@@ -75,7 +74,7 @@ func (r *NotificationRepository) SaveNotification(notification models.Notificati
 }
 
 // GetNotificationByID retrieves a notification by its ID
-func (r *NotificationRepository) GetNotificationByID(id int) (models.Notification, error) {
+func (r *NotificationRepositoryImpl) GetNotificationByID(id int) (models.Notification, error) {
 	query := `
 		SELECT
 			id,
@@ -137,7 +136,7 @@ func (r *NotificationRepository) GetNotificationByID(id int) (models.Notificatio
 }
 
 // UpdateNotification updates an existing notification
-func (r *NotificationRepository) UpdateNotification(notification models.Notification) error {
+func (r *NotificationRepositoryImpl) UpdateNotification(notification models.Notification) error {
 	// แปลงฟิลด์เป็น JSON
 	fieldsJSON, err := json.Marshal(notification.Fields)
 	if err != nil {
@@ -186,7 +185,7 @@ func (r *NotificationRepository) UpdateNotification(notification models.Notifica
 }
 
 // DeleteNotification deletes a notification
-func (r *NotificationRepository) DeleteNotification(id int) error {
+func (r *NotificationRepositoryImpl) DeleteNotification(id int) error {
 	query := `
 		DELETE FROM airtable_notifications
 		WHERE id = $1
@@ -201,7 +200,7 @@ func (r *NotificationRepository) DeleteNotification(id int) error {
 }
 
 // ListNotifications retrieves all notifications
-func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.Notification, error) {
+func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]models.Notification, error) {
 	var query string
 	var args []interface{}
 
@@ -301,7 +300,7 @@ func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.No
 }
 
 // SaveNotificationLog saves a notification execution log
-func (r *NotificationRepository) SaveNotificationLog(log models.NotificationLog) (int, error) {
+func (r *NotificationRepositoryImpl) SaveNotificationLog(log models.NotificationLog) (int, error) {
 	query := `
 		INSERT INTO airtable_notification_logs (
 			notification_id,
@@ -331,7 +330,7 @@ func (r *NotificationRepository) SaveNotificationLog(log models.NotificationLog)
 }
 
 // GetNotificationLogs retrieves logs for a specific notification
-func (r *NotificationRepository) GetNotificationLogs(notificationID int, limit, offset int) ([]models.NotificationLog, error) {
+func (r *NotificationRepositoryImpl) GetNotificationLogs(notificationID int, limit, offset int) ([]models.NotificationLog, error) {
 	query := `
 		SELECT
 			id,
@@ -386,7 +385,7 @@ func (r *NotificationRepository) GetNotificationLogs(notificationID int, limit, 
 }
 
 // UpdateLastRun updates the last run time for a notification
-func (r *NotificationRepository) UpdateLastRun(id int, lastRun time.Time) error {
+func (r *NotificationRepositoryImpl) UpdateLastRun(id int, lastRun time.Time) error {
 	query := `
 		UPDATE airtable_notifications
 		SET last_run = $1, updated_at = $1

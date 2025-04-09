@@ -39,9 +39,11 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	if lineAPIURL == "" {
 		lineAPIURL = "http://line-connect:8085/api/line/messages"
 	}
+	// สร้าง NotificationRepository
+	notificationRepo := data.NewNotificationRepository(db)
 
 	// สร้าง NotificationService
-	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL)
+	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL, notificationRepo)
 
 	// Create handlers
 	syncHandler := handlers.NewSyncHandler(airtableService)

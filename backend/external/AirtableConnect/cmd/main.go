@@ -4,6 +4,7 @@ package main
 import (
 	"backend/external/AirtableConnect/application/services"
 	"backend/external/AirtableConnect/config"
+	"backend/external/AirtableConnect/infrastructure/data"
 	"backend/external/AirtableConnect/infrastructure/external"
 	"backend/external/AirtableConnect/infrastructure/scheduler"
 	"backend/external/AirtableConnect/middleware"
@@ -39,7 +40,7 @@ func main() {
 
 	// สร้าง Repository
 	airtableClientImpl := external.NewAirtableClient(airtableClient)
-	// notificationRepo := data.NewNotificationRepository(db)
+	notificationRepo := data.NewNotificationRepository(db)
 
 	// สร้าง LineAPI URL
 	lineAPIURL := os.Getenv("LINE_CONNECT_URL")
@@ -48,7 +49,7 @@ func main() {
 	}
 
 	// สร้าง Service
-	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL)
+	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL, notificationRepo)
 
 	// เริ่ม scheduler สำหรับการแจ้งเตือนตามกำหนดเวลา
 	notificationScheduler := scheduler.NewNotificationScheduler(db, notificationService)

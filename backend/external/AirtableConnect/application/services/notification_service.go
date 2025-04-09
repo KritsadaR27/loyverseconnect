@@ -34,6 +34,8 @@ func NewNotificationService(
 	airtableClient interfaces.AirtableClient,
 	baseID string,
 	lineAPIURL string,
+	notificationRepo interfaces.NotificationRepository,
+
 ) *NotificationService {
 	return &NotificationService{
 		airtableClient: airtableClient,

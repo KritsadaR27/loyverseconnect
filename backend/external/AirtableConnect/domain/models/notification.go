@@ -28,3 +28,16 @@ type NotificationLog struct {
 	ErrorMessage   string    `json:"error_message,omitempty"`
 	SentAt         time.Time `json:"sent_at"`
 }
+
+// ScheduledNotification เก็บรายละเอียดการแจ้งเตือนที่ตั้งเวลาไว้
+type ScheduledNotification struct {
+	ID              int      `json:"id"`
+	TableID         string   `json:"table_id"`
+	ViewName        string   `json:"view_name"`
+	Fields          []string `json:"fields"`
+	MessageTemplate string   `json:"message_template"`
+	GroupIDs        []string `json:"group_ids"`
+	Schedule        string   `json:"schedule"` // cron format เช่น "0 9 * * *" สำหรับทุกวันเวลา 9:00
+	LastRun         string   `json:"last_run"`
+	Active          bool     `json:"active"`
+}
