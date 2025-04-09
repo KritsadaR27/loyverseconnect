@@ -1,4 +1,3 @@
-
 // backend/external/AirtableConnect/domain/models/table.go
 package models
 
@@ -21,9 +20,10 @@ type Table struct {
 
 // TableRequest is the model for table creation/update requests
 type TableRequest struct {
-	Name          string `json:"name"`
-	AirtableID    string `json:"airtable_id"`
-	Description   string `json:"description"`
-	Mapping       string `json:"mapping"`
-	CreateSQL     string `json:"create_sql,omitempty"`
-	SourceSQL     string `json:"source_sql,omitem
+	Name        string `json:"name"`
+	AirtableID  string `json:"airtable_id"`
+	Description string `json:"description"`
+	Mapping     string `json:"mapping"`
+	CreateSQL   string `json:"create_sql,omitempty"`
+	SourceSQL   string `json:"source_sql,omitempty"`
+}
