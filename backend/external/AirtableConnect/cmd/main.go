@@ -38,20 +38,25 @@ func main() {
 		log.Fatalf("Failed to get Airtable base ID: %v", err)
 	}
 
-	// สร้าง Repository
+	// Initialize repositories
 	airtableClientImpl := external.NewAirtableClient(airtableClient)
 	notificationRepo := data.NewNotificationRepository(db)
 
-	// สร้าง LineAPI URL
+	// Get LINE API URL
 	lineAPIURL := os.Getenv("LINE_CONNECT_URL")
 	if lineAPIURL == "" {
 		lineAPIURL = "http://line-connect:8085/api/line/messages"
 	}
 
-	// สร้าง Service
-	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL, notificationRepo)
+	// Initialize notification service
+	notificationService := services.NewNotificationService(
+		airtableClientImpl,
+		notificationRepo,
+		baseID,
+		lineAPIURL,
+	)
 
-	// เริ่ม scheduler สำหรับการแจ้งเตือนตามกำหนดเวลา
+	// Initialize notification scheduler
 	notificationScheduler := scheduler.NewNotificationScheduler(db, notificationService)
 	notificationScheduler.Start()
 	defer notificationScheduler.Stop()
@@ -69,11 +74,11 @@ func main() {
 		port = "8086" // Default port for Airtable Connect service
 	}
 
-	// สร้าง channel สำหรับรับสัญญาณการหยุดทำงาน
+	// Set up channel for graceful shutdown
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// เริ่มต้น server ในอีก goroutine
+	// Start server in a goroutine
 	go func() {
 		log.Printf("Starting Airtable Connect server on port %s", port)
 		if err := http.ListenAndServe(":"+port, handler); err != nil {
@@ -81,7 +86,7 @@ func main() {
 		}
 	}()
 
-	// รอสัญญาณการหยุดทำงาน
+	// Wait for shutdown signal
 	<-stop
 	log.Println("Shutting down server...")
 }

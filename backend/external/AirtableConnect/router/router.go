@@ -32,11 +32,12 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	}
 
 	notificationRepo := data.NewNotificationRepository(db)
-	notificationService := services.NewNotificationService(airtableClientImpl, baseID, lineAPIURL, notificationRepo)
+	notificationService := services.NewNotificationService(airtableClientImpl, notificationRepo, baseID, lineAPIURL)
 
 	syncHandler := handlers.NewSyncHandler(airtableService)
-	notificationHandler := handlers.NewNotificationHandler(notificationService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService, notificationRepo)
 
+	// Table & Sync Endpoints
 	mux.HandleFunc("/api/airtable/tables", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -91,6 +92,7 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 		w.Write([]byte(`{"status": "operational"}`))
 	})
 
+	// Notification Endpoints
 	mux.HandleFunc("/api/airtable/notify/line", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -107,14 +109,36 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 		notificationHandler.SendRecordPerBubbleToLine(w, r)
 	})
 
-	mux.HandleFunc("/api/airtable/schedules", func(w http.ResponseWriter, r *http.Request) {
+	// Notification Configuration Endpoints
+	mux.HandleFunc("/api/airtable/notifications", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			notificationHandler.GetSchedules(w, r)
+			notificationHandler.GetAllNotifications(w, r)
 		case http.MethodPost:
-			notificationHandler.CreateSchedule(w, r)
+			notificationHandler.CreateNotification(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	mux.HandleFunc("/api/airtable/notifications/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			notificationHandler.GetNotification(w, r)
+		case http.MethodPut:
+			notificationHandler.UpdateNotification(w, r)
+		case http.MethodDelete:
+			notificationHandler.DeleteNotification(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/airtable/notifications/run", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		notificationHandler.RunNotificationNow(w, r)
 	})
 }

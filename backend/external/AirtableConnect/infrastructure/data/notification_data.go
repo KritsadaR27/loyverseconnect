@@ -11,18 +11,18 @@ import (
 	"time"
 )
 
-// NotificationRepositoryImpl implements the repository for notification data
-type NotificationRepositoryImpl struct {
+// NotificationRepository implements the repository for notification data
+type NotificationRepository struct {
 	db *sql.DB
 }
 
 // NewNotificationRepository creates a new instance of NotificationRepository
 func NewNotificationRepository(db *sql.DB) interfaces.NotificationRepository {
-	return &NotificationRepositoryImpl{db: db}
+	return &NotificationRepository{db: db}
 }
 
 // SaveNotification saves a new notification configuration
-func (r *NotificationRepositoryImpl) SaveNotification(notification models.Notification) (int, error) {
+func (r *NotificationRepository) SaveNotification(notification models.Notification) (int, error) {
 	// แปลงฟิลด์เป็น JSON
 	fieldsJSON, err := json.Marshal(notification.Fields)
 	if err != nil {
@@ -35,19 +35,32 @@ func (r *NotificationRepositoryImpl) SaveNotification(notification models.Notifi
 		return 0, fmt.Errorf("error marshaling group IDs: %v", err)
 	}
 
+	// แปลง notification times เป็น JSON ถ้ามีค่า
+	var notificationTimesJSON []byte
+	if notification.NotificationTimes != nil {
+		notificationTimesJSON, err = json.Marshal(notification.NotificationTimes)
+		if err != nil {
+			return 0, fmt.Errorf("error marshaling notification times: %v", err)
+		}
+	}
+
 	// บันทึกลงฐานข้อมูล
 	query := `
 		INSERT INTO airtable_notifications (
+			name,
 			table_id,
 			view_name,
 			fields,
 			message_template,
+			header_template,
+			enable_bubbles,
 			group_ids,
 			schedule,
+			notification_times,
 			created_at,
 			updated_at,
 			active
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id
 	`
 
@@ -55,12 +68,16 @@ func (r *NotificationRepositoryImpl) SaveNotification(notification models.Notifi
 	var id int
 	err = r.db.QueryRow(
 		query,
+		notification.Name,
 		notification.TableID,
 		notification.ViewName,
 		fieldsJSON,
 		notification.MessageTemplate,
+		notification.HeaderTemplate,
+		notification.EnableBubbles,
 		groupIDsJSON,
 		notification.Schedule,
+		notificationTimesJSON,
 		now,
 		now,
 		notification.Active,
@@ -74,16 +91,20 @@ func (r *NotificationRepositoryImpl) SaveNotification(notification models.Notifi
 }
 
 // GetNotificationByID retrieves a notification by its ID
-func (r *NotificationRepositoryImpl) GetNotificationByID(id int) (models.Notification, error) {
+func (r *NotificationRepository) GetNotificationByID(id int) (models.Notification, error) {
 	query := `
 		SELECT
 			id,
+			name,
 			table_id,
 			view_name,
 			fields,
 			message_template,
+			header_template,
+			enable_bubbles,
 			group_ids,
 			schedule,
+			notification_times,
 			last_run,
 			created_at,
 			updated_at,
@@ -93,17 +114,22 @@ func (r *NotificationRepositoryImpl) GetNotificationByID(id int) (models.Notific
 	`
 
 	var notification models.Notification
-	var fieldsJSON, groupIDsJSON []byte
+	var fieldsJSON, groupIDsJSON, notificationTimesJSON []byte
 	var lastRun sql.NullTime
+	var headerTemplate sql.NullString
 
 	err := r.db.QueryRow(query, id).Scan(
 		&notification.ID,
+		&notification.Name,
 		&notification.TableID,
 		&notification.ViewName,
 		&fieldsJSON,
 		&notification.MessageTemplate,
+		&headerTemplate,
+		&notification.EnableBubbles,
 		&groupIDsJSON,
 		&notification.Schedule,
+		&notificationTimesJSON,
 		&lastRun,
 		&notification.CreatedAt,
 		&notification.UpdatedAt,
@@ -127,16 +153,29 @@ func (r *NotificationRepositoryImpl) GetNotificationByID(id int) (models.Notific
 	}
 	notification.GroupIDs = groupIDs
 
+	// แปลง notification times ถ้ามีค่า
+	if notificationTimesJSON != nil {
+		var notificationTimes []string
+		if err := json.Unmarshal(notificationTimesJSON, &notificationTimes); err != nil {
+			return models.Notification{}, fmt.Errorf("error unmarshaling notification times: %v", err)
+		}
+		notification.NotificationTimes = notificationTimes
+	}
+
 	// จัดการกับค่า NULL
 	if lastRun.Valid {
 		notification.LastRun = lastRun.Time
+	}
+
+	if headerTemplate.Valid {
+		notification.HeaderTemplate = headerTemplate.String
 	}
 
 	return notification, nil
 }
 
 // UpdateNotification updates an existing notification
-func (r *NotificationRepositoryImpl) UpdateNotification(notification models.Notification) error {
+func (r *NotificationRepository) UpdateNotification(notification models.Notification) error {
 	// แปลงฟิลด์เป็น JSON
 	fieldsJSON, err := json.Marshal(notification.Fields)
 	if err != nil {
@@ -149,29 +188,46 @@ func (r *NotificationRepositoryImpl) UpdateNotification(notification models.Noti
 		return fmt.Errorf("error marshaling group IDs: %v", err)
 	}
 
+	// แปลง notification times เป็น JSON ถ้ามีค่า
+	var notificationTimesJSON []byte
+	if notification.NotificationTimes != nil {
+		notificationTimesJSON, err = json.Marshal(notification.NotificationTimes)
+		if err != nil {
+			return fmt.Errorf("error marshaling notification times: %v", err)
+		}
+	}
+
 	// อัพเดทในฐานข้อมูล
 	query := `
 		UPDATE airtable_notifications
 		SET
-			table_id = $1,
-			view_name = $2,
-			fields = $3,
-			message_template = $4,
-			group_ids = $5,
-			schedule = $6,
-			updated_at = $7,
-			active = $8
-		WHERE id = $9
+			name = $1,
+			table_id = $2,
+			view_name = $3,
+			fields = $4,
+			message_template = $5,
+			header_template = $6,
+			enable_bubbles = $7,
+			group_ids = $8,
+			schedule = $9,
+			notification_times = $10,
+			updated_at = $11,
+			active = $12
+		WHERE id = $13
 	`
 
 	_, err = r.db.Exec(
 		query,
+		notification.Name,
 		notification.TableID,
 		notification.ViewName,
 		fieldsJSON,
 		notification.MessageTemplate,
+		notification.HeaderTemplate,
+		notification.EnableBubbles,
 		groupIDsJSON,
 		notification.Schedule,
+		notificationTimesJSON,
 		time.Now(),
 		notification.Active,
 		notification.ID,
@@ -185,22 +241,17 @@ func (r *NotificationRepositoryImpl) UpdateNotification(notification models.Noti
 }
 
 // DeleteNotification deletes a notification
-func (r *NotificationRepositoryImpl) DeleteNotification(id int) error {
-	query := `
-		DELETE FROM airtable_notifications
-		WHERE id = $1
-	`
-
+func (r *NotificationRepository) DeleteNotification(id int) error {
+	query := `DELETE FROM airtable_notifications WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("error deleting notification: %v", err)
 	}
-
 	return nil
 }
 
 // ListNotifications retrieves all notifications
-func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]models.Notification, error) {
+func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.Notification, error) {
 	var query string
 	var args []interface{}
 
@@ -208,12 +259,16 @@ func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]model
 		query = `
 			SELECT
 				id,
+				name,
 				table_id,
 				view_name,
 				fields,
 				message_template,
+				header_template,
+				enable_bubbles,
 				group_ids,
 				schedule,
+				notification_times,
 				last_run,
 				created_at,
 				updated_at,
@@ -226,12 +281,16 @@ func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]model
 		query = `
 			SELECT
 				id,
+				name,
 				table_id,
 				view_name,
 				fields,
 				message_template,
+				header_template,
+				enable_bubbles,
 				group_ids,
 				schedule,
+				notification_times,
 				last_run,
 				created_at,
 				updated_at,
@@ -250,17 +309,22 @@ func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]model
 	var notifications []models.Notification
 	for rows.Next() {
 		var notification models.Notification
-		var fieldsJSON, groupIDsJSON []byte
+		var fieldsJSON, groupIDsJSON, notificationTimesJSON []byte
 		var lastRun sql.NullTime
+		var headerTemplate sql.NullString
 
 		err := rows.Scan(
 			&notification.ID,
+			&notification.Name,
 			&notification.TableID,
 			&notification.ViewName,
 			&fieldsJSON,
 			&notification.MessageTemplate,
+			&headerTemplate,
+			&notification.EnableBubbles,
 			&groupIDsJSON,
 			&notification.Schedule,
+			&notificationTimesJSON,
 			&lastRun,
 			&notification.CreatedAt,
 			&notification.UpdatedAt,
@@ -284,9 +348,22 @@ func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]model
 		}
 		notification.GroupIDs = groupIDs
 
+		// แปลง notification times ถ้ามีค่า
+		if notificationTimesJSON != nil {
+			var notificationTimes []string
+			if err := json.Unmarshal(notificationTimesJSON, &notificationTimes); err != nil {
+				return nil, fmt.Errorf("error unmarshaling notification times: %v", err)
+			}
+			notification.NotificationTimes = notificationTimes
+		}
+
 		// จัดการกับค่า NULL
 		if lastRun.Valid {
 			notification.LastRun = lastRun.Time
+		}
+
+		if headerTemplate.Valid {
+			notification.HeaderTemplate = headerTemplate.String
 		}
 
 		notifications = append(notifications, notification)
@@ -300,7 +377,7 @@ func (r *NotificationRepositoryImpl) ListNotifications(activeOnly bool) ([]model
 }
 
 // SaveNotificationLog saves a notification execution log
-func (r *NotificationRepositoryImpl) SaveNotificationLog(log models.NotificationLog) (int, error) {
+func (r *NotificationRepository) SaveNotificationLog(log models.NotificationLog) (int, error) {
 	query := `
 		INSERT INTO airtable_notification_logs (
 			notification_id,
@@ -330,7 +407,7 @@ func (r *NotificationRepositoryImpl) SaveNotificationLog(log models.Notification
 }
 
 // GetNotificationLogs retrieves logs for a specific notification
-func (r *NotificationRepositoryImpl) GetNotificationLogs(notificationID int, limit, offset int) ([]models.NotificationLog, error) {
+func (r *NotificationRepository) GetNotificationLogs(notificationID int, limit, offset int) ([]models.NotificationLog, error) {
 	query := `
 		SELECT
 			id,
@@ -385,7 +462,7 @@ func (r *NotificationRepositoryImpl) GetNotificationLogs(notificationID int, lim
 }
 
 // UpdateLastRun updates the last run time for a notification
-func (r *NotificationRepositoryImpl) UpdateLastRun(id int, lastRun time.Time) error {
+func (r *NotificationRepository) UpdateLastRun(id int, lastRun time.Time) error {
 	query := `
 		UPDATE airtable_notifications
 		SET last_run = $1, updated_at = $1

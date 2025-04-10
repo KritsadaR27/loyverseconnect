@@ -20,5 +20,7 @@ type NotificationRepository interface {
 // NotificationService defines the interface for notification-related operations
 type NotificationService interface {
 	SendAirtableViewToLine(tableID string, viewName string, fields []string, messageTemplate string, groupIDs []string) (int, error)
+	SendRecordPerBubbleToLine(tableID string, viewName string, fields []string, groupIDs []string, headerTemplate string) (int, error)
 	SendScheduledNotifications(schedules []models.ScheduledNotification) []error
+	RunNotificationNow(id int) (int, error)
 }

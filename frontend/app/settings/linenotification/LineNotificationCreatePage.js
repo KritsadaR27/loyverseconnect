@@ -2,17 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SidebarLayout from "../../../../components/layouts/SidebarLayout";
-import LineNotificationActionBar from "../components/LineNotificationActionBar";
-import LineNotificationForm from "../components/LineNotificationForm";
-import Alert from "../../../../components/Alert";
+import SidebarLayout from "../../../components/layouts/SidebarLayout";
+import LineNotificationActionBar from "./components/LineNotificationActionBar";
+import LineNotificationForm from "./components/LineNotificationForm";
+import Alert from "../../../components/Alert";
 import { 
   createNotificationConfig, 
   fetchAirtableTables, 
   fetchAirtableRecordsFromView,
   fetchLineGroups,
-  sendTestNotification
-} from "../../../api/airtableService";
+  sendTestNotification,
+  sendBubbleNotification
+} from "../../api/airtableService";
 
 const LineNotificationCreatePage = () => {
   const router = useRouter();
@@ -20,11 +21,13 @@ const LineNotificationCreatePage = () => {
     name: "",
     headerTemplate: "วันนี้ %s %s มีจัดส่ง %d กล่อง",
     enableBubbles: true,
-    bubbleFields: [],
+    fields: [],
     notificationTimes: ["08:00"],
     groupIDs: [],
     tableID: "",
     viewName: "",
+    active: true,
+    schedule: "0 8 * * *"
   });
   
   const [tableOptions, setTableOptions] = useState([]);
@@ -33,6 +36,40 @@ const LineNotificationCreatePage = () => {
   const [fieldOptions, setFieldOptions] = useState([]);
   const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Check if form is valid
+  const isFormValid = () => {
+    // Basic validation
+    const errors = {};
+    
+    if (!config.name || config.name.trim() === '') {
+      errors.name = 'Notification name is required';
+    }
+    
+    if (!config.tableID) {
+      errors.tableID = 'Airtable selection is required';
+    }
+    
+    if (!config.viewName) {
+      errors.viewName = 'View selection is required'; 
+    }
+    
+    if (!config.fields || config.fields.length === 0) {
+      errors.fields = 'At least one field must be selected';
+    }
+    
+    if (!config.enableBubbles && (!config.messageTemplate || config.messageTemplate.trim() === '')) {
+      errors.messageTemplate = 'Message template is required for non-bubble notifications';
+    }
+    
+    if (!config.groupIDs || config.groupIDs.length === 0) {
+      errors.groupIDs = 'At least one LINE group must be selected';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Fetch available tables, groups, etc.
   useEffect(() => {
@@ -73,7 +110,9 @@ const LineNotificationCreatePage = () => {
       if (!config.tableID) return;
       
       try {
+        setIsLoading(true);
         const data = await fetchAirtableRecordsFromView(config.tableID, "");
+        
         // Extract unique view names if available in the response
         const views = [...new Set(data.map(record => record.view_name).filter(Boolean))];
         setViewOptions(views.map(view => ({
@@ -92,6 +131,12 @@ const LineNotificationCreatePage = () => {
         }
       } catch (error) {
         console.error("Error fetching views:", error);
+        setAlert({
+          type: "error",
+          message: "Failed to fetch views and fields"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -99,27 +144,10 @@ const LineNotificationCreatePage = () => {
   }, [config.tableID]);
 
   const handleSaveConfig = async () => {
-    // Validate form
-    if (!config.name) {
+    if (!isFormValid()) {
       setAlert({
         type: "error",
-        message: "Please enter a name for this notification"
-      });
-      return;
-    }
-    
-    if (!config.tableID || !config.viewName) {
-      setAlert({
-        type: "error",
-        message: "Please select both a table and view"
-      });
-      return;
-    }
-    
-    if (config.groupIDs.length === 0) {
-      setAlert({
-        type: "error",
-        message: "Please select at least one LINE group"
+        message: "Please fix validation errors before saving"
       });
       return;
     }
@@ -133,9 +161,12 @@ const LineNotificationCreatePage = () => {
         view_name: config.viewName,
         header_template: config.headerTemplate,
         enable_bubbles: config.enableBubbles,
-        fields: config.bubbleFields,
+        message_template: config.messageTemplate || "",
+        fields: config.fields,
         notification_times: config.notificationTimes,
-        group_ids: config.groupIDs
+        group_ids: config.groupIDs,
+        schedule: config.schedule,
+        active: config.active
       };
       
       const response = await createNotificationConfig(requestBody);
@@ -161,18 +192,10 @@ const LineNotificationCreatePage = () => {
   };
   
   const handleTestNotification = async () => {
-    if (!config.tableID || !config.viewName) {
+    if (!isFormValid()) {
       setAlert({
         type: "error",
-        message: "Please select both a table and view"
-      });
-      return;
-    }
-    
-    if (config.groupIDs.length === 0) {
-      setAlert({
-        type: "error",
-        message: "Please select at least one LINE group"
+        message: "Please fix validation errors before testing"
       });
       return;
     }
@@ -183,17 +206,23 @@ const LineNotificationCreatePage = () => {
       const requestBody = {
         table_id: config.tableID,
         view_name: config.viewName,
-        fields: config.bubbleFields,
+        fields: config.fields,
         group_ids: config.groupIDs,
-        header_template: config.headerTemplate,
-        enable_bubbles: config.enableBubbles
+        enable_bubbles: config.enableBubbles,
+        message_template: config.messageTemplate || "",
+        header_template: config.headerTemplate
       };
       
-      const response = await sendTestNotification(requestBody);
+      let response;
+      if (config.enableBubbles) {
+        response = await sendBubbleNotification(requestBody);
+      } else {
+        response = await sendTestNotification(requestBody);
+      }
       
       setAlert({
         type: "success",
-        message: `Test notification sent successfully! ${response.recordCount} records sent.`
+        message: `Test notification sent successfully! ${response.records_sent || 0} records sent.`
       });
     } catch (error) {
       console.error("Error sending test notification:", error);
@@ -215,6 +244,7 @@ const LineNotificationCreatePage = () => {
           onTest={handleTestNotification}
           isLoading={isLoading}
           isEdit={false}
+          formValid={isFormValid()}
         />
       }
     >

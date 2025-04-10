@@ -1,4 +1,3 @@
-// เพิ่มเซอร์วิสใหม่เพื่อส่งข้อมูลจาก Airtable ไปยัง LINE
 // backend/external/AirtableConnect/application/services/notification_service.go
 
 package services
@@ -26,29 +25,34 @@ type LineMessageRequest struct {
 
 // NotificationService สำหรับส่งข้อมูลจาก Airtable ไปยังช่องทางต่างๆ เช่น LINE
 type NotificationService struct {
-	airtableClient interfaces.AirtableClient
-	baseID         string
-	lineAPIURL     string
+	airtableClient   interfaces.AirtableClient
+	notificationRepo interfaces.NotificationRepository
+	baseID           string
+	lineAPIURL       string
 }
 
 // NewNotificationService สร้าง instance ใหม่ของ NotificationService
 func NewNotificationService(
 	airtableClient interfaces.AirtableClient,
+	notificationRepo interfaces.NotificationRepository,
 	baseID string,
 	lineAPIURL string,
-	notificationRepo interfaces.NotificationRepository,
-
 ) *NotificationService {
 	return &NotificationService{
-		airtableClient: airtableClient,
-		baseID:         baseID,
-		lineAPIURL:     lineAPIURL,
+		airtableClient:   airtableClient,
+		notificationRepo: notificationRepo,
+		baseID:           baseID,
+		lineAPIURL:       lineAPIURL,
 	}
+}
+
+// NotificationRepo returns the notification repository
+func (s *NotificationService) NotificationRepo() interfaces.NotificationRepository {
+	return s.notificationRepo
 }
 
 // SendAirtableViewToLine ส่งข้อมูลจาก Airtable view ไปยัง LINE group
 func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName string, fields []string, messageTemplate string, groupIDs []string) (int, error) {
-
 	// ดึงข้อมูลจาก Airtable
 	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
@@ -65,7 +69,7 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 			}
 		}
 
-		// ✅ Normalize field names (เช่น "ชื่อออเดอร์" → "OrderName")
+		// Normalize field names (เช่น "ชื่อออเดอร์" → "OrderName")
 		normalized := models.NormalizeFields(filteredRecord)
 
 		filteredRecords = append(filteredRecords, normalized)
@@ -85,6 +89,101 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 
 	return len(records), nil
 }
+
+// SendRecordPerBubbleToLine ส่งข้อมูลแต่ละรายการเป็น bubble แยกกัน
+func (s *NotificationService) SendRecordPerBubbleToLine(tableID string, viewName string, fields []string, groupIDs []string, headerTemplate string) (int, error) {
+	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
+	}
+
+	// Normalize & filter fields
+	var filtered []map[string]interface{}
+	for _, r := range records {
+		rec := make(map[string]interface{})
+		for _, f := range fields {
+			if val, ok := r.Fields[f]; ok {
+				rec[f] = val
+			}
+		}
+		filtered = append(filtered, models.NormalizeFields(rec))
+	}
+
+	// Generate messages
+	messages := s.generateRecordBubbles(filtered, headerTemplate)
+
+	// Send messages to LINE
+	err = s.sendBubblesToLine(messages, groupIDs)
+	if err != nil {
+		return 0, fmt.Errorf("error sending bubble messages to LINE: %v", err)
+	}
+
+	return len(records), nil
+}
+
+// RunNotificationNow runs a notification immediately based on its ID
+func (s *NotificationService) RunNotificationNow(id int) (int, error) {
+	// Get notification configuration
+	notification, err := s.notificationRepo.GetNotificationByID(id)
+	if err != nil {
+		return 0, fmt.Errorf("error retrieving notification: %v", err)
+	}
+
+	var recordsSent int
+	var sendErr error
+
+	// Send notification based on type
+	if notification.EnableBubbles {
+		recordsSent, sendErr = s.SendRecordPerBubbleToLine(
+			notification.TableID,
+			notification.ViewName,
+			notification.Fields,
+			notification.GroupIDs,
+			notification.HeaderTemplate,
+		)
+	} else {
+		recordsSent, sendErr = s.SendAirtableViewToLine(
+			notification.TableID,
+			notification.ViewName,
+			notification.Fields,
+			notification.MessageTemplate,
+			notification.GroupIDs,
+		)
+	}
+
+	// Log the execution
+	status := "success"
+	var errorMessage string
+	if sendErr != nil {
+		status = "failed"
+		errorMessage = sendErr.Error()
+	}
+
+	// Create log entry
+	logEntry := models.NotificationLog{
+		NotificationID: id,
+		Status:         status,
+		RecordsSent:    recordsSent,
+		ErrorMessage:   errorMessage,
+		SentAt:         time.Now(),
+	}
+
+	// Save log to database
+	_, logErr := s.notificationRepo.SaveNotificationLog(logEntry)
+	if logErr != nil {
+		log.Printf("Error saving notification log: %v", logErr)
+	}
+
+	// Update last run time
+	updateErr := s.notificationRepo.UpdateLastRun(id, time.Now())
+	if updateErr != nil {
+		log.Printf("Error updating last run time: %v", updateErr)
+	}
+
+	return recordsSent, sendErr
+}
+
+// ensureUTF8 ensures that the input text is valid UTF-8
 func ensureUTF8(input string) string {
 	// ตัด invalid Unicode ออกเพื่อไม่ให้ template.Parse error
 	if utf8.ValidString(input) {
@@ -105,10 +204,6 @@ func (s *NotificationService) formatMessage(messageTemplate string, records []ma
 	}
 
 	// ตรวจสอบว่า messageTemplate เป็น UTF-8 หรือไม่
-	// ถ้าไม่ใช่ ให้แปลงเป็น UTF-8
-	// หรือ: ใช้ฟังก์ชัน ensureUTF8 เพื่อให้แน่ใจว่าเป็น UTF-8
-	// ถ้าไม่ใช่ ให้แปลงเป็น UTF-8
-	// Parse และ execute template
 	safeTemplate := ensureUTF8(messageTemplate)
 	tmpl, err := template.New("message").Parse(safeTemplate)
 	if err != nil {
@@ -157,96 +252,32 @@ func (s *NotificationService) sendToLine(message string, groupIDs []string) erro
 	return nil
 }
 
-// ScheduledNotification รายละเอียดการแจ้งเตือนที่ตั้งเวลาไว้
-type ScheduledNotification struct {
-	ID              int      `json:"id"`
-	TableID         string   `json:"table_id"`
-	ViewName        string   `json:"view_name"`
-	Fields          []string `json:"fields"`
-	MessageTemplate string   `json:"message_template"`
-	GroupIDs        []string `json:"group_ids"`
-	Schedule        string   `json:"schedule"` // cron format: "0 9 * * *" สำหรับทุกวันตอน 9:00
-	LastRun         string   `json:"last_run"`
-	Active          bool     `json:"active"`
-}
-
-// SendScheduledNotifications ส่งการแจ้งเตือนที่ถึงกำหนดเวลา
-func (s *NotificationService) SendScheduledNotifications(schedules []ScheduledNotification) []error {
-	var errors []error
-	now := time.Now()
-
-	for _, schedule := range schedules {
-		if !schedule.Active {
-			continue
-		}
-
-		// ตรวจสอบว่าถึงเวลาส่งหรือยัง (ในกรณีนี้เป็นแค่การจำลองอย่างง่าย)
-		// ในระบบจริงควรใช้ cron parser อย่างเช่น github.com/robfig/cron
-		shouldRun := true // ตรรกะการตรวจสอบว่าถึงเวลาหรือยัง
-
-		if shouldRun {
-			_, err := s.SendAirtableViewToLine(
-				schedule.TableID,
-				schedule.ViewName,
-				schedule.Fields,
-				schedule.MessageTemplate,
-				schedule.GroupIDs,
-			)
-			if err != nil {
-				errors = append(errors, fmt.Errorf("failed to send notification for schedule %d: %v", schedule.ID, err))
-			}
-
-			// อัพเดทเวลาล่าสุดที่ส่ง
-			// ในระบบจริงควรอัพเดทในฐานข้อมูล
-			log.Printf("Sent scheduled notification %d at %s", schedule.ID, now.Format(time.RFC3339))
-		}
-	}
-
-	return errors
-}
-
-func (s *NotificationService) SendRecordPerBubbleToLine(tableID string, viewName string, fields []string, groupIDs []string) (int, error) {
-	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
-	if err != nil {
-		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
-	}
-
-	// Normalize & filter fields
-	var filtered []map[string]interface{}
-	for _, r := range records {
-		rec := make(map[string]interface{})
-		for _, f := range fields {
-			if val, ok := r.Fields[f]; ok {
-				rec[f] = val
-			}
-		}
-		filtered = append(filtered, rec)
-	}
-
-	// Generate messages
-	messages := generateRecordBubbles(filtered)
-	return len(records), s.sendBubblesToLine(messages, groupIDs)
-}
-
-func generateRecordBubbles(records []map[string]interface{}) []string {
+// generateRecordBubbles creates individual messages for each record
+func (s *NotificationService) generateRecordBubbles(records []map[string]interface{}, headerTemplate string) []string {
 	var messages []string
 	weekday := thaiWeekday(time.Now().Weekday())
 	date := time.Now().Format("02/01/2006")
-	head := fmt.Sprintf("วันนี้ %s %s มีจัดส่ง %d กล่อง", weekday, date, len(records))
-	messages = append(messages, head)
+
+	// Only add header if headerTemplate is provided
+	if headerTemplate != "" {
+		headerMsg := fmt.Sprintf(headerTemplate, weekday, date, len(records))
+		messages = append(messages, headerMsg)
+	} else {
+		headerMsg := fmt.Sprintf("วันนี้ %s %s มีจัดส่ง %d กล่อง", weekday, date, len(records))
+		messages = append(messages, headerMsg)
+	}
 
 	for i, r := range records {
 		var b strings.Builder
 		fmt.Fprintf(&b, "• กล่องที่ %d\n", i+1)
 		if order, ok := r["OrderName"]; ok {
-			orderStr := fmt.Sprintf("%v", first(order)) // แปลงค่าเป็น string
+			orderStr := fmt.Sprintf("%v", first(order))
 			if idx := strings.Index(orderStr, "-"); idx != -1 {
-				orderStr = orderStr[:idx] // ตัดข้อความก่อนเครื่องหมาย "-"
+				orderStr = orderStr[:idx]
 			}
 			fmt.Fprintf(&b, "%s\n", orderStr)
 		}
 		if name, ok := r["CustomerName"]; ok {
-
 			fmt.Fprintf(&b, "ชื่อลูกค้า : %v\n", first(name))
 		}
 		if point, ok := r["PickupPoint"]; ok {
@@ -255,7 +286,6 @@ func generateRecordBubbles(records []map[string]interface{}) []string {
 		if phone, ok := r["PhoneNumber"]; ok {
 			fmt.Fprintf(&b, "เบอร์โทร : %v\n", first(phone))
 		}
-
 		if order, ok := r["OrderNumber"]; ok {
 			fmt.Fprintf(&b, "เลขออเดอร์ : %v", order)
 		}
@@ -265,22 +295,88 @@ func generateRecordBubbles(records []map[string]interface{}) []string {
 	return messages
 }
 
+// sendBubblesToLine sends messages as separate bubbles
 func (s *NotificationService) sendBubblesToLine(messages []string, groupIDs []string) error {
 	for _, msg := range messages {
-		req := map[string]interface{}{
-			"content":   msg,
-			"group_ids": groupIDs,
-			"type":      "text",
+		req := LineMessageRequest{
+			Content:  msg,
+			GroupIDs: groupIDs,
+			Type:     "text",
 		}
-		body, _ := json.Marshal(req)
-		resp, err := http.Post(s.lineAPIURL, "application/json", bytes.NewBuffer(body))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			log.Printf("❌ Failed to send message: %v", err)
+
+		jsonData, err := json.Marshal(req)
+		if err != nil {
+			return err
 		}
+
+		resp, err := http.Post(s.lineAPIURL, "application/json", bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Printf("Failed to send message: %v", err)
+			return err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Failed to send message: status code %d", resp.StatusCode)
+			return fmt.Errorf("LINE API returned non-OK status: %s", resp.Status)
+		}
+
+		resp.Body.Close()
+
+		// Small delay to prevent API rate limiting
+		time.Sleep(100 * time.Millisecond)
 	}
+
 	return nil
 }
 
+// SendScheduledNotifications ส่งการแจ้งเตือนที่ถึงกำหนดเวลา
+func (s *NotificationService) SendScheduledNotifications(schedules []models.ScheduledNotification) []error {
+	var errors []error
+	now := time.Now()
+
+	for _, schedule := range schedules {
+		if !schedule.Active {
+			continue
+		}
+
+		// ตรวจสอบว่าถึงเวลาส่งหรือยัง (ในระบบจริงควรใช้ cron parser ช่วย)
+		shouldRun := true // ตรรกะการตรวจสอบเวลาควรทำที่นี่
+
+		if shouldRun {
+			var recordsSent int
+			var err error
+
+			if schedule.EnableBubbles {
+				recordsSent, err = s.SendRecordPerBubbleToLine(
+					schedule.TableID,
+					schedule.ViewName,
+					schedule.Fields,
+					schedule.GroupIDs,
+					schedule.HeaderTemplate,
+				)
+			} else {
+				recordsSent, err = s.SendAirtableViewToLine(
+					schedule.TableID,
+					schedule.ViewName,
+					schedule.Fields,
+					schedule.MessageTemplate,
+					schedule.GroupIDs,
+				)
+			}
+
+			if err != nil {
+				errors = append(errors, fmt.Errorf("failed to send notification for schedule %d: %v", schedule.ID, err))
+			}
+
+			// อัพเดทเวลาล่าสุดที่ส่ง
+			log.Printf("Sent scheduled notification %d at %s", schedule.ID, now.Format(time.RFC3339))
+		}
+	}
+
+	return errors
+}
+
+// Helper functions
 func thaiWeekday(w time.Weekday) string {
 	switch w {
 	case time.Sunday:

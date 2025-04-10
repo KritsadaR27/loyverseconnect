@@ -58,7 +58,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * Fetch all notification configurations
    */
   export const fetchNotificationConfigs = async () => {
-    return fetchFromAirtableConnect('/api/airtable/notify/configs');
+    return fetchFromAirtableConnect('/api/airtable/notifications');
   };
   
   /**
@@ -67,7 +67,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {string|number} id - Notification configuration ID
    */
   export const fetchNotificationConfig = async (id) => {
-    return fetchFromAirtableConnect(`/api/airtable/notify/configs/${id}`);
+    return fetchFromAirtableConnect(`/api/airtable/notifications/?id=${id}`);
   };
   
   /**
@@ -76,7 +76,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {Object} config - Notification configuration object
    */
   export const createNotificationConfig = async (config) => {
-    return fetchFromAirtableConnect('/api/airtable/notify/configs', {
+    return fetchFromAirtableConnect('/api/airtable/notifications', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {Object} config - Updated notification configuration
    */
   export const updateNotificationConfig = async (id, config) => {
-    return fetchFromAirtableConnect(`/api/airtable/notify/configs/${id}`, {
+    return fetchFromAirtableConnect(`/api/airtable/notifications/?id=${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {string|number} id - Notification configuration ID
    */
   export const deleteNotificationConfig = async (id) => {
-    return fetchFromAirtableConnect(`/api/airtable/notify/configs/${id}`, {
+    return fetchFromAirtableConnect(`/api/airtable/notifications/?id=${id}`, {
       method: 'DELETE',
     });
   };
@@ -118,7 +118,22 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {Object} notificationData - Test notification configuration
    */
   export const sendTestNotification = async (notificationData) => {
-    return fetchFromAirtableConnect('/api/airtable/notify/test', {
+    return fetchFromAirtableConnect('/api/airtable/notify/line', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(notificationData),
+    });
+  };
+  
+  /**
+   * Send messages as bubbles
+   * 
+   * @param {Object} notificationData - Bubble notification configuration
+   */
+  export const sendBubbleNotification = async (notificationData) => {
+    return fetchFromAirtableConnect('/api/airtable/notify/bubbles', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,7 +148,7 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
    * @param {string|number} id - Notification configuration ID
    */
   export const runNotificationNow = async (id) => {
-    return fetchFromAirtableConnect(`/api/airtable/notify/configs/${id}/run`, {
+    return fetchFromAirtableConnect(`/api/airtable/notifications/run?id=${id}`, {
       method: 'POST',
     });
   };
