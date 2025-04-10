@@ -27,52 +27,74 @@ func NewAirtableClient(client *airtable.Client) interfaces.AirtableClient {
 func (c *AirtableClientImpl) GetRecordsFromView(baseID, tableName, viewName string) ([]models.Record, error) {
 	table := c.client.GetTable(baseID, tableName)
 
-	// ดึงข้อมูลจาก View โดยใช้ query parameters
-	records, err := table.GetRecords().FromView(viewName).Do()
-	if err != nil {
-		log.Printf("Failed to get records from Airtable view %s: %v", viewName, err)
-		return nil, err
-	}
+	var allRecords []models.Record
+	offset := ""
 
-	var result []models.Record
-	for _, record := range records.Records {
-		// Convert Airtable record to our model
-		created, _ := time.Parse(time.RFC3339, record.CreatedTime)
-
-		// แปลงชื่อฟิลด์ภาษาไทยเป็นภาษาอังกฤษ
-		normalizedFields := models.NormalizeFields(record.Fields)
-
-		modelRecord := models.Record{
-			ID:          record.ID,
-			Fields:      normalizedFields,
-			CreatedTime: created,
+	for {
+		request := table.GetRecords().FromView(viewName)
+		if offset != "" {
+			request = request.WithOffset(offset)
 		}
-		result = append(result, modelRecord)
+
+		records, err := request.Do()
+		if err != nil {
+			log.Printf("Failed to get records from Airtable view %s: %v", viewName, err)
+			return nil, err
+		}
+
+		for _, record := range records.Records {
+			created, _ := time.Parse(time.RFC3339, record.CreatedTime)
+			allRecords = append(allRecords, models.Record{
+				ID:          record.ID,
+				Fields:      models.NormalizeFields(record.Fields),
+				CreatedTime: created,
+			})
+		}
+
+		if records.Offset == "" {
+			break
+		}
+		offset = records.Offset
 	}
 
-	return result, nil
+	return allRecords, nil
 }
 
 // GetRecords retrieves records from an Airtable table
 func (c *AirtableClientImpl) GetRecords(baseID, tableName string) ([]models.Record, error) {
 	table := c.client.GetTable(baseID, tableName)
 
-	records, err := table.GetRecords().Do() // ไม่มี .FromView
-	if err != nil {
-		log.Printf("Failed to get records from Airtable: %v", err)
-		return nil, err
+	var allRecords []models.Record
+	offset := ""
+
+	for {
+		request := table.GetRecords()
+		if offset != "" {
+			request = request.WithOffset(offset)
+		}
+
+		records, err := request.Do()
+		if err != nil {
+			log.Printf("Failed to get records from Airtable: %v", err)
+			return nil, err
+		}
+
+		for _, record := range records.Records {
+			created, _ := time.Parse(time.RFC3339, record.CreatedTime)
+			allRecords = append(allRecords, models.Record{
+				ID:          record.ID,
+				Fields:      models.NormalizeFields(record.Fields),
+				CreatedTime: created,
+			})
+		}
+
+		if records.Offset == "" {
+			break
+		}
+		offset = records.Offset
 	}
 
-	var result []models.Record
-	for _, record := range records.Records {
-		created, _ := time.Parse(time.RFC3339, record.CreatedTime)
-		result = append(result, models.Record{
-			ID:          record.ID,
-			Fields:      models.NormalizeFields(record.Fields),
-			CreatedTime: created,
-		})
-	}
-	return result, nil
+	return allRecords, nil
 }
 
 // CreateRecord creates a new record in an Airtable table
