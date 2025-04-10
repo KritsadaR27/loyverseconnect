@@ -13,6 +13,8 @@ type Notification struct {
 	Fields            []string  `json:"fields"`
 	MessageTemplate   string    `json:"message_template"`
 	HeaderTemplate    string    `json:"header_template,omitempty"`
+	BubbleTemplate    string    `json:"bubble_template,omitempty"`
+	FooterTemplate    string    `json:"footer_template,omitempty"`
 	EnableBubbles     bool      `json:"enable_bubbles"`
 	GroupIDs          []string  `json:"group_ids"`
 	Schedule          string    `json:"schedule"`
@@ -41,6 +43,8 @@ type ScheduledNotification struct {
 	Fields          []string `json:"fields"`
 	MessageTemplate string   `json:"message_template"`
 	HeaderTemplate  string   `json:"header_template,omitempty"`
+	BubbleTemplate  string   `json:"bubble_template,omitempty"`
+	FooterTemplate  string   `json:"footer_template,omitempty"`
 	EnableBubbles   bool     `json:"enable_bubbles"`
 	GroupIDs        []string `json:"group_ids"`
 	Schedule        string   `json:"schedule"` // cron format เช่น "0 9 * * *" สำหรับทุกวันเวลา 9:00
@@ -56,6 +60,8 @@ type NotificationRequest struct {
 	Fields            []string `json:"fields"`
 	MessageTemplate   string   `json:"message_template"`
 	HeaderTemplate    string   `json:"header_template,omitempty"`
+	BubbleTemplate    string   `json:"bubble_template,omitempty"`
+	FooterTemplate    string   `json:"footer_template,omitempty"`
 	EnableBubbles     bool     `json:"enable_bubbles"`
 	GroupIDs          []string `json:"group_ids"`
 	Schedule          string   `json:"schedule,omitempty"`
@@ -88,6 +94,8 @@ type NotificationTestRequest struct {
 	Fields          []string `json:"fields"`
 	MessageTemplate string   `json:"message_template,omitempty"`
 	HeaderTemplate  string   `json:"header_template,omitempty"`
+	BubbleTemplate  string   `json:"bubble_template,omitempty"`
+	FooterTemplate  string   `json:"footer_template,omitempty"`
 	EnableBubbles   bool     `json:"enable_bubbles"`
 	GroupIDs        []string `json:"group_ids"`
 }

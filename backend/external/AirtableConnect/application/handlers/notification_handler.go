@@ -70,6 +70,8 @@ func (h *NotificationHandler) SendAirtableToLine(w http.ResponseWriter, r *http.
 			req.Fields,
 			req.GroupIDs,
 			req.HeaderTemplate,
+			req.BubbleTemplate,
+			req.FooterTemplate,
 		)
 	} else {
 		recordsSent, err = h.notificationService.SendAirtableViewToLine(
@@ -274,6 +276,8 @@ func (h *NotificationHandler) UpdateNotification(w http.ResponseWriter, r *http.
 	existingNotification.Fields = req.Fields
 	existingNotification.MessageTemplate = req.MessageTemplate
 	existingNotification.HeaderTemplate = req.HeaderTemplate
+	existingNotification.BubbleTemplate = req.BubbleTemplate
+	existingNotification.FooterTemplate = req.FooterTemplate
 	existingNotification.EnableBubbles = req.EnableBubbles
 	existingNotification.GroupIDs = req.GroupIDs
 	existingNotification.Schedule = req.Schedule
@@ -400,6 +404,8 @@ func (h *NotificationHandler) SendRecordPerBubbleToLine(w http.ResponseWriter, r
 		req.Fields,
 		req.GroupIDs,
 		req.HeaderTemplate,
+		req.BubbleTemplate,
+		req.FooterTemplate,
 	)
 	if err != nil {
 		http.Error(w, "Failed to send bubble messages: "+err.Error(), http.StatusInternalServerError)

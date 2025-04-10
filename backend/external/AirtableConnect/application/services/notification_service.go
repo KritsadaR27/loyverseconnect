@@ -8,12 +8,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 	"text/template"
 	"time"
 	"unicode/utf8"
+
+	"github.com/robfig/cron/v3"
 )
 
 // LineMessageRequest สำหรับ request ไปยัง LINE API
@@ -53,6 +56,12 @@ func (s *NotificationService) NotificationRepo() interfaces.NotificationReposito
 
 // SendAirtableViewToLine ส่งข้อมูลจาก Airtable view ไปยัง LINE group
 func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName string, fields []string, messageTemplate string, groupIDs []string) (int, error) {
+	if len(fields) == 0 {
+		return 0, fmt.Errorf("fields cannot be empty")
+	}
+	if len(groupIDs) == 0 {
+		return 0, fmt.Errorf("groupIDs cannot be empty")
+	}
 	// ดึงข้อมูลจาก Airtable
 	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
@@ -91,13 +100,23 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 }
 
 // SendRecordPerBubbleToLine ส่งข้อมูลแต่ละรายการเป็น bubble แยกกัน
-func (s *NotificationService) SendRecordPerBubbleToLine(tableID string, viewName string, fields []string, groupIDs []string, headerTemplate string) (int, error) {
+// SendRecordPerBubbleToLine sends individual LINE bubble messages using Go-style {{ }} templates
+func (s *NotificationService) SendRecordPerBubbleToLine(
+	tableID string,
+	viewName string,
+	fields []string,
+	groupIDs []string,
+	headerTemplate string,
+	bubbleTemplate string,
+	footerTemplate string,
+) (int, error) {
+	// Fetch records from Airtable view
 	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
 		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
 	}
 
-	// Normalize & filter fields
+	// Prepare filtered records by selecting only the requested fields and normalizing them
 	var filtered []map[string]interface{}
 	for _, r := range records {
 		rec := make(map[string]interface{})
@@ -109,18 +128,72 @@ func (s *NotificationService) SendRecordPerBubbleToLine(tableID string, viewName
 		filtered = append(filtered, models.NormalizeFields(rec))
 	}
 
-	// Generate messages
-	messages := s.generateRecordBubbles(filtered, headerTemplate)
+	// Prepare common variables for header/footer templates
+	today := time.Now()
+	weekday := thaiWeekday(today.Weekday())
+	todayStr := today.Format("02/01/2006")
+	tomorrowStr := today.Add(24 * time.Hour).Format("02/01/2006")
 
-	// Send messages to LINE
+	// Render header if provided
+	header := ""
+	if headerTemplate != "" {
+		header, err = renderTemplate(headerTemplate, map[string]interface{}{
+			"Today":    todayStr,
+			"Tomorrow": tomorrowStr,
+			"Weekday":  weekday,
+			"Count":    len(filtered),
+		})
+		if err != nil {
+			return 0, fmt.Errorf("error rendering header template: %v", err)
+		}
+	}
+
+	// Collect LINE message strings
+	var messages []string
+	if header != "" {
+		messages = append(messages, header)
+	}
+
+	// Render each record using the bubble template
+	for i, r := range filtered {
+		r["Index"] = i + 1
+		bubble, err := renderTemplate(bubbleTemplate, r)
+		if err != nil {
+			log.Printf("Error rendering bubble %d: %v", i, err)
+			continue
+		}
+		messages = append(messages, bubble)
+	}
+
+	// Render footer if provided
+	if footerTemplate != "" {
+		footer, err := renderTemplate(footerTemplate, map[string]interface{}{})
+		if err == nil {
+			messages = append(messages, footer)
+		}
+	}
+
+	// Send all messages to LINE
 	err = s.sendBubblesToLine(messages, groupIDs)
 	if err != nil {
-		return 0, fmt.Errorf("error sending bubble messages to LINE: %v", err)
+		return 0, fmt.Errorf("error sending bubbles to LINE: %v", err)
 	}
 
 	return len(records), nil
 }
 
+// renderTemplate parses and executes a Go-style {{ }} template with provided data
+func renderTemplate(tmplStr string, data interface{}) (string, error) {
+	tmpl, err := template.New("msg").Parse(tmplStr)
+	if err != nil {
+		return "", err
+	}
+	var buf strings.Builder
+	err = tmpl.Execute(&buf, data)
+	return buf.String(), err
+}
+
+// SendNotificationToLine sends a notification to LINE based on its ID
 // RunNotificationNow runs a notification immediately based on its ID
 func (s *NotificationService) RunNotificationNow(id int) (int, error) {
 	// Get notification configuration
@@ -140,6 +213,8 @@ func (s *NotificationService) RunNotificationNow(id int) (int, error) {
 			notification.Fields,
 			notification.GroupIDs,
 			notification.HeaderTemplate,
+			notification.FooterTemplate,
+			notification.BubbleTemplate,
 		)
 	} else {
 		recordsSent, sendErr = s.SendAirtableViewToLine(
@@ -246,6 +321,8 @@ func (s *NotificationService) sendToLine(message string, groupIDs []string) erro
 
 	// ตรวจสอบ response
 	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("LINE API returned non-OK status: %s, response: %s", resp.Status, string(body))
 		return fmt.Errorf("LINE API returned non-OK status: %s", resp.Status)
 	}
 
@@ -340,9 +417,7 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 		}
 
 		// ตรวจสอบว่าถึงเวลาส่งหรือยัง (ในระบบจริงควรใช้ cron parser ช่วย)
-		shouldRun := true // ตรรกะการตรวจสอบเวลาควรทำที่นี่
-
-		if !shouldRun {
+		if !shouldRunNow(schedule.Schedule) {
 			continue
 		}
 
@@ -358,6 +433,8 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 				schedule.Fields,
 				schedule.GroupIDs,
 				schedule.HeaderTemplate,
+				schedule.BubbleTemplate,
+				schedule.FooterTemplate,
 			)
 		} else {
 			recordsSent, err = s.SendAirtableViewToLine(
@@ -390,6 +467,8 @@ func (s *NotificationService) processScheduledNotification(schedule models.Sched
 			schedule.Fields,
 			schedule.GroupIDs,
 			schedule.HeaderTemplate,
+			schedule.BubbleTemplate,
+			schedule.FooterTemplate,
 		)
 	} else {
 		return s.SendAirtableViewToLine(
@@ -420,7 +499,7 @@ func thaiWeekday(w time.Weekday) string {
 	case time.Saturday:
 		return "เสาร์"
 	default:
-		return ""
+		return "ไม่ทราบวัน"
 	}
 }
 
@@ -428,5 +507,15 @@ func first(val interface{}) interface{} {
 	if arr, ok := val.([]interface{}); ok && len(arr) > 0 {
 		return arr[0]
 	}
-	return val
+	return nil
+}
+
+func shouldRunNow(schedule string) bool {
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	sched, err := parser.Parse(schedule)
+	if err != nil {
+		log.Printf("Invalid schedule format: %s, error: %v", schedule, err)
+		return false
+	}
+	return sched.Next(time.Now().Add(-1 * time.Second)).Before(time.Now())
 }

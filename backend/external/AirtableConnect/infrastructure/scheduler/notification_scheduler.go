@@ -87,6 +87,8 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 			fields, 
 			message_template, 
 			header_template, 
+			bubble_template,
+			footer_template,
 			enable_bubbles, 
 			group_ids, 
 			schedule, 
@@ -120,6 +122,8 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 			&fieldsJSON,
 			&messageTemplate,
 			&headerTemplate,
+			&notification.BubbleTemplate,
+			&notification.FooterTemplate,
 			&notification.EnableBubbles,
 			&groupIDsJSON,
 			&schedule,
@@ -210,6 +214,8 @@ func (s *NotificationScheduler) scheduleNotification(notification models.Notific
 				notification.Fields,
 				notification.GroupIDs,
 				notification.HeaderTemplate,
+				notification.BubbleTemplate,
+				notification.FooterTemplate,
 			)
 		} else {
 			recordsSent, err = s.notificationService.SendAirtableViewToLine(
