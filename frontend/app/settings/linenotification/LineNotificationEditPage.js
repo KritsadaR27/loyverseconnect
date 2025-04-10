@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SidebarLayout from "../../../../components/layouts/SidebarLayout";
-import LineNotificationActionBar from "../components/LineNotificationActionBar";
-import LineNotificationForm from "../components/LineNotificationForm";
-import Alert from "../../../../components/Alert";
+import SidebarLayout from "../../../components/layouts/SidebarLayout";
+import LineNotificationActionBar from "./components/LineNotificationActionBar";
+import LineNotificationForm from "../../../components/linenotifications/LineNotificationForm";
+import Alert from "../../../components/Alert";
 import { 
   fetchNotificationConfig, 
   updateNotificationConfig, 
+  deleteNotificationConfig,
   fetchAirtableTables, 
   fetchAirtableRecordsFromView,
-  fetchLineGroups 
-} from "../../../api/airtableService";
+  fetchLineGroups,
+  sendTestNotification,
+  sendBubbleNotification
+} from "../../api/airtableService";
 
 const LineNotificationEditPage = ({ id }) => {
   const router = useRouter();
@@ -20,11 +23,13 @@ const LineNotificationEditPage = ({ id }) => {
     name: "",
     headerTemplate: "วันนี้ %s %s มีจัดส่ง %d กล่อง",
     enableBubbles: true,
-    bubbleFields: [],
+    fields: [],
     notificationTimes: ["08:00"],
     groupIDs: [],
     tableID: "",
     viewName: "",
+    active: true,
+    schedule: "0 8 * * *"
   });
   
   const [tableOptions, setTableOptions] = useState([]);
@@ -33,6 +38,41 @@ const LineNotificationEditPage = ({ id }) => {
   const [fieldOptions, setFieldOptions] = useState([]);
   const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Check if form is valid
+  const isFormValid = () => {
+    // Basic validation
+    const errors = {};
+    
+    if (!config.name || config.name.trim() === '') {
+      errors.name = 'Notification name is required';
+    }
+    
+    if (!config.tableID) {
+      errors.tableID = 'Airtable selection is required';
+    }
+    
+    if (!config.viewName) {
+      errors.viewName = 'View selection is required'; 
+    }
+    
+    if (!config.fields || config.fields.length === 0) {
+      errors.fields = 'At least one field must be selected';
+    }
+    
+    if (!config.enableBubbles && (!config.messageTemplate || config.messageTemplate.trim() === '')) {
+      errors.messageTemplate = 'Message template is required for non-bubble notifications';
+    }
+    
+    if (!config.groupIDs || config.groupIDs.length === 0) {
+      errors.groupIDs = 'At least one LINE group must be selected';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Fetch the notification config and available options
   useEffect(() => {
@@ -42,16 +82,21 @@ const LineNotificationEditPage = ({ id }) => {
         
         // Fetch the notification config
         const notificationData = await fetchNotificationConfig(id);
+        
+        // Map API response to our config state
         setConfig({
           id: notificationData.id,
           name: notificationData.name || "",
           headerTemplate: notificationData.header_template || "วันนี้ %s %s มีจัดส่ง %d กล่อง",
           enableBubbles: notificationData.enable_bubbles || true,
-          bubbleFields: notificationData.fields || [],
+          fields: notificationData.fields || [],
+          messageTemplate: notificationData.message_template || "",
           notificationTimes: notificationData.notification_times || ["08:00"],
           groupIDs: notificationData.group_ids || [],
           tableID: notificationData.table_id || "",
           viewName: notificationData.view_name || "",
+          schedule: notificationData.schedule || "0 8 * * *",
+          active: notificationData.active !== undefined ? notificationData.active : true
         });
         
         // Fetch tables
@@ -75,7 +120,7 @@ const LineNotificationEditPage = ({ id }) => {
             notificationData.view_name
           );
           
-          if (recordsData.length > 0) {
+          if (Array.isArray(recordsData) && recordsData.length > 0) {
             const firstRecord = recordsData[0];
             const fields = Object.keys(firstRecord.fields || {});
             setFieldOptions(fields.map(field => ({
@@ -83,6 +128,16 @@ const LineNotificationEditPage = ({ id }) => {
               name: field
             })));
           }
+          
+          // Extract unique view names if available in the response
+          const views = Array.isArray(recordsData) && recordsData.length > 0 
+            ? [...new Set(recordsData.map(record => record.view_name).filter(Boolean))]
+            : [];
+            
+          setViewOptions(views.map(view => ({
+            id: view,
+            name: view
+          })));
         }
       } catch (error) {
         console.error("Error fetching notification data:", error);
@@ -106,17 +161,21 @@ const LineNotificationEditPage = ({ id }) => {
       if (!config.tableID) return;
       
       try {
+        setIsLoading(true);
         const data = await fetchAirtableRecordsFromView(config.tableID, "");
+        
         // Extract unique view names if available in the response
-        // This is an assumption - adjust based on actual API response
-        const views = [...new Set(data.map(record => record.view_name).filter(Boolean))];
+        const views = Array.isArray(data) && data.length > 0 
+          ? [...new Set(data.map(record => record.view_name).filter(Boolean))]
+          : [];
+          
         setViewOptions(views.map(view => ({
           id: view,
           name: view
         })));
         
         // Extract field names from the first record
-        if (data.length > 0) {
+        if (Array.isArray(data) && data.length > 0) {
           const firstRecord = data[0];
           const fields = Object.keys(firstRecord.fields || {});
           setFieldOptions(fields.map(field => ({
@@ -126,6 +185,12 @@ const LineNotificationEditPage = ({ id }) => {
         }
       } catch (error) {
         console.error("Error fetching views:", error);
+        setAlert({
+          type: "error",
+          message: "Failed to fetch views and fields"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -133,26 +198,10 @@ const LineNotificationEditPage = ({ id }) => {
   }, [config.tableID]);
 
   const handleSaveConfig = async () => {
-    if (!config.name) {
+    if (!isFormValid()) {
       setAlert({
         type: "error",
-        message: "Please enter a name for this notification"
-      });
-      return;
-    }
-    
-    if (!config.tableID || !config.viewName) {
-      setAlert({
-        type: "error",
-        message: "Please select both a table and view"
-      });
-      return;
-    }
-    
-    if (config.groupIDs.length === 0) {
-      setAlert({
-        type: "error",
-        message: "Please select at least one LINE group"
+        message: "Please fix validation errors before saving"
       });
       return;
     }
@@ -161,15 +210,17 @@ const LineNotificationEditPage = ({ id }) => {
     try {
       // Create the request body
       const requestBody = {
-        id: config.id,
         name: config.name,
         table_id: config.tableID,
         view_name: config.viewName,
         header_template: config.headerTemplate,
         enable_bubbles: config.enableBubbles,
-        fields: config.bubbleFields,
+        message_template: config.messageTemplate || "",
+        fields: config.fields,
         notification_times: config.notificationTimes,
-        group_ids: config.groupIDs
+        group_ids: config.groupIDs,
+        schedule: config.schedule,
+        active: config.active
       };
       
       await updateNotificationConfig(config.id, requestBody);
@@ -194,19 +245,37 @@ const LineNotificationEditPage = ({ id }) => {
     }
   };
   
-  const handleTestNotification = async () => {
-    if (!config.tableID || !config.viewName) {
+  const handleDeleteConfig = async () => {
+    setIsLoading(true);
+    try {
+      await deleteNotificationConfig(config.id);
+      
       setAlert({
-        type: "error",
-        message: "Please select both a table and view"
+        type: "success",
+        message: "Notification deleted successfully"
       });
-      return;
-    }
-    
-    if (config.groupIDs.length === 0) {
+      
+      // Navigate back to the list after a brief delay
+      setTimeout(() => {
+        router.push("/settings/linenotification");
+      }, 1500);
+    } catch (error) {
+      console.error("Error deleting notification:", error);
       setAlert({
         type: "error",
-        message: "Please select at least one LINE group"
+        message: error.message || "Failed to delete notification"
+      });
+    } finally {
+      setShowDeleteConfirm(false);
+      setIsLoading(false);
+    }
+  };
+  
+  const handleTestNotification = async () => {
+    if (!isFormValid()) {
+      setAlert({
+        type: "error",
+        message: "Please fix validation errors before testing"
       });
       return;
     }
@@ -217,17 +286,23 @@ const LineNotificationEditPage = ({ id }) => {
       const requestBody = {
         table_id: config.tableID,
         view_name: config.viewName,
-        fields: config.bubbleFields,
+        fields: config.fields,
         group_ids: config.groupIDs,
-        header_template: config.headerTemplate,
-        enable_bubbles: config.enableBubbles
+        enable_bubbles: config.enableBubbles,
+        message_template: config.messageTemplate || "",
+        header_template: config.headerTemplate
       };
       
-      const response = await sendTestNotification(requestBody);
+      let response;
+      if (config.enableBubbles) {
+        response = await sendBubbleNotification(requestBody);
+      } else {
+        response = await sendTestNotification(requestBody);
+      }
       
       setAlert({
         type: "success",
-        message: `Test notification sent successfully! ${response.recordCount} records sent.`
+        message: `Test notification sent successfully! ${response.records_sent || response.recordCount || 0} records sent.`
       });
     } catch (error) {
       console.error("Error sending test notification:", error);
@@ -247,8 +322,10 @@ const LineNotificationEditPage = ({ id }) => {
         <LineNotificationActionBar
           onSave={handleSaveConfig}
           onTest={handleTestNotification}
+          onDelete={() => setShowDeleteConfirm(true)}
           isLoading={isLoading}
           isEdit={true}
+          formValid={isFormValid()}
         />
       }
     >
@@ -258,6 +335,32 @@ const LineNotificationEditPage = ({ id }) => {
           type={alert.type}
           onClose={() => setAlert(null)}
         />
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
+            <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
+            <p className="mb-4">
+              Are you sure you want to delete the notification "{config.name}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfig}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       
       {isLoading && !config.id ? (
@@ -272,6 +375,7 @@ const LineNotificationEditPage = ({ id }) => {
           viewOptions={viewOptions}
           groupOptions={groupOptions}
           fieldOptions={fieldOptions}
+          validationErrors={validationErrors}
           isEdit={true}
         />
       )}

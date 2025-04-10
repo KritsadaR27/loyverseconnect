@@ -1,5 +1,3 @@
-// frontend/app/settings/linenotification/components/LineNotificationForm.js
-
 import React, { useState } from 'react';
 import { PlusIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import MultiSelect from '../../../../components/MultiSelect';
@@ -11,66 +9,11 @@ const LineNotificationForm = ({
     viewOptions, 
     groupOptions,
     fieldOptions,
+    validationErrors = {},
     isEdit = false
 }) => {
     const [showFieldsSection, setShowFieldsSection] = useState(true);
     const [showScheduleSection, setShowScheduleSection] = useState(true);
-    const [validationErrors, setValidationErrors] = useState({});
-    
-    // Validate inputs
-    const validateField = (name, value) => {
-        const errors = {...validationErrors};
-        
-        switch(name) {
-            case 'name':
-                if (!value || value.trim() === '') {
-                    errors.name = 'Notification name is required';
-                } else {
-                    delete errors.name;
-                }
-                break;
-            case 'tableID':
-                if (!value) {
-                    errors.tableID = 'Airtable selection is required';
-                } else {
-                    delete errors.tableID;
-                }
-                break;
-            case 'viewName':
-                if (!value) {
-                    errors.viewName = 'View selection is required';
-                } else {
-                    delete errors.viewName;
-                }
-                break;
-            case 'fields':
-                if (!value || value.length === 0) {
-                    errors.fields = 'At least one field must be selected';
-                } else {
-                    delete errors.fields;
-                }
-                break;
-            case 'messageTemplate':
-                if (!config.enableBubbles && (!value || value.trim() === '')) {
-                    errors.messageTemplate = 'Message template is required for non-bubble notifications';
-                } else {
-                    delete errors.messageTemplate;
-                }
-                break;
-            case 'groupIDs':
-                if (!value || value.length === 0) {
-                    errors.groupIDs = 'At least one LINE group must be selected';
-                } else {
-                    delete errors.groupIDs;
-                }
-                break;
-            default:
-                break;
-        }
-        
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
     
     // Handle multi-select for notification times
     const handleAddTime = () => {
@@ -98,14 +41,12 @@ const LineNotificationForm = ({
         });
     };
 
-    // Handle input change with validation
+    // Handle input change
     const handleInputChange = (name, value) => {
         setConfig(prev => ({
             ...prev,
             [name]: value
         }));
-        
-        validateField(name, value);
     };
 
     // Handle field toggles for bubbles
@@ -126,8 +67,6 @@ const LineNotificationForm = ({
             tableID: value,
             viewName: '' // Reset view when table changes
         }));
-        
-        validateField('tableID', value);
     };
 
     // Handle view selection
@@ -152,8 +91,6 @@ const LineNotificationForm = ({
             ...prev,
             groupIDs: []
         }));
-        
-        validateField('groupIDs', []);
     };
 
     // Select all options for a multi-select
@@ -163,8 +100,6 @@ const LineNotificationForm = ({
             ...prev,
             groupIDs: allGroupIds
         }));
-        
-        validateField('groupIDs', allGroupIds);
     };
 
     // Handle bubble toggle
@@ -174,11 +109,6 @@ const LineNotificationForm = ({
             ...prev,
             enableBubbles: checked
         }));
-        
-        // If turning off bubbles, validate message template
-        if (!checked) {
-            validateField('messageTemplate', config.messageTemplate);
-        }
     };
 
     // Handle schedule change

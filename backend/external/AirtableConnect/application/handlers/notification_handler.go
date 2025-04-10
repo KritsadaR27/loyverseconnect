@@ -88,6 +88,7 @@ func (h *NotificationHandler) SendAirtableToLine(w http.ResponseWriter, r *http.
 
 	// ส่ง response กลับ
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // แก้ไขปัญหา CORS
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":      true,
 		"records_sent": recordsSent,
@@ -354,6 +355,7 @@ func (h *NotificationHandler) RunNotificationNow(w http.ResponseWriter, r *http.
 
 	// ส่ง response กลับ
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // แก้ไขปัญหา CORS
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":         true,
 		"records_sent":    recordsSent,
@@ -406,8 +408,10 @@ func (h *NotificationHandler) SendRecordPerBubbleToLine(w http.ResponseWriter, r
 
 	// ส่ง response กลับ
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // แก้ไขปัญหา CORS
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Successfully sent bubble messages",
-		"recordCount": count,
+		"message":      "Successfully sent bubble messages",
+		"recordCount":  count,
+		"records_sent": count, // เพิ่มฟิลด์ให้ตรงกับที่ frontend คาดหวัง
 	})
 }

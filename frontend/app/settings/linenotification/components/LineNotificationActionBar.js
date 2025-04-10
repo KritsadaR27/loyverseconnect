@@ -33,7 +33,7 @@ const LineNotificationActionBar = ({
 
             {/* Right section with action buttons */}
             <div className="flex space-x-3">
-                {isEdit && (
+                {isEdit && onDelete && (
                     <button
                         onClick={onDelete}
                         disabled={isLoading}

@@ -114,14 +114,17 @@ const LineNotificationCreatePage = () => {
         const data = await fetchAirtableRecordsFromView(config.tableID, "");
         
         // Extract unique view names if available in the response
-        const views = [...new Set(data.map(record => record.view_name).filter(Boolean))];
+        const views = Array.isArray(data) && data.length > 0 
+          ? [...new Set(data.map(record => record.view_name).filter(Boolean))]
+          : [];
+          
         setViewOptions(views.map(view => ({
           id: view,
           name: view
         })));
         
         // Extract field names from the first record
-        if (data.length > 0) {
+        if (Array.isArray(data) && data.length > 0) {
           const firstRecord = data[0];
           const fields = Object.keys(firstRecord.fields || {});
           setFieldOptions(fields.map(field => ({
@@ -222,7 +225,7 @@ const LineNotificationCreatePage = () => {
       
       setAlert({
         type: "success",
-        message: `Test notification sent successfully! ${response.records_sent || 0} records sent.`
+        message: `Test notification sent successfully! ${response.records_sent || response.recordCount || 0} records sent.`
       });
     } catch (error) {
       console.error("Error sending test notification:", error);
@@ -263,6 +266,7 @@ const LineNotificationCreatePage = () => {
         viewOptions={viewOptions}
         groupOptions={groupOptions}
         fieldOptions={fieldOptions}
+        validationErrors={validationErrors}
         isEdit={false}
       />
     </SidebarLayout>

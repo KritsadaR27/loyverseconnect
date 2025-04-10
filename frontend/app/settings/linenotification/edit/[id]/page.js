@@ -1,6 +1,6 @@
-// frontend/app/settings/linenotification/edit/[id]/page.js
 "use client";
 
+import React from 'react';
 import LineNotificationEditPage from "../../../LineNotificationEditPage";
 
 export default function Page({ params }) {

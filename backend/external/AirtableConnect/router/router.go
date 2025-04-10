@@ -94,6 +94,16 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 
 	// Notification Endpoints
 	mux.HandleFunc("/api/airtable/notify/line", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -102,6 +112,16 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	})
 
 	mux.HandleFunc("/api/airtable/notify/bubbles", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -111,6 +131,16 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 
 	// Notification Configuration Endpoints
 	mux.HandleFunc("/api/airtable/notifications", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			notificationHandler.GetAllNotifications(w, r)
@@ -121,7 +151,18 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 		}
 	})
 
+	// มีแนวทางการรับค่า id จาก URL query parameter แทนการใช้แบบ RESTful
 	mux.HandleFunc("/api/airtable/notifications/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			notificationHandler.GetNotification(w, r)
@@ -135,6 +176,16 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	})
 
 	mux.HandleFunc("/api/airtable/notifications/run", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return

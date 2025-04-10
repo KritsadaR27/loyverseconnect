@@ -80,7 +80,17 @@ func (s *NotificationScheduler) Reload() {
 // loadNotifications โหลดการตั้งค่าการแจ้งเตือนจากฐานข้อมูล
 func (s *NotificationScheduler) loadNotifications() ([]models.Notification, error) {
 	query := `
-		SELECT id, table_id, view_name, fields, message_template, group_ids, schedule, active
+		SELECT 
+			id, 
+			table_id, 
+			view_name, 
+			fields, 
+			message_template, 
+			header_template, 
+			enable_bubbles, 
+			group_ids, 
+			schedule, 
+			active
 		FROM airtable_notifications
 		WHERE active = true
 	`
@@ -95,6 +105,7 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 	for rows.Next() {
 		var notification models.Notification
 		var fieldsJSON, groupIDsJSON []byte
+		var headerTemplate sql.NullString
 
 		err := rows.Scan(
 			&notification.ID,
@@ -102,6 +113,8 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 			&notification.ViewName,
 			&fieldsJSON,
 			&notification.MessageTemplate,
+			&headerTemplate,
+			&notification.EnableBubbles,
 			&groupIDsJSON,
 			&notification.Schedule,
 			&notification.Active,
@@ -123,6 +136,11 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 		}
 		notification.GroupIDs = groupIDs
 
+		// จัดการกับค่า NULL
+		if headerTemplate.Valid {
+			notification.HeaderTemplate = headerTemplate.String
+		}
+
 		notifications = append(notifications, notification)
 	}
 
@@ -139,14 +157,27 @@ func (s *NotificationScheduler) scheduleNotification(notification models.Notific
 	job := func() {
 		log.Printf("Executing scheduled notification %d", notification.ID)
 
-		// ส่งข้อมูลจาก Airtable ไปยัง LINE
-		recordsSent, err := s.notificationService.SendAirtableViewToLine(
-			notification.TableID,
-			notification.ViewName,
-			notification.Fields,
-			notification.MessageTemplate,
-			notification.GroupIDs,
-		)
+		var recordsSent int
+		var err error
+
+		// ส่งข้อมูลจาก Airtable ไปยัง LINE ตามประเภทการแจ้งเตือน
+		if notification.EnableBubbles {
+			recordsSent, err = s.notificationService.SendRecordPerBubbleToLine(
+				notification.TableID,
+				notification.ViewName,
+				notification.Fields,
+				notification.GroupIDs,
+				notification.HeaderTemplate,
+			)
+		} else {
+			recordsSent, err = s.notificationService.SendAirtableViewToLine(
+				notification.TableID,
+				notification.ViewName,
+				notification.Fields,
+				notification.MessageTemplate,
+				notification.GroupIDs,
+			)
+		}
 
 		// บันทึกประวัติการทำงาน
 		if err != nil {

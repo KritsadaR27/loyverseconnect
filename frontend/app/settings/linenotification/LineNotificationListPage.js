@@ -93,7 +93,7 @@ const LineNotificationListPage = () => {
       const result = await runNotificationNow(id);
       setAlert({
         type: "success",
-        message: `Notification triggered successfully - ${result.records_sent} records sent`
+        message: `Notification triggered successfully - ${result.records_sent || 0} records sent`
       });
     } catch (error) {
       console.error("Error triggering notification:", error);

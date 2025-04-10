@@ -342,38 +342,64 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 		// ตรวจสอบว่าถึงเวลาส่งหรือยัง (ในระบบจริงควรใช้ cron parser ช่วย)
 		shouldRun := true // ตรรกะการตรวจสอบเวลาควรทำที่นี่
 
-		if shouldRun {
-			var recordsSent int
-			var err error
-
-			if schedule.EnableBubbles {
-				recordsSent, err = s.SendRecordPerBubbleToLine(
-					schedule.TableID,
-					schedule.ViewName,
-					schedule.Fields,
-					schedule.GroupIDs,
-					schedule.HeaderTemplate,
-				)
-			} else {
-				recordsSent, err = s.SendAirtableViewToLine(
-					schedule.TableID,
-					schedule.ViewName,
-					schedule.Fields,
-					schedule.MessageTemplate,
-					schedule.GroupIDs,
-				)
-			}
-
-			if err != nil {
-				errors = append(errors, fmt.Errorf("failed to send notification for schedule %d: %v", schedule.ID, err))
-			}
-
-			// อัพเดทเวลาล่าสุดที่ส่ง
-			log.Printf("Sent scheduled notification %d at %s", schedule.ID, now.Format(time.RFC3339))
+		if !shouldRun {
+			continue
 		}
+
+		// กำหนดตัวแปรนอก if/else และรับค่าที่ส่งกลับจากฟังก์ชันโดยตรง
+		var recordsSent int
+		var err error
+
+		// เลือกการส่งตามประเภทการแจ้งเตือน
+		if schedule.EnableBubbles {
+			recordsSent, err = s.SendRecordPerBubbleToLine(
+				schedule.TableID,
+				schedule.ViewName,
+				schedule.Fields,
+				schedule.GroupIDs,
+				schedule.HeaderTemplate,
+			)
+		} else {
+			recordsSent, err = s.SendAirtableViewToLine(
+				schedule.TableID,
+				schedule.ViewName,
+				schedule.Fields,
+				schedule.MessageTemplate,
+				schedule.GroupIDs,
+			)
+		}
+
+		// ตรวจสอบ error
+		if err != nil {
+			errors = append(errors, fmt.Errorf("failed to send notification for schedule %d: %v", schedule.ID, err))
+		}
+
+		// ใช้ตัวแปร recordsSent (เพื่อให้มีการใช้งานตัวแปร)
+		log.Printf("Sent scheduled notification %d with %d records at %s", schedule.ID, recordsSent, now.Format(time.RFC3339))
 	}
 
 	return errors
+}
+
+// processScheduledNotification ช่วยในการส่งการแจ้งเตือนตามประเภท
+func (s *NotificationService) processScheduledNotification(schedule models.ScheduledNotification) (int, error) {
+	if schedule.EnableBubbles {
+		return s.SendRecordPerBubbleToLine(
+			schedule.TableID,
+			schedule.ViewName,
+			schedule.Fields,
+			schedule.GroupIDs,
+			schedule.HeaderTemplate,
+		)
+	} else {
+		return s.SendAirtableViewToLine(
+			schedule.TableID,
+			schedule.ViewName,
+			schedule.Fields,
+			schedule.MessageTemplate,
+			schedule.GroupIDs,
+		)
+	}
 }
 
 // Helper functions
