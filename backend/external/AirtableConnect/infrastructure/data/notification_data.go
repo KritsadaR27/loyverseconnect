@@ -53,6 +53,8 @@ func (r *NotificationRepository) SaveNotification(notification models.Notificati
 			fields,
 			message_template,
 			header_template,
+			bubble_template,
+			footer_template,
 			enable_bubbles,
 			group_ids,
 			schedule,
@@ -60,7 +62,7 @@ func (r *NotificationRepository) SaveNotification(notification models.Notificati
 			created_at,
 			updated_at,
 			active
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id
 	`
 
@@ -74,6 +76,8 @@ func (r *NotificationRepository) SaveNotification(notification models.Notificati
 		fieldsJSON,
 		notification.MessageTemplate,
 		notification.HeaderTemplate,
+		notification.BubbleTemplate, // เพิ่มฟิลด์นี้
+		notification.FooterTemplate, // เพิ่มฟิลด์นี้
 		notification.EnableBubbles,
 		groupIDsJSON,
 		notification.Schedule,
@@ -93,30 +97,32 @@ func (r *NotificationRepository) SaveNotification(notification models.Notificati
 // GetNotificationByID retrieves a notification by its ID
 func (r *NotificationRepository) GetNotificationByID(id int) (models.Notification, error) {
 	query := `
-		SELECT
-			id,
-			name,
-			table_id,
-			view_name,
-			fields,
-			message_template,
-			header_template,
-			enable_bubbles,
-			group_ids,
-			schedule,
-			notification_times,
-			last_run,
-			created_at,
-			updated_at,
-			active
-		FROM airtable_notifications
-		WHERE id = $1
-	`
+        SELECT
+            id,
+            name,
+            table_id,
+            view_name,
+            fields,
+            message_template,
+            header_template,
+            bubble_template, -- เพิ่มฟิลด์นี้
+            footer_template, -- เพิ่มฟิลด์นี้
+            enable_bubbles,
+            group_ids,
+            schedule,
+            notification_times,
+            last_run,
+            created_at,
+            updated_at,
+            active
+        FROM airtable_notifications
+        WHERE id = $1
+    `
 
 	var notification models.Notification
 	var fieldsJSON, groupIDsJSON, notificationTimesJSON []byte
 	var lastRun sql.NullTime
-	var headerTemplate sql.NullString
+	var headerTemplate, bubbleTemplate, footerTemplate sql.NullString
 
 	err := r.db.QueryRow(query, id).Scan(
 		&notification.ID,
@@ -126,6 +132,8 @@ func (r *NotificationRepository) GetNotificationByID(id int) (models.Notificatio
 		&fieldsJSON,
 		&notification.MessageTemplate,
 		&headerTemplate,
+		&bubbleTemplate, // เพิ่มฟิลด์นี้
+		&footerTemplate, // เพิ่มฟิลด์นี้
 		&notification.EnableBubbles,
 		&groupIDsJSON,
 		&notification.Schedule,
@@ -140,7 +148,18 @@ func (r *NotificationRepository) GetNotificationByID(id int) (models.Notificatio
 		return models.Notification{}, fmt.Errorf("error retrieving notification: %v", err)
 	}
 
-	// แปลง JSON เป็นสลาย
+	// จัดการกับค่า NULL
+	if headerTemplate.Valid {
+		notification.HeaderTemplate = headerTemplate.String
+	}
+	if bubbleTemplate.Valid {
+		notification.BubbleTemplate = bubbleTemplate.String
+	}
+	if footerTemplate.Valid {
+		notification.FooterTemplate = footerTemplate.String
+	}
+
+	// แปลง JSON เป็น slice
 	var fields []string
 	if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
 		return models.Notification{}, fmt.Errorf("error unmarshaling fields: %v", err)
@@ -162,13 +181,8 @@ func (r *NotificationRepository) GetNotificationByID(id int) (models.Notificatio
 		notification.NotificationTimes = notificationTimes
 	}
 
-	// จัดการกับค่า NULL
 	if lastRun.Valid {
 		notification.LastRun = lastRun.Time
-	}
-
-	if headerTemplate.Valid {
-		notification.HeaderTemplate = headerTemplate.String
 	}
 
 	return notification, nil
@@ -199,22 +213,24 @@ func (r *NotificationRepository) UpdateNotification(notification models.Notifica
 
 	// อัพเดทในฐานข้อมูล
 	query := `
-		UPDATE airtable_notifications
-		SET
-			name = $1,
-			table_id = $2,
-			view_name = $3,
-			fields = $4,
-			message_template = $5,
-			header_template = $6,
-			enable_bubbles = $7,
-			group_ids = $8,
-			schedule = $9,
-			notification_times = $10,
-			updated_at = $11,
-			active = $12
-		WHERE id = $13
-	`
+        UPDATE airtable_notifications
+        SET
+            name = $1,
+            table_id = $2,
+            view_name = $3,
+            fields = $4,
+            message_template = $5,
+            header_template = $6,
+            bubble_template = $7,
+            footer_template = $8,
+            enable_bubbles = $9,
+            group_ids = $10,
+            schedule = $11,
+            notification_times = $12,
+            updated_at = $13,
+            active = $14
+        WHERE id = $15
+    `
 
 	_, err = r.db.Exec(
 		query,
@@ -224,6 +240,8 @@ func (r *NotificationRepository) UpdateNotification(notification models.Notifica
 		fieldsJSON,
 		notification.MessageTemplate,
 		notification.HeaderTemplate,
+		notification.BubbleTemplate, // เพิ่มฟิลด์นี้
+		notification.FooterTemplate, // เพิ่มฟิลด์นี้
 		notification.EnableBubbles,
 		groupIDsJSON,
 		notification.Schedule,

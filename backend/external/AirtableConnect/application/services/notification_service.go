@@ -55,13 +55,20 @@ func (s *NotificationService) NotificationRepo() interfaces.NotificationReposito
 }
 
 // SendAirtableViewToLine ส่งข้อมูลจาก Airtable view ไปยัง LINE group
-func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName string, fields []string, messageTemplate string, groupIDs []string) (int, error) {
+func (s *NotificationService) SendAirtableViewToLine(
+	tableID string,
+	viewName string,
+	fields []string,
+	messageTemplate string,
+	groupIDs []string,
+) (int, error) {
 	if len(fields) == 0 {
 		return 0, fmt.Errorf("fields cannot be empty")
 	}
 	if len(groupIDs) == 0 {
 		return 0, fmt.Errorf("groupIDs cannot be empty")
 	}
+
 	// ดึงข้อมูลจาก Airtable
 	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
@@ -82,6 +89,12 @@ func (s *NotificationService) SendAirtableViewToLine(tableID string, viewName st
 		normalized := models.NormalizeFields(filteredRecord)
 
 		filteredRecords = append(filteredRecords, normalized)
+	}
+
+	// If messageTemplate is empty, return without sending
+	if messageTemplate == "" {
+		log.Println("No message to send: messageTemplate is empty")
+		return 0, nil
 	}
 
 	// สร้างข้อความจาก template
@@ -111,6 +124,7 @@ func (s *NotificationService) SendRecordPerBubbleToLine(
 	footerTemplate string,
 ) (int, error) {
 	// Fetch records from Airtable view
+
 	records, err := s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
 	if err != nil {
 		return 0, fmt.Errorf("error fetching records from Airtable: %v", err)
@@ -155,22 +169,35 @@ func (s *NotificationService) SendRecordPerBubbleToLine(
 	}
 
 	// Render each record using the bubble template
-	for i, r := range filtered {
-		r["Index"] = i + 1
-		bubble, err := renderTemplate(bubbleTemplate, r)
-		if err != nil {
-			log.Printf("Error rendering bubble %d: %v", i, err)
-			continue
+	if bubbleTemplate != "" {
+		for i, r := range filtered {
+			r["Index"] = i + 1
+			bubble, err := renderTemplate(bubbleTemplate, r)
+			if err != nil {
+				log.Printf("Error rendering bubble %d: %v", i, err)
+				continue
+			}
+			messages = append(messages, bubble)
 		}
-		messages = append(messages, bubble)
 	}
 
 	// Render footer if provided
 	if footerTemplate != "" {
-		footer, err := renderTemplate(footerTemplate, map[string]interface{}{})
+		footer, err := renderTemplate(footerTemplate, map[string]interface{}{
+			"Today":    todayStr,
+			"Tomorrow": tomorrowStr,
+			"Weekday":  weekday,
+			"Count":    len(filtered),
+		})
 		if err == nil {
 			messages = append(messages, footer)
 		}
+	}
+
+	// If no messages to send, return without sending
+	if len(messages) == 0 {
+		log.Println("No messages to send: all templates are empty")
+		return 0, nil
 	}
 
 	// Send all messages to LINE
@@ -184,10 +211,25 @@ func (s *NotificationService) SendRecordPerBubbleToLine(
 
 // renderTemplate parses and executes a Go-style {{ }} template with provided data
 func renderTemplate(tmplStr string, data interface{}) (string, error) {
-	tmpl, err := template.New("msg").Parse(tmplStr)
+	tmpl := template.New("msg").Funcs(template.FuncMap{
+		"beforeDash": func(s string) string {
+			if i := strings.Index(s, "-"); i != -1 {
+				return s[:i]
+			}
+			return s
+		},
+		"TimeNow": func() string {
+			return time.Now().Format("15:04") // แสดงเวลาในรูปแบบ HH:mm
+		},
+	})
+
+	// Parse the template string
+	tmpl, err := tmpl.Parse(tmplStr)
 	if err != nil {
 		return "", err
 	}
+
+	// Execute the template with the provided data
 	var buf strings.Builder
 	err = tmpl.Execute(&buf, data)
 	return buf.String(), err
@@ -196,6 +238,8 @@ func renderTemplate(tmplStr string, data interface{}) (string, error) {
 // SendNotificationToLine sends a notification to LINE based on its ID
 // RunNotificationNow runs a notification immediately based on its ID
 func (s *NotificationService) RunNotificationNow(id int) (int, error) {
+	log.Printf("Test Notification Triggered at: %s", time.Now().Format(time.RFC3339))
+
 	// Get notification configuration
 	notification, err := s.notificationRepo.GetNotificationByID(id)
 	if err != nil {
@@ -329,51 +373,10 @@ func (s *NotificationService) sendToLine(message string, groupIDs []string) erro
 	return nil
 }
 
-// generateRecordBubbles creates individual messages for each record
-func (s *NotificationService) generateRecordBubbles(records []map[string]interface{}, headerTemplate string) []string {
-	var messages []string
-	weekday := thaiWeekday(time.Now().Weekday())
-	date := time.Now().Format("02/01/2006")
-
-	// Only add header if headerTemplate is provided
-	if headerTemplate != "" {
-		headerMsg := fmt.Sprintf(headerTemplate, weekday, date, len(records))
-		messages = append(messages, headerMsg)
-	} else {
-		headerMsg := fmt.Sprintf("วันนี้ %s %s มีจัดส่ง %d กล่อง", weekday, date, len(records))
-		messages = append(messages, headerMsg)
-	}
-
-	for i, r := range records {
-		var b strings.Builder
-		fmt.Fprintf(&b, "• กล่องที่ %d\n", i+1)
-		if order, ok := r["OrderName"]; ok {
-			orderStr := fmt.Sprintf("%v", first(order))
-			if idx := strings.Index(orderStr, "-"); idx != -1 {
-				orderStr = orderStr[:idx]
-			}
-			fmt.Fprintf(&b, "%s\n", orderStr)
-		}
-		if name, ok := r["CustomerName"]; ok {
-			fmt.Fprintf(&b, "ชื่อลูกค้า : %v\n", first(name))
-		}
-		if point, ok := r["PickupPoint"]; ok {
-			fmt.Fprintf(&b, "ที่อยู่ : %v\n", first(point))
-		}
-		if phone, ok := r["PhoneNumber"]; ok {
-			fmt.Fprintf(&b, "เบอร์โทร : %v\n", first(phone))
-		}
-		if order, ok := r["OrderNumber"]; ok {
-			fmt.Fprintf(&b, "เลขออเดอร์ : %v", order)
-		}
-		messages = append(messages, b.String())
-	}
-
-	return messages
-}
-
 // sendBubblesToLine sends messages as separate bubbles
 func (s *NotificationService) sendBubblesToLine(messages []string, groupIDs []string) error {
+	log.Printf("Test Notification Triggered at: %s", time.Now().Format(time.RFC3339))
+
 	for _, msg := range messages {
 		req := LineMessageRequest{
 			Content:  msg,
@@ -416,16 +419,18 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 			continue
 		}
 
-		// ตรวจสอบว่าถึงเวลาส่งหรือยัง (ในระบบจริงควรใช้ cron parser ช่วย)
+		log.Printf("Checking schedule %d: %s (now: %s)", schedule.ID, schedule.Schedule, now.Format(time.RFC3339))
+
 		if !shouldRunNow(schedule.Schedule) {
+			log.Printf("Schedule %d is not due yet", schedule.ID)
 			continue
 		}
 
-		// กำหนดตัวแปรนอก if/else และรับค่าที่ส่งกลับจากฟังก์ชันโดยตรง
+		log.Printf("Running schedule %d", schedule.ID)
+
 		var recordsSent int
 		var err error
 
-		// เลือกการส่งตามประเภทการแจ้งเตือน
 		if schedule.EnableBubbles {
 			recordsSent, err = s.SendRecordPerBubbleToLine(
 				schedule.TableID,
@@ -446,13 +451,11 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 			)
 		}
 
-		// ตรวจสอบ error
 		if err != nil {
 			errors = append(errors, fmt.Errorf("failed to send notification for schedule %d: %v", schedule.ID, err))
 		}
 
-		// ใช้ตัวแปร recordsSent (เพื่อให้มีการใช้งานตัวแปร)
-		log.Printf("Sent scheduled notification %d with %d records at %s", schedule.ID, recordsSent, now.Format(time.RFC3339))
+		log.Printf("Sent scheduled notification %d with %d records", schedule.ID, recordsSent)
 	}
 
 	return errors
