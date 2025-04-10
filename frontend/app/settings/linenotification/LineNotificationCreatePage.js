@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect ,useMemo } from "react";
 import { useRouter } from "next/navigation";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import LineNotificationActionBar from "./components/LineNotificationActionBar";
@@ -10,10 +10,11 @@ import {
   createNotificationConfig, 
   fetchAirtableTables, 
   fetchAirtableRecordsFromView,
-  fetchLineGroups,
   sendTestNotification,
   sendBubbleNotification
 } from "../../api/airtableService";
+import { fetchLineGroups } from '../../api/lineService';
+
 
 const LineNotificationCreatePage = () => {
   const router = useRouter();
@@ -37,39 +38,21 @@ const LineNotificationCreatePage = () => {
   const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-
-  // Check if form is valid
-  const isFormValid = () => {
-    // Basic validation
+  const computedValidationErrors = useMemo(() => {
     const errors = {};
-    
-    if (!config.name || config.name.trim() === '') {
-      errors.name = 'Notification name is required';
-    }
-    
-    if (!config.tableID) {
-      errors.tableID = 'Airtable selection is required';
-    }
-    
-    if (!config.viewName) {
-      errors.viewName = 'View selection is required'; 
-    }
-    
-    if (!config.fields || config.fields.length === 0) {
-      errors.fields = 'At least one field must be selected';
-    }
-    
-    if (!config.enableBubbles && (!config.messageTemplate || config.messageTemplate.trim() === '')) {
-      errors.messageTemplate = 'Message template is required for non-bubble notifications';
-    }
-    
-    if (!config.groupIDs || config.groupIDs.length === 0) {
-      errors.groupIDs = 'At least one LINE group must be selected';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    if (!config.name?.trim()) errors.name = "Notification name is required";
+    if (!config.tableID) errors.tableID = "Airtable selection is required";
+    if (!config.viewName) errors.viewName = "View selection is required";
+    if (!config.fields?.length) errors.fields = "At least one field must be selected";
+    if (!config.enableBubbles && !config.messageTemplate?.trim())
+      errors.messageTemplate = "Message template is required";
+    if (!config.groupIDs?.length) errors.groupIDs = "At least one LINE group must be selected";
+    return errors;
+  }, [config]);
+  
+  const isFormValid = useMemo(() => Object.keys(computedValidationErrors).length === 0, [computedValidationErrors]);
+ 
+  
 
   // Fetch available tables, groups, etc.
   useEffect(() => {
@@ -79,10 +62,17 @@ const LineNotificationCreatePage = () => {
         
         // Fetch tables
         const tablesData = await fetchAirtableTables();
+        console.log("tablesData:", tablesData); // ✅ ดู structure ก่อน
+
+        if (Array.isArray(tablesData)) {
         setTableOptions(tablesData.map(table => ({
-          id: table.airtable_id,
-          name: table.name
+            id: table.airtable_id,
+            name: table.name
         })));
+        } else {
+        throw new Error("Invalid response: expected array from fetchAirtableTables");
+        }
+
         
         // Fetch LINE groups
         const groupsData = await fetchLineGroups();
@@ -147,14 +137,15 @@ const LineNotificationCreatePage = () => {
   }, [config.tableID]);
 
   const handleSaveConfig = async () => {
-    if (!isFormValid()) {
-      setAlert({
-        type: "error",
-        message: "Please fix validation errors before saving"
-      });
-      return;
-    }
-    
+    setValidationErrors(computedValidationErrors);
+  if (!isFormValid) {
+    setAlert({
+      type: "error",
+      message: "Please fix validation errors before saving"
+    });
+    return;
+  }
+      
     setIsLoading(true);
     try {
       // Create the request body
@@ -172,36 +163,26 @@ const LineNotificationCreatePage = () => {
         active: config.active
       };
       
-      const response = await createNotificationConfig(requestBody);
-      
-      setAlert({
-        type: "success",
-        message: "Notification settings created successfully"
-      });
-      
-      // Navigate back to the list after a brief delay
-      setTimeout(() => {
-        router.push("/settings/linenotification");
-      }, 1500);
-    } catch (error) {
-      console.error("Error creating notification settings:", error);
-      setAlert({
-        type: "error",
-        message: error.message || "Failed to create notification settings"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      await createNotificationConfig(requestBody);
+
+    setAlert({ type: "success", message: "Notification settings created successfully" });
+    setTimeout(() => router.push("/settings/linenotification"), 1500);
+  } catch (error) {
+    console.error("Error:", error);
+    setAlert({ type: "error", message: error.message || "Failed to create notification settings" });
+  } finally {
+    setIsLoading(false);
+  }
+
   };
   
   const handleTestNotification = async () => {
-    if (!isFormValid()) {
-      setAlert({
-        type: "error",
-        message: "Please fix validation errors before testing"
-      });
-      return;
+    setValidationErrors(computedValidationErrors);
+    if (!isFormValid) {
+        setAlert({ type: "error", message: "Please fix validation errors before testing" });
+    return;
     }
+
     
     setIsLoading(true);
     try {
@@ -247,7 +228,7 @@ const LineNotificationCreatePage = () => {
           onTest={handleTestNotification}
           isLoading={isLoading}
           isEdit={false}
-          formValid={isFormValid()}
+          formValid={isFormValid}
         />
       }
     >

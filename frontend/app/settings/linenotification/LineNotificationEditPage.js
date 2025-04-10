@@ -12,10 +12,11 @@ import {
   deleteNotificationConfig,
   fetchAirtableTables, 
   fetchAirtableRecordsFromView,
-  fetchLineGroups,
+
   sendTestNotification,
   sendBubbleNotification
 } from "../../api/airtableService";
+import { fetchLineGroups } from '../../api/lineService';
 
 const LineNotificationEditPage = ({ id }) => {
   const router = useRouter();

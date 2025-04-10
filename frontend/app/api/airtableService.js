@@ -8,8 +8,10 @@
  * @returns {Promise<any>} - Parsed JSON response
  */
 export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
-    const apiUrl = process.env.NEXT_PUBLIC_AIRTABLE_CONNECT_URL || 'http://localhost:8086';
-    const url = `${apiUrl}${endpoint}`;
+    const ApiUrl = process.env.NEXT_PUBLIC_AIRTABLE_CONNECT_URL;
+   
+    
+    const url = `${ApiUrl}${endpoint}`;
     
     try {
       const response = await fetch(url, options);
@@ -47,12 +49,8 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
     return fetchFromAirtableConnect(url);
   };
   
-  /**
-   * Fetch available LINE groups
-   */
-  export const fetchLineGroups = async () => {
-    return fetchFromAirtableConnect('/api/line/groups');
-  };
+  
+ 
   
   /**
    * Fetch all notification configurations
