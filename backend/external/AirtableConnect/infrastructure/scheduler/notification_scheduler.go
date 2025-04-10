@@ -105,41 +105,77 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 	for rows.Next() {
 		var notification models.Notification
 		var fieldsJSON, groupIDsJSON []byte
+
+		// ใช้ sql.NullString สำหรับฟิลด์ที่อาจเป็น NULL
+		var tableID sql.NullString
+		var viewName sql.NullString
+		var messageTemplate sql.NullString
 		var headerTemplate sql.NullString
+		var schedule sql.NullString
 
 		err := rows.Scan(
 			&notification.ID,
-			&notification.TableID,
-			&notification.ViewName,
+			&tableID,
+			&viewName,
 			&fieldsJSON,
-			&notification.MessageTemplate,
+			&messageTemplate,
 			&headerTemplate,
 			&notification.EnableBubbles,
 			&groupIDsJSON,
-			&notification.Schedule,
+			&schedule,
 			&notification.Active,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning notification row: %v", err)
 		}
 
+		// จัดการค่า NULL
+		if tableID.Valid {
+			notification.TableID = tableID.String
+		} else {
+			notification.TableID = ""
+		}
+
+		if viewName.Valid {
+			notification.ViewName = viewName.String
+		} else {
+			notification.ViewName = ""
+		}
+
+		if messageTemplate.Valid {
+			notification.MessageTemplate = messageTemplate.String
+		} else {
+			notification.MessageTemplate = ""
+		}
+
+		if headerTemplate.Valid {
+			notification.HeaderTemplate = headerTemplate.String
+		} else {
+			notification.HeaderTemplate = ""
+		}
+
+		if schedule.Valid {
+			notification.Schedule = schedule.String
+		} else {
+			notification.Schedule = ""
+		}
+
 		// แปลง JSON เป็นสลาย
 		var fields []string
-		if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
-			return nil, fmt.Errorf("error unmarshaling fields: %v", err)
+		if fieldsJSON != nil && len(fieldsJSON) > 0 {
+			if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
+				return nil, fmt.Errorf("error unmarshaling fields: %v", err)
+			}
 		}
 		notification.Fields = fields
 
 		var groupIDs []string
-		if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
-			return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)
+		if groupIDsJSON != nil && len(groupIDsJSON) > 0 {
+			if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
+				return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)
+			}
 		}
 		notification.GroupIDs = groupIDs
-
-		// จัดการกับค่า NULL
-		if headerTemplate.Valid {
-			notification.HeaderTemplate = headerTemplate.String
-		}
 
 		notifications = append(notifications, notification)
 	}
@@ -153,6 +189,12 @@ func (s *NotificationScheduler) loadNotifications() ([]models.Notification, erro
 
 // scheduleNotification ลงทะเบียนการแจ้งเตือนในระบบ cron
 func (s *NotificationScheduler) scheduleNotification(notification models.Notification) {
+	// ตรวจสอบว่ามี schedule และมีค่าไม่เป็นค่าว่าง
+	if notification.Schedule == "" {
+		log.Printf("Notification %d has empty schedule, skipping", notification.ID)
+		return
+	}
+
 	// ฟังก์ชันสำหรับการส่งการแจ้งเตือน
 	job := func() {
 		log.Printf("Executing scheduled notification %d", notification.ID)

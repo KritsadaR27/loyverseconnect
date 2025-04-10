@@ -168,7 +168,7 @@ const LineNotificationListPage = () => {
         </div>
       )}
 
-      <div className="p-6">
+      <div >
         {isLoading && notifications.length === 0 ? (
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
@@ -191,12 +191,12 @@ const LineNotificationListPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Source</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Run</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">ชื่อ</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">แหล่งข้อมูล</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">กำหนดการณ์</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">รันล่าสุด</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">สถานะ</th>
+                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">แอคชั่น</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">

@@ -1,10 +1,10 @@
 // frontend/app/settings/linenotification/components/LineNotificationActionBar.js
 
-import React from 'react';
+import React, { memo } from 'react';
 import { CloudArrowUpIcon, BellIcon, ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 
-const LineNotificationActionBar = ({ 
+const LineNotificationActionBar = memo(({ 
     onSave, 
     onTest, 
     onDelete, 
@@ -79,6 +79,8 @@ const LineNotificationActionBar = ({
             </div>
         </div>
     );
-};
+});
+
+LineNotificationActionBar.displayName = 'LineNotificationActionBar';
 
 export default LineNotificationActionBar;

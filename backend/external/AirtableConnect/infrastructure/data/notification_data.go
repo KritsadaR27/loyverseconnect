@@ -311,19 +311,26 @@ func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.No
 		var notification models.Notification
 		var fieldsJSON, groupIDsJSON, notificationTimesJSON []byte
 		var lastRun sql.NullTime
+
+		// ใช้ sql.NullString สำหรับทุกฟิลด์ string ที่อาจเป็น NULL
+		var name sql.NullString
+		var tableID sql.NullString
+		var viewName sql.NullString
+		var messageTemplate sql.NullString
 		var headerTemplate sql.NullString
+		var schedule sql.NullString
 
 		err := rows.Scan(
 			&notification.ID,
-			&notification.Name,
-			&notification.TableID,
-			&notification.ViewName,
+			&name,
+			&tableID,
+			&viewName,
 			&fieldsJSON,
-			&notification.MessageTemplate,
+			&messageTemplate,
 			&headerTemplate,
 			&notification.EnableBubbles,
 			&groupIDsJSON,
-			&notification.Schedule,
+			&schedule,
 			&notificationTimesJSON,
 			&lastRun,
 			&notification.CreatedAt,
@@ -335,21 +342,62 @@ func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.No
 			return nil, fmt.Errorf("error scanning notification row: %v", err)
 		}
 
+		// จัดการค่า NULL ในฟิลด์ String
+		if name.Valid {
+			notification.Name = name.String
+		} else {
+			notification.Name = ""
+		}
+
+		if tableID.Valid {
+			notification.TableID = tableID.String
+		} else {
+			notification.TableID = ""
+		}
+
+		if viewName.Valid {
+			notification.ViewName = viewName.String
+		} else {
+			notification.ViewName = ""
+		}
+
+		if messageTemplate.Valid {
+			notification.MessageTemplate = messageTemplate.String
+		} else {
+			notification.MessageTemplate = ""
+		}
+
+		if headerTemplate.Valid {
+			notification.HeaderTemplate = headerTemplate.String
+		} else {
+			notification.HeaderTemplate = ""
+		}
+
+		if schedule.Valid {
+			notification.Schedule = schedule.String
+		} else {
+			notification.Schedule = ""
+		}
+
 		// แปลง JSON เป็นสลาย
 		var fields []string
-		if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
-			return nil, fmt.Errorf("error unmarshaling fields: %v", err)
+		if fieldsJSON != nil && len(fieldsJSON) > 0 {
+			if err := json.Unmarshal(fieldsJSON, &fields); err != nil {
+				return nil, fmt.Errorf("error unmarshaling fields: %v", err)
+			}
 		}
 		notification.Fields = fields
 
 		var groupIDs []string
-		if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
-			return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)
+		if groupIDsJSON != nil && len(groupIDsJSON) > 0 {
+			if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
+				return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)
+			}
 		}
 		notification.GroupIDs = groupIDs
 
 		// แปลง notification times ถ้ามีค่า
-		if notificationTimesJSON != nil {
+		if notificationTimesJSON != nil && len(notificationTimesJSON) > 0 {
 			var notificationTimes []string
 			if err := json.Unmarshal(notificationTimesJSON, &notificationTimes); err != nil {
 				return nil, fmt.Errorf("error unmarshaling notification times: %v", err)
@@ -360,10 +408,6 @@ func (r *NotificationRepository) ListNotifications(activeOnly bool) ([]models.No
 		// จัดการกับค่า NULL
 		if lastRun.Valid {
 			notification.LastRun = lastRun.Time
-		}
-
-		if headerTemplate.Valid {
-			notification.HeaderTemplate = headerTemplate.String
 		}
 
 		notifications = append(notifications, notification)
