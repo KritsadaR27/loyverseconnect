@@ -121,6 +121,8 @@ const utilityMenus = [
     submenu: [
       { name: "ตั้งค่าการซิงค์ข้อมูล *", link: "/settings/syncdata" },
       { name: "ตั้งค่าการแจ้งเตือน LINE *", link: "/settings/linenotification" },
+      { name: "จัดการกลุ่ม LINE *", link: "/settings/linegroups" },
+
       { name: "ตั้งค่าซัพพลายเออร์ *", link: "/settings/supplier" },
     ] 
   },

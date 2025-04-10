@@ -375,7 +375,6 @@ func (s *NotificationService) sendToLine(message string, groupIDs []string) erro
 
 // sendBubblesToLine sends messages as separate bubbles
 func (s *NotificationService) sendBubblesToLine(messages []string, groupIDs []string) error {
-	log.Printf("Test Notification Triggered at: %s", time.Now().Format(time.RFC3339))
 
 	for _, msg := range messages {
 		req := LineMessageRequest{
@@ -415,7 +414,11 @@ func (s *NotificationService) SendScheduledNotifications(schedules []models.Sche
 	now := time.Now()
 
 	for _, schedule := range schedules {
+		// Log Schedule Configuration และเวลาปัจจุบัน
+		log.Printf("📌 Schedule config: %s | Now: %s", schedule.Schedule, now.Format("15:04"))
+
 		if !schedule.Active {
+			log.Printf("Skipping inactive schedule %d", schedule.ID)
 			continue
 		}
 
@@ -514,11 +517,14 @@ func first(val interface{}) interface{} {
 }
 
 func shouldRunNow(schedule string) bool {
-	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	sched, err := parser.Parse(schedule)
 	if err != nil {
 		log.Printf("Invalid schedule format: %s, error: %v", schedule, err)
 		return false
 	}
-	return sched.Next(time.Now().Add(-1 * time.Second)).Before(time.Now())
+
+	now := time.Now().Truncate(time.Minute)
+	previous := now.Add(-1 * time.Minute)
+	return sched.Next(previous).Equal(now)
 }

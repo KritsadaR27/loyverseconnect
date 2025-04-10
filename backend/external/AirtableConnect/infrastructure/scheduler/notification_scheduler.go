@@ -34,14 +34,18 @@ func NewNotificationScheduler(db *sql.DB, notificationService *services.Notifica
 
 // Start เริ่มการทำงานของ scheduler
 func (s *NotificationScheduler) Start() {
+	// Log เวลาปัจจุบัน
+	log.Printf("📆 Starting scheduler at %s", time.Now().Format("15:04:05"))
+
 	// โหลดการแจ้งเตือนที่ตั้งไว้
 	notifications, err := s.loadNotifications()
 	if err != nil {
 		log.Printf("Error loading notifications: %v", err)
 	}
 
-	// ลงทะเบียนงานในระบบ cron
+	// Log Schedule ที่โหลดมา
 	for _, notification := range notifications {
+		log.Printf("🔍 Found schedule: %s", notification.Schedule)
 		s.scheduleNotification(notification)
 	}
 

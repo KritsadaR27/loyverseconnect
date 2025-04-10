@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { PlusIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import MultiSelect from '../../../../components/MultiSelect';
+import ScheduleConfigurationSection from './ScheduleConfigurationSection'; // Import the new component
 
 const LineNotificationForm = ({ 
     config, 
@@ -110,11 +111,6 @@ const LineNotificationForm = ({
             ...prev,
             enableBubbles: checked
         }));
-    };
-
-    // Handle schedule change
-    const handleScheduleChange = (e) => {
-        handleInputChange('schedule', e.target.value);
     };
 
     return (
@@ -234,8 +230,8 @@ const LineNotificationForm = ({
                             onClear={handleClearGroups}
                             onSelectAll={handleSelectAllGroups}
                             context="form"
-                            valueField="id"     // 💡 ใช้ id เป็น value จริง
-                            labelField="name"   // 💡 แสดงชื่อให้คนอ่าน   
+                            valueField="id"     
+                            labelField="name"   
                         />
                     </div>
                     
@@ -416,74 +412,13 @@ const LineNotificationForm = ({
                 )}
             </div>
             
-            {/* Schedule Configuration */}
-            <div className="mb-8">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2 flex-1">
-                        Schedule Configuration
-                    </h2>
-                    <button 
-                        onClick={() => setShowScheduleSection(!showScheduleSection)}
-                        className="text-blue-500 hover:text-blue-700"
-                    >
-                        {showScheduleSection ? 
-                            <ChevronUpIcon className="h-5 w-5" /> : 
-                            <ChevronDownIcon className="h-5 w-5" />
-                        }
-                    </button>
-                </div>
-                
-                {showScheduleSection && (
-                    <>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Cron Schedule
-                            </label>
-                            <input
-                                type="text"
-                                value={config.schedule || ''}
-                                onChange={handleScheduleChange}
-                                className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="0 9 * * *"
-                            />
-                            <p className="text-sm text-gray-500 mt-1">
-                                Format: minute hour day_of_month month day_of_week (e.g., "0 9 * * *" for every day at 9:00 AM)
-                            </p>
-                        </div>
-                        
-                        <div>
-                            <h3 className="text-md font-semibold mb-2 text-gray-700">
-                                Notification Times
-                            </h3>
-                            <div className="space-y-2">
-                                {(config.notificationTimes || []).map((time, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                        <input
-                                            type="time"
-                                            value={time}
-                                            onChange={(e) => handleTimeChange(index, e.target.value)}
-                                            className="border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                        <button 
-                                            onClick={() => handleRemoveTime(index)}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <TrashIcon className="h-5 w-5" />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button
-                                    onClick={handleAddTime}
-                                    className="flex items-center text-blue-500 hover:text-blue-700"
-                                >
-                                    <PlusIcon className="h-5 w-5 mr-1" />
-                                    Add Time
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
+            {/* Include the new ScheduleConfigurationSection component */}
+            <ScheduleConfigurationSection 
+                config={config}
+                setConfig={setConfig}
+                showScheduleSection={showScheduleSection}
+                setShowScheduleSection={setShowScheduleSection}
+            />
         </div>
     );
 };

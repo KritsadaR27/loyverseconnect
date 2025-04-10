@@ -15,6 +15,9 @@ import (
 )
 
 // RegisterRoutes sets up all routes for the LINE Connect service
+// Update to backend/external/LineConnect/router/router.go
+
+// First, add the detectedGroupsHandler to the RegisterRoutes function
 func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Client) {
 	// Create repositories
 	messageRepo := data.NewMessageRepository(db)
@@ -30,6 +33,7 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 	// Create handlers
 	messageHandler := handlers.NewMessageHandler(messageService)
 	groupHandler := handlers.NewGroupHandler(groupService)
+	detectedGroupsHandler := handlers.NewDetectedGroupsHandler(groupRepo) // Add this line
 
 	// Register message routes
 	mux.HandleFunc("/api/line/messages", messageHandler.SendMessage)
@@ -46,6 +50,9 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Register detected groups route
+	mux.HandleFunc("/api/line/detected-groups", detectedGroupsHandler.GetDetectedGroups)
 
 	// Handle group-specific operations (update, delete)
 	mux.HandleFunc("/api/line/groups/", func(w http.ResponseWriter, r *http.Request) {
@@ -85,23 +92,27 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 			log.Printf("Event Message: %v", event.Message)
 			log.Printf("Event Postback: %v", event.Postback)
 			log.Printf("Event Beacon: %v", event.Beacon)
+
+			// Record the group ID if the event is from a group
+			if event.Source.Type == linebot.EventSourceTypeGroup && event.Source.GroupID != "" {
+				detectedGroupsHandler.RecordDetectedGroup(event.Source.GroupID)
+			}
+
 			switch event.Type {
 			case linebot.EventTypeJoin:
 				// ตอบกลับเพื่อให้ LINE รู้ว่า bot ยัง active อยู่
 				replyToken := event.ReplyToken
-				if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("สวัสดี! Bot เข้าร่วมกลุ่ม แล้ว 🚀")).Do(); err != nil {
+				if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("สวัสดี! Bot เข้าร่วมกลุ่มเรียบร้อยแล้วจ้า 🚀")).Do(); err != nil {
 					log.Println("Error replying to join event:", err)
 				}
 
 			case linebot.EventTypeMessage:
 				switch message := event.Message.(type) {
 				case *linebot.TextMessage:
-					// replyToken := event.ReplyToken
-					// if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("Received: "+message.Text)).Do(); err != nil {
-					// 	log.Println("Error replying to text message:", err)
-					// }
-					log.Printf("Received message: %s", message.Text)
-
+					replyToken := event.ReplyToken
+					if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("Received: "+message.Text)).Do(); err != nil {
+						log.Println("Error replying to text message:", err)
+					}
 				}
 			}
 		}

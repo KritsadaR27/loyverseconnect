@@ -78,6 +78,8 @@ type NotificationResponse struct {
 	Fields            []string  `json:"fields"`
 	MessageTemplate   string    `json:"message_template"`
 	HeaderTemplate    string    `json:"header_template,omitempty"`
+	BubbleTemplate    string    `json:"bubble_template,omitempty"`
+	FooterTemplate    string    `json:"footer_template,omitempty"`
 	EnableBubbles     bool      `json:"enable_bubbles"`
 	GroupIDs          []string  `json:"group_ids"`
 	Schedule          string    `json:"schedule"`
