@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect ,useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import LineNotificationActionBar from "./components/LineNotificationActionBar";
@@ -20,7 +20,10 @@ const LineNotificationCreatePage = () => {
   const router = useRouter();
   const [config, setConfig] = useState({
     name: "",
-    headerTemplate: "วันนี้ %s %s มีจัดส่ง %d กล่อง",
+    // Default templates
+    headerTemplate: "วันนี้ {{.Weekday}} {{.Date}} มีจัดส่ง {{.Count}} กล่อง",
+    bubbleTemplate: "• กล่องที่ {{.Index}}\n{{if .OrderName}}{{.OrderName}}\n{{end}}{{if .CustomerName}}ชื่อลูกค้า: {{.CustomerName}}\n{{end}}{{if .PhoneNumber}}เบอร์โทร: {{.PhoneNumber}}{{end}}",
+    footerTemplate: "ขอให้มีความสุขในการจัดส่ง 🙏",
     enableBubbles: true,
     fields: [],
     notificationTimes: ["08:00"],
@@ -38,6 +41,7 @@ const LineNotificationCreatePage = () => {
   const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  
   const computedValidationErrors = useMemo(() => {
     const errors = {};
     if (!config.name?.trim()) errors.name = "Notification name is required";
@@ -52,8 +56,6 @@ const LineNotificationCreatePage = () => {
   
   const isFormValid = useMemo(() => Object.keys(computedValidationErrors).length === 0, [computedValidationErrors]);
  
-  
-
   // Fetch available tables, groups, etc.
   useEffect(() => {
     const fetchData = async () => {
@@ -62,17 +64,15 @@ const LineNotificationCreatePage = () => {
         
         // Fetch tables
         const tablesData = await fetchAirtableTables();
-        console.log("tablesData:", tablesData); // ✅ ดู structure ก่อน
 
         if (Array.isArray(tablesData)) {
-        setTableOptions(tablesData.map(table => ({
+          setTableOptions(tablesData.map(table => ({
             id: table.airtable_id,
             name: table.name
-        })));
+          })));
         } else {
-        throw new Error("Invalid response: expected array from fetchAirtableTables");
+          throw new Error("Invalid response: expected array from fetchAirtableTables");
         }
-
         
         // Fetch LINE groups
         const groupsData = await fetchLineGroups();
@@ -101,15 +101,15 @@ const LineNotificationCreatePage = () => {
   
       try {
         setIsLoading(true);
-        const data = await fetchViewsByTable(config.tableID); // ✅ เรียกอันใหม่
+        const data = await fetchViewsByTable(config.tableID);
   
         const views = data.views || [];
         setViewOptions(views.map(view => ({
-          id: view.name,    // view.name = ชื่อ view จริงใน Airtable
+          id: view.name,  
           name: view.name
         })));
   
-        // เคลียร์ field ถ้ายังไม่มี view ถูกเลือก
+        // Reset field options when table changes
         setFieldOptions([]);
         setConfig(prev => ({ ...prev, viewName: "" }));
       } catch (error) {
@@ -144,7 +144,6 @@ const LineNotificationCreatePage = () => {
     fetchFields();
   }, [config.tableID, config.viewName]);
   
-
   const handleSaveConfig = async () => {
     setValidationErrors(computedValidationErrors);
     if (!isFormValid) {
@@ -163,6 +162,8 @@ const LineNotificationCreatePage = () => {
         table_id: config.tableID,
         view_name: config.viewName,
         header_template: config.headerTemplate,
+        bubble_template: config.bubbleTemplate,
+        footer_template: config.footerTemplate,
         enable_bubbles: config.enableBubbles,
         message_template: config.messageTemplate || "",
         fields: config.fields,
@@ -174,24 +175,22 @@ const LineNotificationCreatePage = () => {
       
       await createNotificationConfig(requestBody);
 
-    setAlert({ type: "success", message: "Notification settings created successfully" });
-    setTimeout(() => router.push("/settings/linenotification"), 1500);
-  } catch (error) {
-    console.error("Error:", error);
-    setAlert({ type: "error", message: error.message || "Failed to create notification settings" });
-  } finally {
-    setIsLoading(false);
-  }
-
+      setAlert({ type: "success", message: "Notification settings created successfully" });
+      setTimeout(() => router.push("/settings/linenotification"), 1500);
+    } catch (error) {
+      console.error("Error:", error);
+      setAlert({ type: "error", message: error.message || "Failed to create notification settings" });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleTestNotification = async () => {
     setValidationErrors(computedValidationErrors);
     if (!isFormValid) {
-        setAlert({ type: "error", message: "Please fix validation errors before testing" });
-    return;
+      setAlert({ type: "error", message: "Please fix validation errors before testing" });
+      return;
     }
-
     
     setIsLoading(true);
     try {
@@ -203,7 +202,9 @@ const LineNotificationCreatePage = () => {
         group_ids: config.groupIDs,
         enable_bubbles: config.enableBubbles,
         message_template: config.messageTemplate || "",
-        header_template: config.headerTemplate
+        header_template: config.headerTemplate,
+        bubble_template: config.bubbleTemplate,
+        footer_template: config.footerTemplate
       };
       
       let response;

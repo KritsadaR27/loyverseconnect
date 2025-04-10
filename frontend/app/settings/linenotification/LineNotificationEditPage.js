@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect,useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import LineNotificationActionBar from "./components/LineNotificationActionBar";
@@ -8,13 +8,13 @@ import LineNotificationForm from "./components/LineNotificationForm";
 import Alert from "../../../components/Alert";
 import {
   fetchNotificationConfig,
-  saveNotificationConfig,
   updateNotificationConfig,
   fetchAirtableTables,
   fetchAirtableRecordsFromView,
   fetchViewsByTable,
   sendTestNotification,
   sendBubbleNotification,
+  runNotificationNow
 } from "../../api/airtableService";
 import { fetchLineGroups } from "../../api/lineService";
 
@@ -22,7 +22,9 @@ const LineNotificationEditPage = ({ id }) => {
   const router = useRouter();
   const [config, setConfig] = useState({
     name: "",
-    headerTemplate: "วันนี้ %s %s มีจัดส่ง %d กล่อง",
+    headerTemplate: "วันนี้ {{.Weekday}} {{.Date}} มีจัดส่ง {{.Count}} กล่อง",
+    bubbleTemplate: "• กล่องที่ {{.Index}}\n{{if .OrderName}}{{.OrderName}}\n{{end}}{{if .CustomerName}}ชื่อลูกค้า: {{.CustomerName}}\n{{end}}{{if .PhoneNumber}}เบอร์โทร: {{.PhoneNumber}}{{end}}",
+    footerTemplate: "ขอให้มีความสุขในการจัดส่ง 🙏",
     enableBubbles: true,
     fields: [],
     notificationTimes: ["08:00"],
@@ -41,7 +43,7 @@ const LineNotificationEditPage = ({ id }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  // ตรวจสอบความถูกต้องของฟอร์ม
+  // Form validation
   const computedValidationErrors = useMemo(() => {
     const errors = {};
     if (!config.name?.trim()) errors.name = "Notification name is required";
@@ -56,18 +58,39 @@ const LineNotificationEditPage = ({ id }) => {
   
   const isFormValid = useMemo(() => Object.keys(computedValidationErrors).length === 0, [computedValidationErrors]);
 
-  // โหลดข้อมูลเริ่มต้น
+  // Load initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
 
+        // Load table options and group options
+        const [tablesData, groupsData] = await Promise.all([
+          fetchAirtableTables(),
+          fetchLineGroups()
+        ]);
+
+        setTableOptions(tablesData.map((table) => ({ 
+          id: table.airtable_id, 
+          name: table.name 
+        })));
+
+        setGroupOptions(groupsData.map((group) => ({ 
+          id: group.id, 
+          name: group.name 
+        })));
+
+        // Load notification configuration if ID is provided
         if (id) {
           const notificationData = await fetchNotificationConfig(id);
+          
+          // Map backend field names to frontend config state
           const newConfig = {
             id: notificationData.id,
             name: notificationData.name || "",
-            headerTemplate: notificationData.header_template || "วันนี้ %s %s มีจัดส่ง %d กล่อง",
+            headerTemplate: notificationData.header_template || "วันนี้ {{.Weekday}} {{.Date}} มีจัดส่ง {{.Count}} กล่อง",
+            bubbleTemplate: notificationData.bubble_template || "• กล่องที่ {{.Index}}\n{{if .OrderName}}{{.OrderName}}\n{{end}}{{if .CustomerName}}ชื่อลูกค้า: {{.CustomerName}}\n{{end}}{{if .PhoneNumber}}เบอร์โทร: {{.PhoneNumber}}{{end}}",
+            footerTemplate: notificationData.footer_template || "ขอให้มีความสุขในการจัดส่ง 🙏",
             enableBubbles: notificationData.enable_bubbles ?? true,
             fields: notificationData.fields || [],
             messageTemplate: notificationData.message_template || "",
@@ -78,18 +101,29 @@ const LineNotificationEditPage = ({ id }) => {
             schedule: notificationData.schedule || "0 8 * * *",
             active: notificationData.active ?? true,
           };
-
-          // เปรียบเทียบก่อน setConfig
-          if (JSON.stringify(config) !== JSON.stringify(newConfig)) {
-            setConfig(newConfig);
+          
+          setConfig(newConfig);
+          
+          // Load view options for the selected table
+          if (newConfig.tableID) {
+            const viewsData = await fetchViewsByTable(newConfig.tableID);
+            const views = viewsData.views || [];
+            setViewOptions(views.map((view) => ({
+              id: view.name,
+              name: view.name,
+            })));
+            
+            // Load field options for the selected view
+            if (newConfig.viewName) {
+              const records = await fetchAirtableRecordsFromView(newConfig.tableID, newConfig.viewName);
+              const sampleFields = records?.[0]?.fields || {};
+              setFieldOptions(Object.keys(sampleFields).map((key) => ({ 
+                id: key, 
+                name: key 
+              })));
+            }
           }
         }
-
-        const tablesData = await fetchAirtableTables();
-        setTableOptions(tablesData.map((table) => ({ id: table.airtable_id, name: table.name })));
-
-        const groupsData = await fetchLineGroups();
-        setGroupOptions(groupsData.map((group) => ({ id: group.id, name: group.name })));
       } catch (error) {
         console.error("Error fetching data:", error);
         setAlert({ type: "error", message: "Failed to load data" });
@@ -99,9 +133,9 @@ const LineNotificationEditPage = ({ id }) => {
     };
 
     fetchData();
-  }, [id]); // Track only id
+  }, [id]);
 
-  // เมื่อ tableID เปลี่ยน ให้โหลด Views และ Fields ใหม่
+  // Update views and fields when tableID or viewName changes
   useEffect(() => {
     const fetchViewsAndFields = async () => {
       if (!config.tableID) return;
@@ -112,27 +146,19 @@ const LineNotificationEditPage = ({ id }) => {
         // Fetch views
         const response = await fetchViewsByTable(config.tableID);
         const views = response.views || [];  
-        const newViewOptions = views.map((view) => ({
-          id: view.view_id,
+        setViewOptions(views.map((view) => ({
+          id: view.name,
           name: view.name,
-        }));
-        setViewOptions((prev) =>
-          JSON.stringify(prev) !== JSON.stringify(newViewOptions) ? newViewOptions : prev
-        );
+        })));
   
-        // Fetch fields only if viewName exists
+        // Only fetch fields if viewName exists
         if (config.viewName) {
           const records = await fetchAirtableRecordsFromView(config.tableID, config.viewName);
-          const sampleFields = records?.[0]?.fields;
-          const newFieldOptions = sampleFields && typeof sampleFields === "object"
-            ? Object.keys(sampleFields).map((key) => ({ id: key, name: key }))
-            : [];
-  
-          setFieldOptions((prev) =>
-            JSON.stringify(prev) !== JSON.stringify(newFieldOptions) ? newFieldOptions : prev
-          );
-        } else {
-          setFieldOptions([]); // clear
+          const sampleFields = records?.[0]?.fields || {};
+          setFieldOptions(Object.keys(sampleFields).map((key) => ({ 
+            id: key, 
+            name: key 
+          })));
         }
       } catch (error) {
         console.error("Error fetching views/fields:", error);
@@ -142,14 +168,10 @@ const LineNotificationEditPage = ({ id }) => {
       }
     };
   
-    
     fetchViewsAndFields();
-  }, [config.tableID, config.viewName]); // Track only tableID and viewName
-
+  }, [config.tableID, config.viewName]);
   
-
-  
-  // บันทึกการตั้งค่า Notification
+  // Save notification configuration
   const handleSaveConfig = async () => {
     setValidationErrors(computedValidationErrors);
     if (!isFormValid) {
@@ -159,14 +181,19 @@ const LineNotificationEditPage = ({ id }) => {
       });
       return;
     }
-
+  
     setIsLoading(true);
     try {
+      // Sanitize the templates to ensure they're valid for JSON
+      const sanitizeBubbleTemplate = config.bubbleTemplate?.replace(/\r/g, '')?.trim() || "";
+      
       const requestBody = {
         name: config.name,
         table_id: config.tableID,
         view_name: config.viewName,
-        header_template: config.headerTemplate,
+        header_template: config.headerTemplate || "",
+        bubble_template: sanitizeBubbleTemplate,
+        footer_template: config.footerTemplate || "",
         enable_bubbles: config.enableBubbles,
         message_template: config.messageTemplate || "",
         fields: config.fields,
@@ -175,13 +202,11 @@ const LineNotificationEditPage = ({ id }) => {
         schedule: config.schedule,
         active: config.active,
       };
-
-      if (id) {
-        await updateNotificationConfig(id, requestBody);
-      } else {
-        await saveNotificationConfig(requestBody);
-      }
-
+  
+      console.log("Sanitized request body:", JSON.stringify(requestBody));
+      
+      await updateNotificationConfig(id, requestBody);
+  
       setAlert({ type: "success", message: "Notification settings saved successfully" });
       setTimeout(() => router.push("/settings/linenotification"), 1500);
     } catch (error) {
@@ -191,6 +216,29 @@ const LineNotificationEditPage = ({ id }) => {
       setIsLoading(false);
     }
   };
+  // Handle running a notification immediately
+  const handleRunNow = async () => {
+    if (!id) return;
+    
+    try {
+      setIsLoading(true);
+      const result = await runNotificationNow(id);
+      setAlert({
+        type: "success",
+        message: `Notification sent successfully! ${result.records_sent || 0} records sent.`
+      });
+    } catch (error) {
+      console.error("Error running notification:", error);
+      setAlert({
+        type: "error",
+        message: error.message || "Failed to run notification"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Test notification
   const handleTestNotification = async () => {
     setValidationErrors(computedValidationErrors);
     if (!isFormValid) {
@@ -208,6 +256,8 @@ const LineNotificationEditPage = ({ id }) => {
         enable_bubbles: config.enableBubbles,
         message_template: config.messageTemplate || "",
         header_template: config.headerTemplate,
+        bubble_template: config.bubbleTemplate,
+        footer_template: config.footerTemplate
       };
   
       const response = config.enableBubbles
@@ -228,16 +278,24 @@ const LineNotificationEditPage = ({ id }) => {
       setIsLoading(false);
     }
   };
+
+  // Handle notification deletion
+  const handleDelete = async () => {
+    // Code for deleting notification would go here
+    // This would typically be implemented in the action bar component
+  };
   
   return (
     <SidebarLayout
-      headerTitle={`${id ? "Edit" : "Create"} LINE Notification`}
+      headerTitle={`Edit LINE Notification`}
       actionBar={
         <LineNotificationActionBar
           onSave={handleSaveConfig}
-          onTest={handleTestNotification} // ต้องมีบรรทัดนี้
+          onTest={handleTestNotification}
+          onRun={handleRunNow}
+          onDelete={handleDelete}
           isLoading={isLoading}
-          isEdit={!!id}
+          isEdit={true}
           formValid={isFormValid}
         />
       }
@@ -256,7 +314,7 @@ const LineNotificationEditPage = ({ id }) => {
           groupOptions={groupOptions}
           fieldOptions={fieldOptions}
           validationErrors={validationErrors}
-          isEdit={!!id}
+          isEdit={true}
         />
       )}
     </SidebarLayout>

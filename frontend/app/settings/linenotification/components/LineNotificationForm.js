@@ -14,6 +14,7 @@ const LineNotificationForm = ({
 }) => {
     const [showFieldsSection, setShowFieldsSection] = useState(true);
     const [showScheduleSection, setShowScheduleSection] = useState(true);
+    const [showTemplateSection, setShowTemplateSection] = useState(true);
     
     // Handle multi-select for notification times
     const handleAddTime = () => {
@@ -268,10 +269,10 @@ const LineNotificationForm = ({
                         Message Formatting
                     </h2>
                     <button 
-                        onClick={() => setShowFieldsSection(!showFieldsSection)}
+                        onClick={() => setShowTemplateSection(!showTemplateSection)}
                         className="text-blue-500 hover:text-blue-700"
                     >
-                        {showFieldsSection ? 
+                        {showTemplateSection ? 
                             <ChevronUpIcon className="h-5 w-5" /> : 
                             <ChevronDownIcon className="h-5 w-5" />
                         }
@@ -290,73 +291,128 @@ const LineNotificationForm = ({
                     </label>
                 </div>
                 
-                {config.enableBubbles && (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Header Template
-                        </label>
-                        <input
-                            type="text"
-                            value={config.headerTemplate || ''}
-                            onChange={(e) => handleInputChange('headerTemplate', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="วันนี้ %s %s มีจัดส่ง %d กล่อง"
-                        />
-                        <p className="text-sm text-gray-500 mt-1">
-                            You can use placeholders: %s for day of week, %s for date, %d for number of records
-                        </p>
-                    </div>
-                )}
-
-                {!config.enableBubbles && (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Message Template <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                            value={config.messageTemplate || ''}
-                            onChange={(e) => handleInputChange('messageTemplate', e.target.value)}
-                            className={`w-full border rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                validationErrors.messageTemplate ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                            placeholder="🚨 รายการสินค้าใกล้หมด {{.Count}} รายการ:
-{{range .Records}}• {{.Name}} เหลือ {{.Quantity}} (ขั้นต่ำ {{.MinimumLevel}})
-{{end}}"
-                            rows="6"
-                        ></textarea>
-                        <p className="text-sm text-gray-500 mt-1">
-                            You can use Go templates with .Records, .Count, .Date, .Time
-                        </p>
-                        {validationErrors.messageTemplate && (
-                            <p className="text-red-500 text-sm mt-1">{validationErrors.messageTemplate}</p>
+                {showTemplateSection && (
+                    <>
+                        {config.enableBubbles ? (
+                            <div className="p-4 border rounded-md bg-gray-50 mb-4">
+                                <h3 className="font-medium text-gray-800 mb-3">Bubble Templates</h3>
+                                
+                                {/* Header Template */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Header Template (First message)
+                                    </label>
+                                    <textarea
+                                        value={config.headerTemplate || ''}
+                                        onChange={(e) => handleInputChange('headerTemplate', e.target.value)}
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="วันนี้ {{.Weekday}} {{.Date}} มีจัดส่ง {{.Count}} กล่อง"
+                                        rows="3"
+                                    ></textarea>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        First message sent in the series. You can use: {'{{.Weekday}}'}, {'{{.Date}}'}, {'{{.Count}}'} (total records).
+                                    </p>
+                                </div>
+                                
+                                {/* Bubble Template */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Bubble Template (Each Record)
+                                    </label>
+                                    <textarea
+                                        value={config.bubbleTemplate || ''}
+                                        onChange={(e) => handleInputChange('bubbleTemplate', e.target.value)}
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={'• กล่องที่ {{.Index}}\n{{if .OrderName}}{{.OrderName}}\n{{end}}{{if .CustomerName}}ชื่อลูกค้า: {{.CustomerName}}\n{{end}}{{if .PhoneNumber}}เบอร์โทร: {{.PhoneNumber}}{{end}}'}
+                                        rows="6"
+                                    ></textarea>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Format for each record as a separate message. Use field names in double curly braces. 
+                                        Example: {'{{.OrderName}}'}, {'{{.CustomerName}}'}, etc.
+                                    </p>
+                                </div>
+                                
+                                {/* Footer Template */}
+                                <div className="mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Footer Template (Last message)
+                                    </label>
+                                    <textarea
+                                        value={config.footerTemplate || ''}
+                                        onChange={(e) => handleInputChange('footerTemplate', e.target.value)}
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="ขอให้มีความสุขในการจัดส่ง 🙏"
+                                        rows="3"
+                                    ></textarea>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Final message sent in the series. Optional closing message.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Message Template <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={config.messageTemplate || ''}
+                                    onChange={(e) => handleInputChange('messageTemplate', e.target.value)}
+                                    className={`w-full border rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                        validationErrors.messageTemplate ? 'border-red-500' : 'border-gray-300'
+                                    }`}
+                                    placeholder={'รายการสินค้า:\n{{range .Records}}\n• {{.OrderName}} - {{.CustomerName}}\n{{end}}'}
+                                    rows="6"
+                                ></textarea>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    You can use Go templates with {'{{.Records}}'}, {'{{.Count}}'}, {'{{.Date}}'}, {'{{.Time}}'}
+                                </p>
+                                {validationErrors.messageTemplate && (
+                                    <p className="text-red-500 text-sm mt-1">{validationErrors.messageTemplate}</p>
+                                )}
+                            </div>
                         )}
-                    </div>
+                    </>
                 )}
                 
+                <div className="flex justify-between items-center">
+                    <h3 className="text-md font-semibold mb-2 text-gray-700">
+                        Fields to Include <span className="text-red-500">*</span>
+                    </h3>
+                    <button 
+                        onClick={() => setShowFieldsSection(!showFieldsSection)}
+                        className="text-blue-500 hover:text-blue-700"
+                    >
+                        {showFieldsSection ? 
+                            <ChevronUpIcon className="h-5 w-5" /> : 
+                            <ChevronDownIcon className="h-5 w-5" />
+                        }
+                    </button>
+                </div>
+                
                 {showFieldsSection && (
-                    <div>
-                        <h3 className="text-md font-semibold mb-2 text-gray-700">
-                            Select Fields to Include <span className="text-red-500">*</span>
-                        </h3>
-                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${
-                            validationErrors.fields ? 'border border-red-500 p-2 rounded' : ''
-                        }`}>
-                            {fieldOptions.map(field => (
-                                <label key={field.id} className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={(config.fields || []).includes(field.id)}
-                                        onChange={() => handleFieldToggle(field.id)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-700">{field.name}</span>
-                                </label>
-                            ))}
-                        </div>
-                        {validationErrors.fields && (
-                            <p className="text-red-500 text-sm mt-1">{validationErrors.fields}</p>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-gray-50 ${
+                        validationErrors.fields ? 'border-red-500' : 'border-gray-200'
+                    }`}>
+                        {fieldOptions.map(field => (
+                            <label key={field.id} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={(config.fields || []).includes(field.id)}
+                                    onChange={() => handleFieldToggle(field.id)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="ml-2 text-sm text-gray-700">{field.name}</span>
+                            </label>
+                        ))}
+                        {fieldOptions.length === 0 && (
+                            <p className="text-sm text-gray-500 col-span-2">
+                                Select a table and view to see available fields
+                            </p>
                         )}
                     </div>
+                )}
+                {validationErrors.fields && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.fields}</p>
                 )}
             </div>
             

@@ -10,7 +10,9 @@ import {
   ClockIcon,
   BellIcon,
   ExclamationCircleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon
 } from "@heroicons/react/24/outline";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import Alert from "../../../components/Alert";
@@ -109,12 +111,55 @@ const LineNotificationListPage = () => {
   const formatDateTime = (dateString) => {
     if (!dateString) return "Never";
     const date = new Date(dateString);
-    return date.toLocaleString();
+    return date.toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatSchedule = (times) => {
     if (!times || times.length === 0) return "Not scheduled";
     return times.join(", ");
+  };
+  
+  const getCronDescription = (cronExpression) => {
+    if (!cronExpression) return "Manual only";
+    
+    // Very basic cron description
+    const parts = cronExpression.split(" ");
+    if (parts.length !== 5) return cronExpression;
+    
+    const [minute, hour, day, month, weekday] = parts;
+    
+    if (minute === "0" && hour !== "*" && day === "*" && month === "*" && weekday === "*") {
+      return `Daily at ${hour}:00`;
+    } else if (weekday !== "*" && day === "*") {
+      return `Weekly on days ${weekday} at ${hour}:${minute === "0" ? "00" : minute}`;
+    }
+    
+    return cronExpression; // Fallback to showing the raw expression
+  };
+
+  // Get notification type badge
+  const getNotificationTypeBadge = (notification) => {
+    if (notification.enable_bubbles) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <ChatBubbleLeftRightIcon className="h-3 w-3 mr-1" />
+          Bubbles
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <DocumentTextIcon className="h-3 w-3 mr-1" />
+          Single message
+        </span>
+      );
+    }
   };
 
   const ActionBar = () => (
@@ -168,7 +213,7 @@ const LineNotificationListPage = () => {
         </div>
       )}
 
-      <div >
+      <div>
         {isLoading && notifications.length === 0 ? (
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
@@ -191,12 +236,12 @@ const LineNotificationListPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">ชื่อ</th>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">แหล่งข้อมูล</th>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">กำหนดการณ์</th>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">รันล่าสุด</th>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">สถานะ</th>
-                  <th className="px-6 py-3 text-left   text-gray-500 uppercase ">แอคชั่น</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Data Source</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Schedule</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Last Run</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -205,14 +250,7 @@ const LineNotificationListPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{notification.name}</div>
                       <div className="text-sm text-gray-500">
-                        {notification.enable_bubbles ? 
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Bubbles
-                          </span> : 
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            Single message
-                          </span>
-                        }
+                        {getNotificationTypeBadge(notification)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -222,7 +260,7 @@ const LineNotificationListPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         <ClockIcon className="h-4 w-4 inline mr-1" />
-                        {notification.schedule || "Manual only"}
+                        {getCronDescription(notification.schedule)}
                       </div>
                       <div className="text-sm text-gray-500">
                         {formatSchedule(notification.notification_times)}
@@ -232,8 +270,11 @@ const LineNotificationListPage = () => {
                       {formatDateTime(notification.last_run)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${notification.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {notification.active ? 'Active' : 'Inactive'}
+                      <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${notification.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {notification.active ? 
+                          <><CheckCircleIcon className="h-3 w-3 mr-1" /> Active</> : 
+                          <><ExclamationCircleIcon className="h-3 w-3 mr-1" /> Inactive</>
+                        }
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
