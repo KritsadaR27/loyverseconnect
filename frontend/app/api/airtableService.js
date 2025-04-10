@@ -49,8 +49,18 @@ export const fetchFromAirtableConnect = async (endpoint, options = {}) => {
     return fetchFromAirtableConnect(url);
   };
   
+  /**
+ * Fetch available views for a specific Airtable table
+ *
+ * @param {string} tableId - Airtable table ID (same as airtable_id from DB)
+ */
+export const fetchViewsByTable = async (tableId) => {
+  if (!tableId) throw new Error("Missing tableId for fetching views");
+  return fetchFromAirtableConnect(`/api/airtable/views?table_id=${encodeURIComponent(tableId)}`);
+};
+
   
- 
+
   
   /**
    * Fetch all notification configurations

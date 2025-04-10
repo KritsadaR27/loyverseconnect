@@ -10,11 +10,11 @@ import {
   createNotificationConfig, 
   fetchAirtableTables, 
   fetchAirtableRecordsFromView,
+  fetchViewsByTable,
   sendTestNotification,
   sendBubbleNotification
 } from "../../api/airtableService";
 import { fetchLineGroups } from '../../api/lineService';
-
 
 const LineNotificationCreatePage = () => {
   const router = useRouter();
@@ -98,53 +98,62 @@ const LineNotificationCreatePage = () => {
   useEffect(() => {
     const fetchViews = async () => {
       if (!config.tableID) return;
-      
+  
       try {
         setIsLoading(true);
-        const data = await fetchAirtableRecordsFromView(config.tableID, "");
-        
-        // Extract unique view names if available in the response
-        const views = Array.isArray(data) && data.length > 0 
-          ? [...new Set(data.map(record => record.view_name).filter(Boolean))]
-          : [];
-          
+        const data = await fetchViewsByTable(config.tableID); // ✅ เรียกอันใหม่
+  
+        const views = data.views || [];
         setViewOptions(views.map(view => ({
-          id: view,
-          name: view
+          id: view.name,    // view.name = ชื่อ view จริงใน Airtable
+          name: view.name
         })));
-        
-        // Extract field names from the first record
-        if (Array.isArray(data) && data.length > 0) {
-          const firstRecord = data[0];
-          const fields = Object.keys(firstRecord.fields || {});
-          setFieldOptions(fields.map(field => ({
-            id: field,
-            name: field
-          })));
-        }
+  
+        // เคลียร์ field ถ้ายังไม่มี view ถูกเลือก
+        setFieldOptions([]);
+        setConfig(prev => ({ ...prev, viewName: "" }));
       } catch (error) {
         console.error("Error fetching views:", error);
-        setAlert({
-          type: "error",
-          message: "Failed to fetch views and fields"
-        });
+        setAlert({ type: "error", message: "Failed to fetch views" });
       } finally {
         setIsLoading(false);
       }
     };
-    
+  
     fetchViews();
   }, [config.tableID]);
 
+  // When viewName changes, fetch available fields
+  useEffect(() => {
+    const fetchFields = async () => {
+      if (!config.tableID || !config.viewName) return;
+  
+      try {
+        const records = await fetchAirtableRecordsFromView(config.tableID, config.viewName);
+        const sampleFields = records?.[0]?.fields || {};
+        setFieldOptions(Object.keys(sampleFields).map(key => ({
+          id: key,
+          name: key
+        })));
+      } catch (error) {
+        console.error("Error fetching fields:", error);
+        setAlert({ type: "error", message: "Failed to fetch fields" });
+      }
+    };
+  
+    fetchFields();
+  }, [config.tableID, config.viewName]);
+  
+
   const handleSaveConfig = async () => {
     setValidationErrors(computedValidationErrors);
-  if (!isFormValid) {
-    setAlert({
-      type: "error",
-      message: "Please fix validation errors before saving"
-    });
-    return;
-  }
+    if (!isFormValid) {
+      setAlert({
+        type: "error",
+        message: "Please fix validation errors before saving"
+      });
+      return;
+    }
       
     setIsLoading(true);
     try {

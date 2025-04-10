@@ -2,7 +2,7 @@
    * Fetch available LINE groups
    */
 export const fetchLineGroups = async () => {
-    const lineApiUrl = process.env.NEXT_PUBLIC_LINE_API_URL;
+    const lineApiUrl = process.env.NEXT_PUBLIC_LINE_CONNECT_URL;
     const url = `${lineApiUrl}/api/line/groups`;
   
     try {

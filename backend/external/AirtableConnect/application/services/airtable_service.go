@@ -16,6 +16,7 @@ import (
 type AirtableService struct {
 	tableRepo      interfaces.TableRepository
 	recordRepo     interfaces.RecordRepository
+	viewRepo       interfaces.ViewRepository
 	airtableClient interfaces.AirtableClient
 	baseID         string
 	db             *sql.DB
@@ -25,6 +26,7 @@ type AirtableService struct {
 func NewAirtableService(
 	tableRepo interfaces.TableRepository,
 	recordRepo interfaces.RecordRepository,
+	viewRepo interfaces.ViewRepository,
 	airtableClient interfaces.AirtableClient,
 	baseID string,
 	db *sql.DB,
@@ -32,6 +34,7 @@ func NewAirtableService(
 	return &AirtableService{
 		tableRepo:      tableRepo,
 		recordRepo:     recordRepo,
+		viewRepo:       viewRepo,
 		airtableClient: airtableClient,
 		baseID:         baseID,
 		db:             db,
@@ -288,4 +291,8 @@ func (s *AirtableService) SyncAllTables() ([]models.SyncResult, error) {
 
 func (s *AirtableService) GetRecordsFromView(tableID, viewName string) ([]models.Record, error) {
 	return s.airtableClient.GetRecordsFromView(s.baseID, tableID, viewName)
+}
+
+func (s *AirtableService) GetViewsByTableID(tableID string) ([]models.View, error) {
+	return s.viewRepo.GetViewsByTableID(tableID)
 }

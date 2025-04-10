@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 
-export default function MultiSelect({ title, items, selectedItems, toggleItem, onClear, onSelectAll ,className,context}) {
+export default function MultiSelect({ title, items, selectedItems, toggleItem, onClear, onSelectAll ,className,context,valueField = "name",labelField = "name",      }) {
     const [showDropdown, setShowDropdown] = useState(false); // จัดการ Show/Hide Dropdown
     const [searchTerm, setSearchTerm] = useState(""); // สำหรับการค้นหา
     const dropdownRef = useRef(null);
@@ -26,7 +26,8 @@ export default function MultiSelect({ title, items, selectedItems, toggleItem, o
 
     // กรองรายการตาม Search Term
     const filteredItems = items.filter((item) =>
-        item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        item[labelField]?.toLowerCase().includes(searchTerm.toLowerCase())
+
     );
 
     const getContextClass = () => {
@@ -96,17 +97,22 @@ export default function MultiSelect({ title, items, selectedItems, toggleItem, o
                     </div>
 
                     {/* List Items */}
-                    {filteredItems.map((item) => (
+                    {filteredItems.map((item) => {
+                        const value = item[valueField];
+                        const label = item[labelField];
+
+                        return (
                         <label key={item.name} className="block px-4 py-2 cursor-pointer hover:bg-gray-100">
                             <input
                                 type="checkbox"
-                                checked={selectedItems.includes(item.name)}
-                                onChange={() => toggleItem(item.name)}
+                                checked={selectedItems.includes(value)}
+                                onChange={() => toggleItem(value)}
                                 className="mr-2"
                             />
-                            {item.name}
+                            {label}
                         </label>
-                    ))}
+                         );
+            })}
                 </div>
             )}
         </div>

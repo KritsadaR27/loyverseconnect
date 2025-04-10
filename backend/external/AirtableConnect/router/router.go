@@ -8,6 +8,7 @@ import (
 	"backend/external/AirtableConnect/infrastructure/data"
 	"backend/external/AirtableConnect/infrastructure/external"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"os"
 
@@ -24,7 +25,9 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	tableRepo := data.NewTableRepository(db)
 	recordRepo := data.NewRecordRepository(db)
 	airtableClientImpl := external.NewAirtableClient(airtableClient)
-	airtableService := services.NewAirtableService(tableRepo, recordRepo, airtableClientImpl, baseID, db)
+	viewRepo := data.NewViewRepository(db)
+
+	airtableService := services.NewAirtableService(tableRepo, recordRepo, viewRepo, airtableClientImpl, baseID, db)
 
 	lineAPIURL := os.Getenv("LINE_CONNECT_URL")
 	if lineAPIURL == "" {
@@ -191,5 +194,21 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 			return
 		}
 		notificationHandler.RunNotificationNow(w, r)
+	})
+
+	mux.HandleFunc("/api/airtable/views", func(w http.ResponseWriter, r *http.Request) {
+		tableID := r.URL.Query().Get("table_id")
+		if tableID == "" {
+			http.Error(w, "Missing table_id", http.StatusBadRequest)
+			return
+		}
+
+		views, err := airtableService.GetViewsByTableID(tableID)
+		if err != nil {
+			http.Error(w, "Error fetching views: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"views": views})
 	})
 }

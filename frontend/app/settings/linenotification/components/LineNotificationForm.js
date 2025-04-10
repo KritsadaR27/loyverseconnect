@@ -201,9 +201,9 @@ const LineNotificationForm = ({
                             disabled={!config.tableID || viewOptions.length === 0}
                         >
                             <option value="">Select a view</option>
-                            {viewOptions.map(view => (
-                                <option key={view.id} value={view.id}>
-                                    {view.name}
+                            {viewOptions.map((view) => (
+                                <option key={view.id} value={view.name}>
+                                {view.name}
                                 </option>
                             ))}
                         </select>
@@ -233,6 +233,8 @@ const LineNotificationForm = ({
                             onClear={handleClearGroups}
                             onSelectAll={handleSelectAllGroups}
                             context="form"
+                            valueField="id"     // 💡 ใช้ id เป็น value จริง
+                            labelField="name"   // 💡 แสดงชื่อให้คนอ่าน   
                         />
                     </div>
                     
