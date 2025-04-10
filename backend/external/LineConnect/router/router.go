@@ -89,17 +89,19 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, lineBotClient *linebot.Clien
 			case linebot.EventTypeJoin:
 				// ตอบกลับเพื่อให้ LINE รู้ว่า bot ยัง active อยู่
 				replyToken := event.ReplyToken
-				if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("สวัสดี! Bot เข้าร่วมกลุ่มเรียบร้อยแล้วจ้า 🚀")).Do(); err != nil {
+				if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("สวัสดี! Bot เข้าร่วมกลุ่ม แล้ว 🚀")).Do(); err != nil {
 					log.Println("Error replying to join event:", err)
 				}
 
 			case linebot.EventTypeMessage:
 				switch message := event.Message.(type) {
 				case *linebot.TextMessage:
-					replyToken := event.ReplyToken
-					if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("Received: "+message.Text)).Do(); err != nil {
-						log.Println("Error replying to text message:", err)
-					}
+					// replyToken := event.ReplyToken
+					// if _, err = lineBotClient.ReplyMessage(replyToken, linebot.NewTextMessage("Received: "+message.Text)).Do(); err != nil {
+					// 	log.Println("Error replying to text message:", err)
+					// }
+					log.Printf("Received message: %s", message.Text)
+
 				}
 			}
 		}
