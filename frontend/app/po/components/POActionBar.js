@@ -233,7 +233,7 @@ const POActionBar = ({
                 disabled={disabled}
               >
                 {deliveryDate ? (
-                  format(deliveryDate, 'dd MMMM yyyy', { locale: th })
+                  format(new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate(), 0, 0, 0, 0), 'dd MMMM yyyy', { locale: th })
                 ) : (
                   <span>เลือกวันที่</span>
                 )}

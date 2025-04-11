@@ -76,14 +76,13 @@ export const fetchSalesByDay = async (startDate, endDate) => {
   try {
     console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
     
-    // Make sure the URL points to the correct API endpoint
+    // ปรับ URL ให้ชี้ไปยัง API endpoint ที่ถูกต้อง
     const url = `${RECEIPT_API_URL}/api/sales/days`;
     console.log(`Complete URL: ${url}`);
     
     // Log the request parameters for debugging
     console.log('Request params:', { startDate, endDate });
     
-    // Make sure to use the ISO format that the API expects
     const response = await axios.get(url, {
       params: {
         startDate,
@@ -100,25 +99,22 @@ export const fetchSalesByDay = async (startDate, endDate) => {
       return [];
     }
     
-    // Enhance the response with item_id if it's missing
+    // ปรับรูปแบบข้อมูลให้สอดคล้องกับการใช้งานในหน้า PO
     const enhancedData = response.data.map(item => {
-      // Create a new object to avoid mutating the original data
       const enhancedItem = { ...item };
       
-      // Ensure date format consistency
+      // Format date consistently
       if (item.sale_date) {
         try {
-          // Make sure the date is properly formatted
           const date = new Date(item.sale_date);
-          enhancedItem.sale_date = date.toISOString();
+          enhancedItem.sale_date = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
         } catch (e) {
           console.warn("Invalid date format:", item.sale_date);
         }
       }
       
-      // If item_id is missing, try to extract it from item_name
+      // Extract item_id from item_name if missing
       if (!enhancedItem.item_id && enhancedItem.item_name) {
-        // Try to extract item_id from item_name (assuming format like "P101")
         const match = enhancedItem.item_name.match(/^(P\d+)/);
         if (match) {
           enhancedItem.item_id = match[1];
@@ -129,21 +125,14 @@ export const fetchSalesByDay = async (startDate, endDate) => {
       return enhancedItem;
     });
     
-    console.log(`Enhanced ${enhancedData.length} sales records with item_id where needed`);
+    console.log(`Enhanced ${enhancedData.length} sales records`);
     return enhancedData;
   } catch (error) {
     console.error('Error fetching sales data:', error);
-    
-    // Check if connection can be established to the API server
-    const isApiAvailable = await checkApiAvailability(RECEIPT_API_URL);
-    if (!isApiAvailable) {
-      console.warn('Sales API server appears to be down or unreachable');
-    }
-    
-    // Return empty array instead of throwing error so the app continues to work
     return [];
   }
-};
+}
+
 /**
  * Save buffer settings for items with improved error handling
  * @param {Array} bufferSettings - Buffer settings for items
