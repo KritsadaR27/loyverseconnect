@@ -70,9 +70,7 @@ const ClientPOPage = () => {
       <div className="space-y-4 mt-2">
         {loading ? (
           <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-[300px] w-full" />
-            <Skeleton className="h-10 w-full" />
+           
           </div>
         ) : (
           <>
