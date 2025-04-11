@@ -10,22 +10,14 @@ import (
 
 // ConnectDB สร้างการเชื่อมต่อกับฐานข้อมูล
 func ConnectDB() (*sql.DB, error) {
-	// ดึงค่าจาก environment variables
-	host := getEnv("DB_HOST", "postgres")
-	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "postgres")
-	password := getEnv("DB_PASSWORD", "postgres")
-	dbname := getEnv("DB_NAME", "storedb")
-	sslmode := getEnv("DB_SSLMODE", "disable")
+	// อ่านค่า DATABASE_URL จาก environment variable
+	psqlInfo := os.Getenv("DATABASE_URL")
+	if psqlInfo == "" {
+		return nil, fmt.Errorf("DATABASE_URL environment variable is not set")
+	}
 
-	// สร้าง connection string
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode,
-	)
-
-	// เชื่อมต่อฐานข้อมูล
-	db, err := sql.Open("postgres", connStr)
+	// เปิดการเชื่อมต่อฐานข้อมูล
+	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
