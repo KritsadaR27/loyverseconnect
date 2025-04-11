@@ -70,6 +70,8 @@ export const fetchInventoryData = async () => {
  * @param {string} endDate - End date in ISO format
  * @returns {Promise<Array>} - Sales data by day
  */
+
+// แก้ไขฟังก์ชัน fetchSalesByDay ใน poService.js
 export const fetchSalesByDay = async (startDate, endDate) => {
   try {
     console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
@@ -91,7 +93,6 @@ export const fetchSalesByDay = async (startDate, endDate) => {
     });
     
     console.log('Sales data response status:', response.status);
-    console.log('Sales data received:', response.data);
     
     // Validate the response data
     if (!Array.isArray(response.data)) {
@@ -99,20 +100,37 @@ export const fetchSalesByDay = async (startDate, endDate) => {
       return [];
     }
     
-    // Map the response to include item_id if it's missing
-    const mappedData = response.data.map(item => {
-      // Ensure each item has an item_id, extract from item_name if needed
-      if (!item.item_id && item.item_name) {
-        // Try to extract item_id from item_name (assuming format like "P101")
-        const match = item.item_name.match(/^(P\d+)/);
-        if (match) {
-          return { ...item, item_id: match[1] };
+    // Enhance the response with item_id if it's missing
+    const enhancedData = response.data.map(item => {
+      // Create a new object to avoid mutating the original data
+      const enhancedItem = { ...item };
+      
+      // Ensure date format consistency
+      if (item.sale_date) {
+        try {
+          // Make sure the date is properly formatted
+          const date = new Date(item.sale_date);
+          enhancedItem.sale_date = date.toISOString();
+        } catch (e) {
+          console.warn("Invalid date format:", item.sale_date);
         }
       }
-      return item;
+      
+      // If item_id is missing, try to extract it from item_name
+      if (!enhancedItem.item_id && enhancedItem.item_name) {
+        // Try to extract item_id from item_name (assuming format like "P101")
+        const match = enhancedItem.item_name.match(/^(P\d+)/);
+        if (match) {
+          enhancedItem.item_id = match[1];
+          console.log(`Extracted item_id ${enhancedItem.item_id} from ${enhancedItem.item_name}`);
+        }
+      }
+      
+      return enhancedItem;
     });
     
-    return mappedData;
+    console.log(`Enhanced ${enhancedData.length} sales records with item_id where needed`);
+    return enhancedData;
   } catch (error) {
     console.error('Error fetching sales data:', error);
     
@@ -120,15 +138,12 @@ export const fetchSalesByDay = async (startDate, endDate) => {
     const isApiAvailable = await checkApiAvailability(RECEIPT_API_URL);
     if (!isApiAvailable) {
       console.warn('Sales API server appears to be down or unreachable');
-      // Provide mock sales data structure for development
-      return [];
     }
     
     // Return empty array instead of throwing error so the app continues to work
     return [];
   }
 };
-
 /**
  * Save buffer settings for items with improved error handling
  * @param {Array} bufferSettings - Buffer settings for items

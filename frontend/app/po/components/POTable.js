@@ -14,12 +14,21 @@ const POTable = ({
 }) => {
   const dateColumns = useMemo(() => {
     return futureDates.map(date => {
-      const dateStr = date.toISOString().split('T')[0];
+
+      const getFormattedDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const dateStr = getFormattedDate(date);
+      // Format date to 'YYYY-MM-DD'
       return {
         date,
         dateStr,
         label: formatDate(date, 'dd/MM'),
-        isTarget: targetCoverageDate && date.toISOString().split('T')[0] === targetCoverageDate.toISOString().split('T')[0]
+        isTarget: targetCoverageDate && getFormattedDate(date) === getFormattedDate(targetCoverageDate),
       };
     });
   }, [futureDates, targetCoverageDate]);
@@ -90,39 +99,45 @@ const POTable = ({
                   </td>
                   {dateColumns.map((col, colIndex) => {
                       const dateStr = col.dateStr;
-
-// เปลี่ยนเป็นตรวจสอบทุกวันที่มีในข้อมูล
-                  const dailySale = Object.keys(item.dailySales || {}).includes(dateStr) 
-                    ? item.dailySales[dateStr] 
-                    : 0;                    console.log(`Item ${item.name} sale on ${dateStr}:`, dailySale, item.dailySales);
-
-                    // Accumulate sales up to this date
-                    let accumulatedSales = 0;
-                    for (let i = 0; i <= colIndex; i++) {
-                      accumulatedSales += (item.dailySales[dateColumns[i].dateStr] || 0);
-                    }
-                    
-                    // Calculate remaining stock
-                    const remainingStock = Math.round(item.currentStock - accumulatedSales);
-                    
-                    return (
-                      <td
-                        key={`${item.id}-${col.date.toISOString()}`}
-                        className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
-                        onClick={() => setTargetCoverageDate(col.date)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="flex flex-col gap-1">
-                          <div className="text-xs text-red-600">
-                            {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
+                      
+                      // ตรวจสอบว่ามีข้อมูลยอดขายของวันนี้หรือไม่ 
+                      // เปลี่ยนจากการใช้ Object.keys().includes เป็นดูที่ค่าโดยตรง
+                      const dailySale = item.dailySales && typeof item.dailySales[dateStr] !== 'undefined' 
+                        ? item.dailySales[dateStr] 
+                        : 0;
+                      
+                      // Accumulate sales up to this date
+                      let accumulatedSales = 0;
+                      for (let i = 0; i <= colIndex; i++) {
+                        const dateKey = dateColumns[i].dateStr;
+                        const daySale = item.dailySales && typeof item.dailySales[dateKey] !== 'undefined'
+                          ? item.dailySales[dateKey]
+                          : 0;
+                        accumulatedSales += daySale;
+                      }
+                      
+                      // Calculate remaining stock
+                      const remainingStock = Math.round(item.currentStock - accumulatedSales);
+                      
+                      return (
+                        <td
+                          key={`${item.id}-${col.date.toISOString()}`}
+                          className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
+                          onClick={() => setTargetCoverageDate(col.date)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="text-xs text-red-600">
+                              {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
+                            </div>
+                            <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
+                              {formatNumber(remainingStock)}
+                            </div>
                           </div>
-                          <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
-                            {formatNumber(remainingStock)}
-                          </div>
-                        </div>
-                      </td>
-                    );
-                  })}
+                        </td>
+                      );
+                    })}
+
                   <td className="p-2 text-center border">
                     <input
                       type="number"
