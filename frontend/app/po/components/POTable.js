@@ -98,45 +98,60 @@ const POTable = ({
                     </div>
                   </td>
                   {dateColumns.map((col, colIndex) => {
-                      const dateStr = col.dateStr;
-                      
-                      // ตรวจสอบว่ามีข้อมูลยอดขายของวันนี้หรือไม่ 
-                      // เปลี่ยนจากการใช้ Object.keys().includes เป็นดูที่ค่าโดยตรง
-                      const dailySale = item.dailySales && typeof item.dailySales[dateStr] !== 'undefined' 
-                        ? item.dailySales[dateStr] 
-                        : 0;
-                      
-                      // Accumulate sales up to this date
-                      let accumulatedSales = 0;
+                    const dateStr = col.dateStr;
+                    const currentDate = col.date;
+                    
+                    // หาวันที่ย้อนหลัง 7 วัน (วันเดียวกันในสัปดาห์ที่แล้ว)
+                    const previousWeekDate = new Date(currentDate);
+                    previousWeekDate.setDate(previousWeekDate.getDate() - 6);
+                    const previousWeekDateStr = previousWeekDate.toISOString().split('T')[0];
+                    
+                    // ใช้ยอดขายของสัปดาห์ที่แล้วในวันที่ตรงกัน หรือ 0 ถ้าไม่มีข้อมูล
+                    const dailySale = item.dailySales && item.dailySales[previousWeekDateStr] !== undefined
+                      ? item.dailySales[previousWeekDateStr]
+                      : 0;
+                    
+                    // คำนวณสต็อกคงเหลือ
+                    let remainingStock;
+                    
+                    // ถ้ามีข้อมูล projectedStock จาก hook ให้ใช้ค่านั้น
+                    if (item.projectedStock && item.projectedStock[dateStr] !== undefined) {
+                      remainingStock = item.projectedStock[dateStr];
+                    } else {
+                      // คำนวณเอง โดยหักจากยอดขายวันที่ผ่านมา (ของสัปดาห์ที่แล้ว)
+                      remainingStock = item.currentStock;
                       for (let i = 0; i <= colIndex; i++) {
-                        const dateKey = dateColumns[i].dateStr;
-                        const daySale = item.dailySales && typeof item.dailySales[dateKey] !== 'undefined'
-                          ? item.dailySales[dateKey]
+                        const currentDay = dateColumns[i].date;
+                        const prevWeekDay = new Date(currentDay);
+                        prevWeekDay.setDate(prevWeekDay.getDate() - 6);
+                        const prevWeekDayStr = prevWeekDay.toISOString().split('T')[0];
+                        
+                        const daySale = item.dailySales && item.dailySales[prevWeekDayStr]
+                          ? item.dailySales[prevWeekDayStr]
                           : 0;
-                        accumulatedSales += daySale;
+                        
+                        remainingStock -= daySale;
                       }
-                      
-                      // Calculate remaining stock
-                      const remainingStock = Math.round(item.currentStock - accumulatedSales);
-                      
-                      return (
-                        <td
-                          key={`${item.id}-${col.date.toISOString()}`}
-                          className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
-                          onClick={() => setTargetCoverageDate(col.date)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="text-xs text-red-600">
-                              {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
-                            </div>
-                            <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
-                              {formatNumber(remainingStock)}
-                            </div>
+                    }
+                    
+                    return (
+                      <td
+                        key={`${item.id}-${col.date.toISOString()}`}
+                        className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
+                        onClick={() => setTargetCoverageDate(col.date)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="text-xs text-red-600" title={`ยอดขาย ${previousWeekDate.toLocaleDateString()}`}>
+                            {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
                           </div>
-                        </td>
-                      );
-                    })}
+                          <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
+                            {formatNumber(remainingStock)}
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
 
                   <td className="p-2 text-center border">
                     <input
