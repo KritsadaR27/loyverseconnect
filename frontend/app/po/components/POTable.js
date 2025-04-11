@@ -1,5 +1,12 @@
 import React, { useMemo } from 'react';
-import { formatNumber, formatDate } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
+import { formatThaiDate, getThaiDay } from '@/app/utils/dateUtils';
+import { Button } from '@/components/ui/button';
+import { 
+  PencilSquareIcon as Edit, 
+  ArrowDownTrayIcon as Save,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline';
 
 const POTable = ({
   items,
@@ -11,10 +18,20 @@ const POTable = ({
   handleBufferChange,
   handleOrderQuantityChange,
   editingBuffers,
+  setEditingBuffers,
+  handleSaveBuffers,
+  processingAction
 }) => {
+  // ตรวจสอบ props ที่ได้รับ
+  console.log('[POTable] Props received:', {
+    editingBuffers,
+    setEditingBuffers: typeof setEditingBuffers === 'function',
+    handleSaveBuffers: typeof handleSaveBuffers === 'function',
+    processingAction
+  });
+
   const dateColumns = useMemo(() => {
     return futureDates.map(date => {
-
       const getFormattedDate = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -23,11 +40,12 @@ const POTable = ({
       };
 
       const dateStr = getFormattedDate(date);
-      // Format date to 'YYYY-MM-DD'
+      // แสดงชื่อวันเป็นภาษาไทย และวันที่แบบ วัน/เดือน
       return {
         date,
         dateStr,
-        label: formatDate(date, 'dd/MM'),
+        label: formatThaiDate(date, 'day-month'),
+        dayName: getThaiDay(date),
         isTarget: targetCoverageDate && getFormattedDate(date) === getFormattedDate(targetCoverageDate),
       };
     });
@@ -52,18 +70,67 @@ const POTable = ({
                 key={col.date.toISOString()}
                 className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
               >
-                <div className="text-xs font-normal text-gray-500">
-                  {col.label}
-                  {col.isTarget && <span className="ml-1 text-blue-600">*</span>}
-                </div>
-                <div className="text-xs font-normal mt-1">
-                  (คลิกวันที่ต้องการ)
-                </div>
+                <button 
+                  className="w-full flex flex-col items-center justify-center focus:outline-none hover:bg-blue-100 p-1 rounded"
+                  onClick={() => setTargetCoverageDate(col.date)}
+                >
+                  <div className="text-xs font-normal text-gray-500">
+                    {col.dayName}
+                  </div>
+                  <div className="text-xs font-medium">
+                    {col.label.split(' ')[1]}
+                    {col.isTarget && <span className="ml-1 text-blue-600">*</span>}
+                  </div>
+                </button>
               </th>
             ))}
-            <th className="p-2 text-center border">ยอดเผื่อ</th>
+            <th className="p-2 text-center border">
+              <div className="flex flex-col items-center">
+                <span>ยอดเผื่อ</span>
+                {editingBuffers ? (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => {
+                      console.log('Saving buffer settings...');
+                      if (typeof handleSaveBuffers === 'function') {
+                        handleSaveBuffers();
+                      } else {
+                        console.error('handleSaveBuffers is not a function!');
+                      }
+                    }}
+                    disabled={processingAction}
+                    className="mt-1 h-7 text-xs"
+                  >
+                    {processingAction ? (
+                      <ArrowPathIcon className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <Save className="h-3 w-3 mr-1" />
+                    )}
+                    บันทึก
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      console.log('Toggling edit mode ON');
+                      if (typeof setEditingBuffers === 'function') {
+                        setEditingBuffers(true);
+                      } else {
+                        console.error('setEditingBuffers is not a function!');
+                      }
+                    }}
+                    className="mt-1 h-7 text-xs"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    แก้ไข
+                  </Button>
+                )}
+              </div>
+            </th>
             <th className="p-2 text-center border">แนะนำ</th>
-            <th className="p-2 text-center border">สั่ง <span className="text-xs text-gray-500">(ชิ้น)</span></th>
+            <th className="p-2 text-center border">สั่ง</th>
           </tr>
         </thead>
 
@@ -89,7 +156,7 @@ const POTable = ({
                   </td>
                   <td className="p-2 text-center border">
                     <div
-                      className={`inline-block px-2 py-1 rounded text-sm font-medium ${getStockLevelIndicator(item.currentStock)}`}
+                      className={`inline-block px-3 py-2 rounded text-base font-medium ${getStockLevelIndicator(item.currentStock)}`}
                       title={Object.entries(storeStocks[item.id] || {})
                         .map(([storeName, qty]) => `${storeName}: ${formatNumber(qty)}`)
                         .join('\n')}
@@ -142,7 +209,7 @@ const POTable = ({
                         style={{ cursor: 'pointer' }}
                       >
                         <div className="flex flex-col gap-1">
-                          <div className="text-xs text-red-600" title={`ยอดขาย ${previousWeekDate.toLocaleDateString()}`}>
+                          <div className="text-xs text-red-600 bg-red-50 px-1 py-0.5 rounded" title={`ยอดขาย ${previousWeekDate.toLocaleDateString('th-TH')}`}>
                             {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
                           </div>
                           <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
@@ -166,7 +233,9 @@ const POTable = ({
                     />
                   </td>
                   <td className="p-2 text-center border font-medium">
-                    {formatNumber(item.suggestedOrderQuantity)}
+                    <span className="text-blue-600 text-lg">
+                      {formatNumber(item.suggestedOrderQuantity)}
+                    </span>
                   </td>
                   <td className="p-2 text-center border">
                     <input

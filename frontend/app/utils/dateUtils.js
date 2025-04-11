@@ -51,3 +51,56 @@ export const addDaysToDate = (date, days) => {
     const result = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate() + days));
     return result;
 };
+
+
+// frontend/app/utils/dateUtils.js
+
+// ฟังก์ชันสำหรับแปลงวันภาษาอังกฤษเป็นภาษาไทย
+export const getThaiDay = (date) => {
+    const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    return days[date.getDay()];
+  };
+  
+  // ฟังก์ชันสำหรับฟอร์แมตวันที่แบบไทย
+  export const formatThaiDate = (date, format = 'full') => {
+    if (!date) return '';
+    
+    // สร้าง Date object ใหม่จาก input
+    const dateObj = new Date(date);
+    
+    // วันที่ เดือน ปี
+    const day = dateObj.getDate();
+    const month = dateObj.getMonth();
+    const year = dateObj.getFullYear();
+    
+    // ชื่อวันภาษาไทย
+    const thaiDay = getThaiDay(dateObj);
+    
+    // ชื่อเดือนภาษาไทย
+    const thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    const thaiMonth = thaiMonths[month];
+    
+    // ปีพุทธศักราช
+    const buddhistYear = year + 543;
+    
+    // รูปแบบต่างๆ
+    switch (format) {
+      case 'full':
+        return `วัน${thaiDay}ที่ ${day} ${thaiMonth} พ.ศ. ${buddhistYear}`;
+      case 'medium':
+        return `${thaiDay} ${day} ${thaiMonth} ${buddhistYear}`;
+      case 'short':
+        return `${thaiDay} ${day}/${month + 1}/${buddhistYear.toString().substr(2)}`;
+      case 'day-only':
+        return thaiDay;
+      case 'date-only':
+        return `${day}/${month + 1}/${buddhistYear.toString().substr(2)}`;
+      case 'day-month':
+        return `${thaiDay} ${day}/${month + 1}`;
+      default:
+        return `${day}/${month + 1}/${buddhistYear}`;
+    }
+  };

@@ -18,6 +18,7 @@ const ClientPOPage = () => {
   const { 
     items,
     groupedItems,
+    filteredGroupedItems,
     deliveryDate,
     setDeliveryDate,
     targetCoverageDate,
@@ -49,6 +50,12 @@ const ClientPOPage = () => {
     handleCreatePO,
     selectedSupplier,
     setSelectedSupplier,
+    // Order quantity controls
+    applyAllSuggestedQuantities,
+    clearAllOrderQuantities,
+    // Supplier filter
+    supplierFilter,
+    handleSupplierFilterChange,
     // UI state
     alert,
     setAlert,
@@ -106,6 +113,12 @@ const ClientPOPage = () => {
           setSelectedSupplier={setSelectedSupplier}
           // Items for supplier selection
           suppliers={suppliers}
+          // Order quantity controls
+          applyAllSuggestedQuantities={applyAllSuggestedQuantities}
+          clearAllOrderQuantities={clearAllOrderQuantities}
+          // Supplier filter
+          supplierFilter={supplierFilter}
+          handleSupplierFilterChange={handleSupplierFilterChange}
           // Disabled state
           disabled={loading || processingAction}
           processingAction={processingAction}
@@ -131,13 +144,15 @@ const ClientPOPage = () => {
           </div>
         ) : (
           <>
-            {Object.keys(groupedItems).length === 0 ? (
+            {Object.keys(filteredGroupedItems).length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-3xl mb-2">📦</div>
                 <h3 className="text-lg font-medium mb-2">ไม่พบข้อมูลสินค้า</h3>
                 <p className="text-muted-foreground">
                   {error ? 
                     "เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง" : 
+                    supplierFilter ? 
+                    `ไม่พบรายการสินค้าจากซัพพลายเออร์ "${supplierFilter}"` :
                     "ไม่พบรายการสินค้าที่ต้องสั่งซื้อ"
                   }
                 </p>
@@ -155,7 +170,7 @@ const ClientPOPage = () => {
                 {isMobile ? (
                   <MobilePOView
                     items={items}
-                    groupedItems={groupedItems}
+                    groupedItems={filteredGroupedItems}
                     storeStocks={storeStocks}
                     targetCoverageDate={targetCoverageDate}
                     setTargetCoverageDate={setTargetCoverageDate}
@@ -163,11 +178,14 @@ const ClientPOPage = () => {
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
                     editingBuffers={editingBuffers}
+                    setEditingBuffers={setEditingBuffers}
+                    handleSaveBuffers={handleSaveBuffers}
+                    processingAction={processingAction}
                   />
                 ) : (
                   <POTable
                     items={items}
-                    groupedItems={groupedItems}
+                    groupedItems={filteredGroupedItems}
                     storeStocks={storeStocks}
                     futureDates={futureDates}
                     targetCoverageDate={targetCoverageDate}
@@ -175,6 +193,9 @@ const ClientPOPage = () => {
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
                     editingBuffers={editingBuffers}
+                    setEditingBuffers={setEditingBuffers}
+                    handleSaveBuffers={handleSaveBuffers}
+                    processingAction={processingAction}
                   />
                 )}
               </>

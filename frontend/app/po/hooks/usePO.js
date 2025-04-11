@@ -1,5 +1,5 @@
 // app/po/hooks/usePO.js
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef ,useMemo} from 'react';
 import { 
   fetchInventoryData,
   fetchSalesByDay,
@@ -194,6 +194,29 @@ const usePO = () => {
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [salesData, setSalesData] = useState([]);
   const [groupedItems, setGroupedItems] = useState({});
+  const [supplierFilter, setSupplierFilter] = useState(""); // เพิ่ม state เก็บซัพพลายเออร์ที่เลือก
+
+  // ฟังก์ชัน callback สำหรับจัดการการเปลี่ยนแปลงของตัวเลือกซัพพลายเออร์
+  const handleSupplierFilterChange = useCallback((selectedSupplier) => {
+    console.log(`Filtering items by supplier: ${selectedSupplier}`);
+    setSupplierFilter(selectedSupplier);
+  }, []);
+// สร้าง groupedItems ที่ผ่านการกรอง
+  const filteredGroupedItems = useMemo(() => {
+    if (!supplierFilter) {
+      return groupedItems; // ไม่มีการกรอง คืนค่าเดิม
+    }
+    
+    // กรองเฉพาะซัพพลายเออร์ที่เลือก
+    const filtered = {};
+    if (groupedItems[supplierFilter]) {
+      filtered[supplierFilter] = groupedItems[supplierFilter];
+    }
+    
+    return filtered;
+  }, [groupedItems, supplierFilter]);
+
+ 
   
   // Create future dates for projection when delivery date changes
   useEffect(() => {
@@ -478,8 +501,7 @@ const usePO = () => {
   }, [deliveryDate, items.length, futureDates, targetCoverageDate, groupedItems]);
   
   
- // แก้ไขฟังก์ชัน calculateProjectedSales ในไฟล์ usePO.js
-// (ค้นหาและแทนที่เฉพาะฟังก์ชันนี้)
+
 
 // Calculate projected sales and suggested order quantities
 const calculateProjectedSales = useCallback((itemsToCalculate, targetDate) => {
@@ -561,7 +583,7 @@ const calculateProjectedSales = useCallback((itemsToCalculate, targetDate) => {
         ...item,
         projectedStock,
         suggestedOrderQuantity: suggestedQuantity,
-        orderQuantity: suggestedQuantity // กำหนดค่าเริ่มต้นเท่ากับยอดแนะนำ
+        orderQuantity: 0  // กำหนดค่าเริ่มต้นเป็น 0 แทนที่จะเท่ากับยอดแนะนำ
       };
     });
     
@@ -572,7 +594,7 @@ const calculateProjectedSales = useCallback((itemsToCalculate, targetDate) => {
   }
 }, [futureDates]);
 
-// แก้ไข useEffect สำหรับโหลดข้อมูลยอดขาย
+
 
 // Load sales data when dates change or inventory loaded
 useEffect(() => {
@@ -716,144 +738,229 @@ useEffect(() => {
   }, 100); // เพิ่มเวลาเป็น 100ms เพื่อให้มั่นใจว่า render เสร็จก่อน
 }, [targetCoverageDate, items, loading, calculateProjectedSales, groupedItems]);
 
-  // Update buffer quantities
-  const handleBufferChange = useCallback((itemId, value) => {
-    setItems(prevItems => 
-      prevItems.map(item => {
-        if (item.id === itemId) {
-          const updatedItem = {
-            ...item,
-            buffer: value
-          };
-          
-          // Recalculate suggested quantity if target date exists
-          if (targetCoverageDate) {
-            const targetDateStr = getDateOnlyString(formatDateForAPI(targetCoverageDate));
-            const projectedStock = item.projectedStock || {};
-            
-            let suggestedQuantity = 0;
-            if (projectedStock[targetDateStr] < 0) {
-              suggestedQuantity = Math.abs(projectedStock[targetDateStr]) + value;
-            } else if (projectedStock[targetDateStr] < value) {
-              suggestedQuantity = value - projectedStock[targetDateStr];
-            }
-            
-            updatedItem.suggestedOrderQuantity = Math.ceil(suggestedQuantity);
-            updatedItem.orderQuantity = Math.ceil(suggestedQuantity);
-          }
-          
-          return updatedItem;
-        }
-        return item;
-      })
-    );
-    
-    // Update in grouped items too
-    setGroupedItems(prevGrouped => {
-      const newGrouped = {};
-      Object.keys(prevGrouped).forEach(supplier => {
-        newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
-          if (groupItem.id === itemId) {
-            const updatedItem = {
-              ...groupItem,
-              buffer: value
-            };
-            
-            // Recalculate suggested quantity if target date exists
-            if (targetCoverageDate) {
-              const targetDateStr = getDateOnlyString(formatDateForAPI(targetCoverageDate));
-              const projectedStock = groupItem.projectedStock || {};
-              
-              let suggestedQuantity = 0;
-              if (projectedStock[targetDateStr] < 0) {
-                suggestedQuantity = Math.abs(projectedStock[targetDateStr]) + value;
-              } else if (projectedStock[targetDateStr] < value) {
-                suggestedQuantity = value - projectedStock[targetDateStr];
-              }
-              
-              updatedItem.suggestedOrderQuantity = Math.ceil(suggestedQuantity);
-              updatedItem.orderQuantity = Math.ceil(suggestedQuantity);
-            }
-            
-            return updatedItem;
-          }
-          return groupItem;
-        });
-      });
-      return newGrouped;
-    });
-  }, [targetCoverageDate]);
+  // แก้ไขฟังก์ชันใน usePO.js
+
+// Update buffer quantities
+const handleBufferChange = useCallback((itemId, value) => {
+  // แปลงค่าเป็นตัวเลข และใช้ 0 ถ้าไม่สามารถแปลงได้
+  const numericValue = parseInt(value) || 0;
   
-  // Update order quantities
-  const handleOrderQuantityChange = useCallback((itemId, value) => {
-    setItems(prevItems => 
-      prevItems.map(item => {
-        if (item.id === itemId) {
-          return {
-            ...item,
-            orderQuantity: value
-          };
-        }
-        return item;
-      })
-    );
-    
-    // Update in grouped items too
-    setGroupedItems(prevGrouped => {
-      const newGrouped = {};
-      Object.keys(prevGrouped).forEach(supplier => {
-        newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
-          if (groupItem.id === itemId) {
-            return {
-              ...groupItem,
-              orderQuantity: value
-            };
-          }
-          return groupItem;
-        });
-      });
-      return newGrouped;
-    });
-  }, []);
-  
-  // Save buffer settings
-  const handleSaveBuffers = useCallback(async () => {
-    setProcessingAction(true);
-    try {
-      // Prepare buffer settings data for API
-      const bufferSettings = items.map(item => ({
-        item_id: item.id,
-        reserve_quantity: item.buffer || 0
-      }));
-      
-      const result = await saveBufferSettings(bufferSettings);
-      
-      if (result.success) {
-        setAlert({
-          message: result.offline 
-            ? "บันทึกยอดเผื่อสำเร็จ (โหมดออฟไลน์)" 
-            : "บันทึกยอดเผื่อสำเร็จ",
-          type: "success",
-          description: result.offline 
-            ? "ข้อมูลจะถูกซิงค์เมื่อมีการเชื่อมต่ออินเทอร์เน็ต" 
-            : undefined
-        });
-        
-        setEditingBuffers(false);
-      } else {
-        throw new Error(result.message || "ไม่สามารถบันทึกได้");
+  // อัปเดตค่าใน items โดยตรง
+  setItems(prevItems => 
+    prevItems.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          buffer: numericValue
+        };
       }
-    } catch (err) {
-      console.error("Error saving buffer settings:", err);
-      setAlert({
-        message: "ไม่สามารถบันทึกยอดเผื่อได้",
-        type: "error",
-        description: err.message
+      return item;
+    })
+  );
+  
+  // อัปเดตใน groupedItems ด้วย
+  setGroupedItems(prevGrouped => {
+    const newGrouped = {};
+    Object.keys(prevGrouped).forEach(supplier => {
+      newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+        if (groupItem.id === itemId) {
+          return {
+            ...groupItem,
+            buffer: numericValue
+          };
+        }
+        return groupItem;
       });
-    } finally {
-      setProcessingAction(false);
+    });
+    return newGrouped;
+  });
+  
+  // คำนวณยอดแนะนำใหม่หลังจากเปลี่ยนยอดเผื่อ
+  setTimeout(() => {
+    if (targetCoverageDate) {
+      const processedItems = calculateProjectedSales(
+        items.map(item => item.id === itemId ? {...item, buffer: numericValue} : item),
+        targetCoverageDate
+      );
+      
+      // อัปเดตเฉพาะ item ที่เปลี่ยนแปลง
+      setItems(prevItems => 
+        prevItems.map(item => {
+          if (item.id === itemId) {
+            const updatedItem = processedItems.find(i => i.id === itemId);
+            if (updatedItem) {
+              return {
+                ...updatedItem,
+                buffer: numericValue // ยืนยันว่าใช้ค่า buffer ที่ป้อนใหม่
+              };
+            }
+          }
+          return item;
+        })
+      );
+      
+      // อัปเดตใน groupedItems ด้วย
+      setGroupedItems(prevGrouped => {
+        const newGrouped = {};
+        Object.keys(prevGrouped).forEach(supplier => {
+          newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+            if (groupItem.id === itemId) {
+              const updatedItem = processedItems.find(i => i.id === itemId);
+              if (updatedItem) {
+                return {
+                  ...updatedItem,
+                  buffer: numericValue // ยืนยันว่าใช้ค่า buffer ที่ป้อนใหม่
+                };
+              }
+            }
+            return groupItem;
+          });
+        });
+        return newGrouped;
+      });
     }
-  }, [items]);
+  }, 0);
+}, [items, targetCoverageDate, calculateProjectedSales]);
+// ฟังก์ชันสำหรับเพิ่มในไฟล์ usePO.js
+
+// เพิ่มยอดสั่งเป็นยอดแนะนำทั้งหมด
+const applyAllSuggestedQuantities = useCallback(() => {
+  console.log('Applying all suggested quantities as order quantities');
+  
+  setItems(prevItems => 
+    prevItems.map(item => ({
+      ...item,
+      orderQuantity: item.suggestedOrderQuantity
+    }))
+  );
+  
+  setGroupedItems(prevGrouped => {
+    const newGrouped = {};
+    Object.keys(prevGrouped).forEach(supplier => {
+      newGrouped[supplier] = prevGrouped[supplier].map(groupItem => ({
+        ...groupItem,
+        orderQuantity: groupItem.suggestedOrderQuantity
+      }));
+    });
+    return newGrouped;
+  });
+  
+  setAlert({
+    message: "นำยอดแนะนำมาใช้เป็นยอดสั่งทั้งหมดแล้ว",
+    type: "success"
+  });
+}, [setAlert]);
+
+// ล้างยอดสั่งทั้งหมดเป็น 0
+const clearAllOrderQuantities = useCallback(() => {
+  console.log('Clearing all order quantities to zero');
+  
+  setItems(prevItems => 
+    prevItems.map(item => ({
+      ...item,
+      orderQuantity: 0
+    }))
+  );
+  
+  setGroupedItems(prevGrouped => {
+    const newGrouped = {};
+    Object.keys(prevGrouped).forEach(supplier => {
+      newGrouped[supplier] = prevGrouped[supplier].map(groupItem => ({
+        ...groupItem,
+        orderQuantity: 0
+      }));
+    });
+    return newGrouped;
+  });
+  
+  setAlert({
+    message: "ล้างยอดสั่งทั้งหมดเป็น 0 แล้ว",
+    type: "success"
+  });
+}, [setAlert]);
+// Update order quantities
+// แก้ไขฟังก์ชัน handleOrderQuantityChange ใน usePO.js เพื่อแก้ปัญหาตัวเลขกลับไปค่าเดิม
+
+// Update order quantities
+const handleOrderQuantityChange = useCallback((itemId, value) => {
+  console.log(`Updating order quantity for item ${itemId} to ${value}`);
+  
+  // แปลงค่าเป็นตัวเลข และใช้ 0 ถ้าไม่สามารถแปลงได้
+  const numericValue = parseInt(value) || 0;
+  
+  // อัปเดตค่าใน items โดยตรง และไม่เรียกฟังก์ชันคำนวณอื่นใดเพิ่มเติม
+  setItems(prevItems => 
+    prevItems.map(item => {
+      if (item.id === itemId) {
+        console.log(`Found item ${itemId}, changing orderQuantity from ${item.orderQuantity} to ${numericValue}`);
+        return {
+          ...item,
+          orderQuantity: numericValue
+        };
+      }
+      return item;
+    })
+  );
+  
+  // อัปเดตใน groupedItems ด้วย
+  setGroupedItems(prevGrouped => {
+    const newGrouped = {};
+    Object.keys(prevGrouped).forEach(supplier => {
+      newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+        if (groupItem.id === itemId) {
+          console.log(`Found item ${itemId} in supplier ${supplier}, updating`);
+          return {
+            ...groupItem,
+            orderQuantity: numericValue
+          };
+        }
+        return groupItem;
+      });
+    });
+    return newGrouped;
+  });
+}, []);
+
+// Save buffer settings
+const handleSaveBuffers = useCallback(async () => {
+  setProcessingAction(true);
+  try {
+    // Prepare buffer settings data for API
+    const bufferSettings = items.map(item => ({
+      item_id: item.id,
+      reserve_quantity: parseInt(item.buffer) || 0
+    }));
+    
+    console.log("Sending buffer settings to API:", bufferSettings);
+    
+    const result = await saveBufferSettings(bufferSettings);
+    
+    if (result.success) {
+      setAlert({
+        message: result.offline 
+          ? "บันทึกยอดเผื่อสำเร็จ (โหมดออฟไลน์)" 
+          : "บันทึกยอดเผื่อสำเร็จ",
+        type: "success",
+        description: result.offline 
+          ? "ข้อมูลจะถูกซิงค์เมื่อมีการเชื่อมต่ออินเทอร์เน็ต" 
+          : undefined
+      });
+      
+      setEditingBuffers(false);
+    } else {
+      throw new Error(result.message || "ไม่สามารถบันทึกได้");
+    }
+  } catch (err) {
+    console.error("Error saving buffer settings:", err);
+    setAlert({
+      message: "ไม่สามารถบันทึกยอดเผื่อได้",
+      type: "error",
+      description: err.message
+    });
+  } finally {
+    setProcessingAction(false);
+  }
+}, [items, saveBufferSettings, setAlert, setEditingBuffers, setProcessingAction]);
   
   // Generate LINE notification by supplier
   const generateSupplierMessage = useCallback((supplier, supplierItems) => {
@@ -1125,10 +1232,11 @@ useEffect(() => {
       calculateProjectedSales(items, targetCoverageDate);
     }
   }, [targetCoverageDate, items, loading, calculateProjectedSales]);
-  
+  // ส่งออกค่าและฟังก์ชันทั้งหมดที่ต้องใช้
   return {
     items,
     groupedItems,
+    filteredGroupedItems, // เพิ่มมา
     deliveryDate,
     setDeliveryDate,
     targetCoverageDate,
@@ -1160,6 +1268,12 @@ useEffect(() => {
     handleCreatePO,
     selectedSupplier,
     setSelectedSupplier,
+    // Order quantity controls - เพิ่มมา
+    applyAllSuggestedQuantities,
+    clearAllOrderQuantities,
+    // Supplier filter - เพิ่มมา
+    supplierFilter,
+    handleSupplierFilterChange,
     // UI state
     alert,
     setAlert,

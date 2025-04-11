@@ -133,6 +133,7 @@ export const fetchSalesByDay = async (startDate, endDate) => {
   }
 }
 
+
 /**
  * Save buffer settings for items with improved error handling
  * @param {Array} bufferSettings - Buffer settings for items
@@ -142,10 +143,16 @@ export const saveBufferSettings = async (bufferSettings) => {
   try {
     console.log(`Saving buffer settings for ${bufferSettings.length} items:`, bufferSettings);
     
+    // ตรวจสอบรูปแบบข้อมูลที่ถูกต้อง
+    const formattedSettings = bufferSettings.map(item => ({
+      item_id: item.item_id,
+      reserve_quantity: parseInt(item.reserve_quantity) || 0
+    }));
+    
     // Try to save to the API
     const response = await axios.post(
       `${PO_API_URL}/api/po/buffers`, 
-      bufferSettings, 
+      formattedSettings, 
       {
         headers: {
           'Content-Type': 'application/json'
@@ -155,7 +162,11 @@ export const saveBufferSettings = async (bufferSettings) => {
     );
     
     console.log('Buffer settings saved successfully:', response.data);
-    return response.data;
+    return {
+      success: true,
+      message: "บันทึกยอดเผื่อสำเร็จ",
+      data: response.data
+    };
   } catch (error) {
     console.error("Error saving buffer settings:", error);
     
@@ -167,7 +178,7 @@ export const saveBufferSettings = async (bufferSettings) => {
       // Still return success to allow the user to continue
       return { 
         success: true, 
-        message: "Buffer settings saved locally. Will sync when connection is restored.",
+        message: "บันทึกยอดเผื่อสำเร็จ (โหมดออฟไลน์)",
         offline: true
       };
     }
@@ -175,7 +186,7 @@ export const saveBufferSettings = async (bufferSettings) => {
     // Return error info
     return { 
       success: false, 
-      message: `Failed to save buffer settings: ${error.message}`,
+      message: `ไม่สามารถบันทึกยอดเผื่อได้: ${error.message}`,
       error: error.message
     };
   }

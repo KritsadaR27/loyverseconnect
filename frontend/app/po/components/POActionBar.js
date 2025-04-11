@@ -1,4 +1,3 @@
-// POActionBar.js
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -18,13 +17,15 @@ import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { 
   CalendarIcon, 
-  ArrowDownTrayIcon as Save, 
-  PencilSquareIcon as Edit, 
   XMarkIcon as X,
   PaperAirplaneIcon,
   DocumentTextIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ArrowDownTrayIcon,
+  TrashIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline';
+import { formatThaiDate } from '@/app/utils/dateUtils';
 
 const SendLineDialog = ({
   open,
@@ -215,13 +216,19 @@ const POActionBar = ({
   setSelectedSupplier,
   // Items for supplier selection
   suppliers = [],
+  // Order quantity controls
+  applyAllSuggestedQuantities,
+  clearAllOrderQuantities,
+  // Supplier filter
+  supplierFilter,
+  handleSupplierFilterChange,
   // Disabled state
   disabled = false,
   processingAction,
 }) => {
   return (
     <div className="flex flex-col gap-3 bg-white p-4 rounded-lg border shadow-sm">
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {/* วันที่รับสินค้า */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">วันที่รับสินค้า</label>
@@ -233,7 +240,7 @@ const POActionBar = ({
                 disabled={disabled}
               >
                 {deliveryDate ? (
-                  format(deliveryDate, 'dd MMMM yyyy', { locale: th })
+                  formatThaiDate(deliveryDate, 'medium')
                 ) : (
                   <span>เลือกวันที่</span>
                 )}
@@ -265,7 +272,7 @@ const POActionBar = ({
                 disabled={disabled}
               >
                 {targetCoverageDate ? (
-                  format(targetCoverageDate, 'dd MMMM yyyy', { locale: th })
+                  formatThaiDate(targetCoverageDate, 'medium')
                 ) : (
                   <span>เลือกวันที่</span>
                 )}
@@ -281,7 +288,7 @@ const POActionBar = ({
                     className="w-full justify-start my-1"
                     onClick={() => setTargetCoverageDate(date)}
                   >
-                    {format(date, 'dd MMMM yyyy', { locale: th })}
+                    {formatThaiDate(date, 'medium')}
                   </Button>
                 ))}
               </div>
@@ -289,69 +296,111 @@ const POActionBar = ({
           </Popover>
         </div>
 
+        {/* ตัวกรองซัพพลายเออร์ */}
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">กรองตามซัพพลายเออร์</label>
+          <select
+            className="h-10 rounded-md border border-input px-3 py-2 text-sm"
+            value={supplierFilter}
+            onChange={(e) => handleSupplierFilterChange(e.target.value)}
+            disabled={disabled}
+          >
+            <option value="">ทั้งหมด</option>
+            {suppliers.map(supplier => (
+              <option key={supplier} value={supplier}>
+                {supplier}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Spacer */}
         <div className="flex-1"></div>
         
-        {/* ปุ่มแก้ไขยอดเผื่อ / บันทึกยอดเผื่อ */}
-        <div>
-          {editingBuffers ? (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditingBuffers(false)}
-                disabled={disabled}
-              >
-                <X className="h-4 w-4 mr-1" />
-                ยกเลิก
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  handleSaveBuffers();
-                }}
-                disabled={disabled || processingAction}
-              >
-                <Save className="h-4 w-4 mr-1" />
-                บันทึกยอดเผื่อ
-              </Button>
-            </div>
-          ) : (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => setEditingBuffers(true)}
-              disabled={disabled}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              แก้ไขยอดเผื่อ
-            </Button>
-          )}
+        {/* ปุ่มจัดการยอดสั่ง */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={applyAllSuggestedQuantities}
+            disabled={disabled || processingAction}
+            className="h-10 flex items-center gap-1"
+            title="ใส่ยอดแนะนำทั้งหมด"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            ใส่ยอดแนะนำ
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={clearAllOrderQuantities}
+            disabled={disabled || processingAction}
+            className="h-10 flex items-center gap-1"
+            title="ล้างยอดสั่งทั้งหมด"
+          >
+            <TrashIcon className="h-4 w-4" />
+            ล้างยอดสั่ง
+          </Button>
         </div>
-      </div>
-      
-      {/* ส่วนปุ่มจาก Footer ที่ย้ายมา */}
-      <div className="flex flex-wrap justify-end gap-2 border-t pt-3 mt-1">
+        
+        {/* ปุ่มส่งไลน์แจ้งเตือน - สีเขียว */}
         <Button
-          variant="outline"
+          variant="default"
           onClick={handleOpenSendLineDialog}
           disabled={disabled || processingAction}
-          className="flex items-center gap-2"
+          className="h-10 flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
         >
           <PaperAirplaneIcon className="h-4 w-4" />
           ส่งไลน์แจ้งเตือน
         </Button>
         
+        {/* ปุ่มสร้างใบสั่งซื้อ - สีน้ำเงิน */}
         <Button
           variant="default"
           onClick={handleOpenCreatePODialog}
           disabled={disabled || processingAction}
-          className="flex items-center gap-2"
+          className="h-10 flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
         >
           <DocumentTextIcon className="h-4 w-4" />
           สร้างใบสั่งซื้อ
         </Button>
       </div>
+      
+      {/* ถ้ากำลังแก้ไขยอดเผื่อ แสดงข้อความคำแนะนำ */}
+      {editingBuffers && (
+        <div className="mt-1 p-2 bg-yellow-50 text-sm border border-yellow-200 rounded">
+          <div className="flex items-center gap-2">
+            <span>กำลังแก้ไขยอดเผื่อ - แก้ไขเสร็จแล้วกดปุ่มบันทึกที่หัวตาราง</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditingBuffers(false)}
+              className="ml-auto text-xs py-1"
+            >
+              <X className="h-4 w-4 mr-1" />
+              ยกเลิก
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* ถ้ามีการเลือกซัพพลายเออร์ แสดงข้อความแจ้งเตือน */}
+      {supplierFilter && (
+        <div className="mt-1 p-2 bg-blue-50 text-sm border border-blue-200 rounded">
+          <div className="flex items-center gap-2">
+            <FunnelIcon className="h-4 w-4 text-blue-500" />
+            <span>กำลังแสดงเฉพาะสินค้าจากซัพพลายเออร์: <strong>{supplierFilter}</strong></span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleSupplierFilterChange("")}
+              className="ml-auto text-xs py-1"
+            >
+              <X className="h-4 w-4 mr-1" />
+              แสดงทั้งหมด
+            </Button>
+          </div>
+        </div>
+      )}
       
       {/* LINE Notification Dialog */}
       <SendLineDialog
