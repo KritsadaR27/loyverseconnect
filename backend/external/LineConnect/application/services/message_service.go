@@ -4,12 +4,13 @@ package services
 import (
 	"backend/external/LineConnect/domain/interfaces"
 	"backend/external/LineConnect/domain/models"
+	"fmt"
 	"log"
 	"strings"
 	"time"
 )
 
-// MessageService handles the business logic for sending messages
+// MessageService provides methods for managing messages
 type MessageService struct {
 	messageRepo interfaces.MessageRepository
 	groupRepo   interfaces.GroupRepository
@@ -17,11 +18,7 @@ type MessageService struct {
 }
 
 // NewMessageService creates a new instance of MessageService
-func NewMessageService(
-	messageRepo interfaces.MessageRepository,
-	groupRepo interfaces.GroupRepository,
-	lineClient interfaces.LineClient,
-) *MessageService {
+func NewMessageService(messageRepo interfaces.MessageRepository, groupRepo interfaces.GroupRepository, lineClient interfaces.LineClient) *MessageService {
 	return &MessageService{
 		messageRepo: messageRepo,
 		groupRepo:   groupRepo,
@@ -141,6 +138,27 @@ func (s *MessageService) GetMessageHistory(limit, offset int) ([]models.MessageR
 			Status:    msg.Status,
 			CreatedAt: msg.CreatedAt,
 			SentAt:    msg.SentAt,
+		})
+	}
+
+	return responses, nil
+}
+
+// GetRecentMessages retrieves the most recent messages for a specific group
+
+func (s *MessageService) GetRecentMessages(groupID string, limit int) ([]models.MessageResponse, error) {
+	messages, err := s.messageRepo.GetRecentMessagesByGroupID(groupID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving recent messages: %v", err)
+	}
+
+	var responses []models.MessageResponse
+	for _, msg := range messages {
+		responses = append(responses, models.MessageResponse{
+			ID:        msg.ID,
+			Content:   msg.Content,
+			Sender:    msg.Sender, // ตรวจสอบว่ามี Sender หรือไม่
+			Timestamp: msg.CreatedAt,
 		})
 	}
 

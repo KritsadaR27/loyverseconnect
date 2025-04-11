@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
@@ -27,11 +28,11 @@ func main() {
 	}
 
 	// Set up HTTP router
-	mux := http.NewServeMux()
-	router.RegisterRoutes(mux, db, lineClient)
+	r := mux.NewRouter()
+	router.RegisterRoutes(r, db, lineClient)
 
 	// Apply middleware
-	handler := middleware.CORS(mux)
+	handler := middleware.CORS(r)
 
 	// Set port and start server
 	port := os.Getenv("PORT")

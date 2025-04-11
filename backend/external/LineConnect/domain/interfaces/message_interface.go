@@ -19,4 +19,7 @@ type MessageRepository interface {
 
 	// ListMessages retrieves all messages with optional filters
 	ListMessages(limit, offset int, status string) ([]models.Message, error)
+
+	// เพิ่มฟังก์ชันนี้
+	GetRecentMessagesByGroupID(groupID string, limit int) ([]models.Message, error)
 }

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -23,26 +24,21 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 
 // SaveMessage saves a new message to the database
 func (r *MessageRepository) SaveMessage(message models.Message) (int, error) {
-	// Marshal group IDs to JSON
-	groupIDsJSON, err := json.Marshal(message.GroupIDs)
-	if err != nil {
-		return 0, fmt.Errorf("error marshaling group IDs: %v", err)
-	}
-
-	// Insert message into database
 	query := `
-		INSERT INTO line_messages (content, group_ids, type, status, created_at)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`
+        INSERT INTO line_messages (content, group_ids, type, status, created_at, sender, timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+    `
+
 	var id int
-	err = r.db.QueryRow(
-		query,
+	err := r.db.QueryRow(query,
 		message.Content,
-		groupIDsJSON,
+		message.GroupIDs,
 		message.Type,
 		message.Status,
 		message.CreatedAt,
+		message.Sender,
+		message.Timestamp, // เพิ่ม timestamp
 	).Scan(&id)
 
 	if err != nil {
@@ -157,6 +153,71 @@ func (r *MessageRepository) ListMessages(limit, offset int, status string) ([]mo
 		}
 
 		// Unmarshal group IDs from JSON
+		var groupIDs []string
+		if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
+			return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)
+		}
+		message.GroupIDs = groupIDs
+
+		// Handle nullable sent_at
+		if sentAt.Valid {
+			message.SentAt = &sentAt.Time
+		}
+
+		messages = append(messages, message)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating message rows: %v", err)
+	}
+
+	return messages, nil
+}
+
+// GetRecentMessagesByGroupID retrieves the most recent messages sent to a specific group
+func (r *MessageRepository) GetRecentMessagesByGroupID(groupID string, limit int) ([]models.Message, error) {
+	query := `
+        SELECT id, content, group_ids, type, status, created_at, sent_at, sender, timestamp
+        FROM line_messages
+        WHERE group_ids @> $1::jsonb
+        ORDER BY created_at DESC
+        LIMIT $2
+    `
+
+	groupIDJSON, err := json.Marshal([]string{groupID})
+	if err != nil {
+		log.Printf("Error marshaling group ID: %v", err)
+		return nil, fmt.Errorf("error marshaling group ID: %v", err)
+	}
+
+	rows, err := r.db.Query(query, groupIDJSON, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error querying recent messages: %v", err)
+	}
+	defer rows.Close()
+
+	var messages []models.Message
+	for rows.Next() {
+		var message models.Message
+		var groupIDsJSON []byte
+		var sentAt sql.NullTime
+
+		err := rows.Scan(
+			&message.ID,
+			&message.Content,
+			&groupIDsJSON,
+			&message.Type,
+			&message.Status,
+			&message.CreatedAt,
+			&sentAt,
+			&message.Sender,
+			&message.Timestamp,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning message row: %v", err)
+		}
+
+		// Unmarshal group IDs
 		var groupIDs []string
 		if err := json.Unmarshal(groupIDsJSON, &groupIDs); err != nil {
 			return nil, fmt.Errorf("error unmarshaling group IDs: %v", err)

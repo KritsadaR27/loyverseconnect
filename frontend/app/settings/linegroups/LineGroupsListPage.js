@@ -12,42 +12,46 @@ import {
 } from "@heroicons/react/24/outline";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import Alert from "../../../components/Alert";
+import { 
+  fetchLineGroups, 
+  deleteLineGroup, 
+  registerLineGroup, 
+  fetchUnregisteredGroups, 
+  fetchRecentMessages 
+} from "../../api/lineService";
 
 const LineGroupsListPage = () => {
   const router = useRouter();
-  const [groups, setGroups] = useState([]);
-  const [unregisteredGroups, setUnregisteredGroups] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [groups, setGroups] = useState([]);  
+  const [unregisteredGroups, setUnregisteredGroups] = useState([]);  
+  const [isLoading, setIsLoading] = useState(true);  
   const [alert, setAlert] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [registerForm, setRegisterForm] = useState(null);
+  const [recentMessages, setRecentMessages] = useState({});
+  const [showMessages, setShowMessages] = useState(null);
 
   // Fetch all LINE groups
   useEffect(() => {
     const loadGroups = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch registered groups
-        const response = await fetch('/api/line/groups');
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-        const data = await response.json();
-        setGroups(data);
-        
+        const data = await fetchLineGroups();
+        setGroups(data || []);  
+
         // Fetch unregistered groups
-        const unregisteredResponse = await fetch('/api/line/unregistered-groups');
-        if (unregisteredResponse.ok) {
-          const unregisteredData = await unregisteredResponse.json();
-          setUnregisteredGroups(unregisteredData);
-        }
+        const unregisteredData = await fetchUnregisteredGroups();
+        setUnregisteredGroups(unregisteredData || []);  
       } catch (error) {
         console.error("Error loading groups:", error);
         setAlert({
           type: "error",
-          message: "Failed to load LINE groups"
+          message: "Failed to load LINE groups",
         });
+        setGroups([]);  
+        setUnregisteredGroups([]);  
       } finally {
         setIsLoading(false);
       }
@@ -82,28 +86,21 @@ const LineGroupsListPage = () => {
 
   const handleDelete = async () => {
     if (!deleteConfirmation) return;
-    
+
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/line/groups/${deleteConfirmation.id}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      setGroups(groups.filter(g => g.id !== deleteConfirmation.id));
+      await deleteLineGroup(deleteConfirmation.id);
+      setGroups(groups.filter((g) => g.id !== deleteConfirmation.id));
       setAlert({
         type: "success",
-        message: "LINE group deleted successfully"
+        message: "LINE group deleted successfully",
       });
       setDeleteConfirmation(null);
     } catch (error) {
       console.error("Error deleting group:", error);
       setAlert({
         type: "error",
-        message: "Failed to delete LINE group"
+        message: "Failed to delete LINE group",
       });
     } finally {
       setIsLoading(false);
@@ -113,39 +110,18 @@ const LineGroupsListPage = () => {
   const handleRegisterGroup = async (groupId, groupName) => {
     try {
       setIsLoading(true);
-      
-      // Register using the existing API
-      const response = await fetch('/api/line/groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: groupId,
-          name: groupName,
-          description: ''
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const newGroup = await response.json();
-      
-      // Add the new group to the list and remove from unregistered
+      const newGroup = await registerLineGroup(groupId, groupName);
       setGroups([...groups, newGroup]);
-      setUnregisteredGroups(unregisteredGroups.filter(g => g.id !== groupId));
-      
+      setUnregisteredGroups(unregisteredGroups.filter((g) => g.id !== groupId));
       setAlert({
         type: "success",
-        message: "LINE group registered successfully"
+        message: "LINE group registered successfully",
       });
     } catch (error) {
       console.error("Error registering group:", error);
       setAlert({
         type: "error",
-        message: "Failed to register LINE group"
+        message: "Failed to register LINE group",
       });
     } finally {
       setIsLoading(false);
@@ -214,6 +190,32 @@ const LineGroupsListPage = () => {
     setRegisterForm(null);
   };
 
+  const handleViewMessages = async (groupId) => {
+    if (recentMessages[groupId]) {
+      setShowMessages(groupId);
+    } else {
+      try {
+        setIsLoading(true);
+        const messages = await fetchRecentMessages(groupId); // เรียก API
+        console.log("Fetched messages:", messages); // เพิ่ม log เพื่อตรวจสอบข้อมูล
+        setRecentMessages((prev) => ({ ...prev, [groupId]: messages }));
+        setShowMessages(groupId);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        setAlert({
+          type: "error",
+          message: "Failed to load recent messages",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const closeMessages = () => {
+    setShowMessages(null);
+  };
+
   const ActionBar = () => (
     <div className="flex items-center justify-between py-1.5 rounded-md">
       <button
@@ -239,7 +241,7 @@ const LineGroupsListPage = () => {
       {/* Delete Confirmation Modal */}
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
+          <div className="bg-white  rounded-lg shadow-lg max-w-md mx-auto">
             <div className="flex items-center text-red-600 mb-4">
               <ExclamationCircleIcon className="w-6 h-6 mr-2" />
               <h3 className="text-lg font-semibold">Confirm Deletion</h3>
@@ -334,7 +336,43 @@ const LineGroupsListPage = () => {
         </div>
       )}
 
-      <div className="p-6">
+      {/* Recent Messages Modal */}
+      {showMessages && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Recent Messages - {groups.find(g => g.id === showMessages)?.name}
+              </h3>
+              <button onClick={closeMessages} className="text-gray-500 hover:text-gray-700">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {recentMessages[showMessages]?.length > 0 ? (
+                recentMessages[showMessages].map((msg, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>{msg.sender || "Unknown Sender"}</span> {/* ตรวจสอบ sender */}
+                      <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "Unknown Time"}</span> {/* ตรวจสอบ timestamp */}
+                    </div>
+                    <p className="text-gray-800 text-sm">{msg.content || "No Content"}</p> {/* ตรวจสอบ content */}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <p>No recent messages found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div>
         {isLoading && groups.length === 0 ? (
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
@@ -342,7 +380,7 @@ const LineGroupsListPage = () => {
         ) : (
           <>
             {/* Unregistered Groups Section */}
-            {unregisteredGroups.length > 0 && (
+            {(unregisteredGroups || []).length > 0 && (
               <div className="mb-8">
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
                   <div className="flex">
@@ -385,6 +423,12 @@ const LineGroupsListPage = () => {
                               disabled={!group.tempName}
                             >
                               Register
+                            </button>
+                            <button
+                              onClick={() => handleViewMessages(group.id)} // ปุ่มสำหรับดูข้อความล่าสุด
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 ml-2"
+                            >
+                              View Messages
                             </button>
                           </td>
                         </tr>
@@ -441,6 +485,16 @@ const LineGroupsListPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-3">
+                            <button
+                              onClick={() => handleViewMessages(group.id)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Recent Messages"
+                              disabled={isLoading}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                              </svg>
+                            </button>
                             <button
                               onClick={() => handleEdit(group)}
                               className="text-indigo-600 hover:text-indigo-900"

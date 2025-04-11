@@ -1,7 +1,10 @@
 // backend/external/LineConnect/domain/models/message.go
 package models
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // Message represents a message to be sent to LINE
 type Message struct {
@@ -12,6 +15,8 @@ type Message struct {
 	Status    string     `json:"status"` // pending, sent, failed
 	CreatedAt time.Time  `json:"created_at"`
 	SentAt    *time.Time `json:"sent_at"`
+	Sender    string     `json:"sender"` // sender ID or name
+	Timestamp time.Time  `json:"timestamp"`
 }
 
 // MessageRequest is the model for message creation requests
@@ -30,4 +35,8 @@ type MessageResponse struct {
 	Status    string     `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`
 	SentAt    *time.Time `json:"sent_at"`
+	Sender    string     `json:"sender"`
+	Timestamp time.Time  `json:"timestamp"`
 }
+
+var sender sql.NullString
