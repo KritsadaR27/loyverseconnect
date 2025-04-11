@@ -6,9 +6,8 @@ import SidebarLayout from '@/components/layouts/SidebarLayout';
 import POActionBar from './components/POActionBar';
 import POTable from './components/POTable';
 import MobilePOView from './components/MobilePOView';
-import POFooter from './components/POFooter';
-import usePO from './hooks/usePO';
 import Alert from '../../components/Alert'; // นำเข้า Alert component ที่มีอยู่
+import usePO from './hooks/usePO';
 
 // Add placeholder components if they're not available
 const Skeleton = ({ className }) => (
@@ -30,10 +29,26 @@ const ClientPOPage = () => {
     processingAction,
     handleBufferChange,
     handleOrderQuantityChange,
-    handleCoverageDateChange,
     handleSaveBuffers,
+    // LINE notification
+    showSendLineDialog,
+    handleOpenSendLineDialog,
+    handleCloseSendLineDialog,
     handleSendLineNotification,
-    handleGeneratePO,
+    lineGroups,
+    setLineGroups,
+    lineMessage,
+    setLineMessage,
+    lineNote,
+    setLineNote,
+    // Create PO
+    showCreatePODialog,
+    handleOpenCreatePODialog,
+    handleCloseCreatePODialog,
+    handleCreatePO,
+    selectedSupplier,
+    setSelectedSupplier,
+    // UI state
     alert,
     setAlert,
     error
@@ -67,7 +82,29 @@ const ClientPOPage = () => {
           editingBuffers={editingBuffers}
           setEditingBuffers={setEditingBuffers}
           handleSaveBuffers={handleSaveBuffers}
+          // LINE notification
+          showSendLineDialog={showSendLineDialog}
+          handleOpenSendLineDialog={handleOpenSendLineDialog}
+          handleCloseSendLineDialog={handleCloseSendLineDialog}
+          handleSendLineNotification={handleSendLineNotification}
+          lineGroups={lineGroups}
+          setLineGroups={setLineGroups}
+          lineMessage={lineMessage}
+          setLineMessage={setLineMessage}
+          lineNote={lineNote}
+          setLineNote={setLineNote}
+          // Create PO
+          showCreatePODialog={showCreatePODialog}
+          handleOpenCreatePODialog={handleOpenCreatePODialog}
+          handleCloseCreatePODialog={handleCloseCreatePODialog}
+          handleCreatePO={handleCreatePO}
+          selectedSupplier={selectedSupplier}
+          setSelectedSupplier={setSelectedSupplier}
+          // Items for supplier selection
+          items={items}
+          // Disabled state
           disabled={loading || processingAction}
+          processingAction={processingAction}
         />
       }
     >
@@ -116,6 +153,7 @@ const ClientPOPage = () => {
                     items={items}
                     storeStocks={storeStocks}
                     targetCoverageDate={targetCoverageDate}
+                    setTargetCoverageDate={setTargetCoverageDate} // เพิ่ม prop
                     futureDates={futureDates}
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
@@ -127,17 +165,12 @@ const ClientPOPage = () => {
                     storeStocks={storeStocks}
                     futureDates={futureDates}
                     targetCoverageDate={targetCoverageDate}
+                    setTargetCoverageDate={setTargetCoverageDate} // เพิ่ม prop
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
                     editingBuffers={editingBuffers}
                   />
                 )}
-                
-                <POFooter
-                  onSendLine={handleSendLineNotification}
-                  onGeneratePO={handleGeneratePO}
-                  disabled={processingAction || items.filter(item => item.orderQuantity > 0).length === 0}
-                />
               </>
             )}
           </>

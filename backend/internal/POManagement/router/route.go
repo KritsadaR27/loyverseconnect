@@ -39,6 +39,8 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("/api/po", poHandler.GetPOData)
 	mux.HandleFunc("/api/po/calculate", poHandler.CalculateSuggestedQuantities)
 	mux.HandleFunc("/api/po/buffers", poHandler.SaveBufferSettings)
+	mux.HandleFunc("/api/po/buffers/batch", poHandler.GetBufferSettingsBatch) // เพิ่ม endpoint ใหม่
+
 	mux.HandleFunc("/api/po/create", poHandler.CreatePO)
 	mux.HandleFunc("/api/po/detail", poHandler.GetPOByID)
 	mux.HandleFunc("/api/po/list", poHandler.GetAllPOs)

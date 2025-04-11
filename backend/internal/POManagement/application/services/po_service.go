@@ -266,3 +266,10 @@ func (s *POService) formatPOMessage(po *models.PurchaseOrder) string {
 func (s *POService) GetSalesByDay(ctx context.Context, startDate, endDate time.Time) ([]models.SalesByDay, error) {
 	return s.salesService.GetSalesByDay(ctx, startDate, endDate)
 }
+
+// internal/POManagement/application/services/po_service.go
+
+// GetBufferSettingsBatch ดึงข้อมูล buffer settings สำหรับ item IDs จำนวนมาก
+func (s *POService) GetBufferSettingsBatch(ctx context.Context, itemIDs []string) (map[string]int, error) {
+	return s.poRepo.GetBufferSettingsBatch(ctx, itemIDs)
+}

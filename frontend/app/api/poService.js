@@ -1,155 +1,167 @@
 // app/api/poService.js
 import axios from 'axios';
-import { mockPOService } from './mockService';
 
 const isServer = typeof window === 'undefined';
 const PO_API_URL = isServer 
   ? process.env.PURCHASE_ORDER_API_URL 
-  : process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL;
+  : process.env.NEXT_PUBLIC_PURCHASE_ORDER_BASE_URL || 'http://localhost:8088';
 
 const INVENTORY_API_URL = isServer
   ? process.env.INVENTORY_API_URL
-  : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
+  : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8082';
 
-// Flag to enable mock service
-const USE_MOCK_SERVICE = true; // Set to false when backend service is available
+// เปลี่ยนจาก SALES_API_URL เป็น RECEIPT_API_URL เพื่อดึงข้อมูลยอดขาย
+const RECEIPT_API_URL = isServer
+  ? process.env.RECEIPT_API_URL
+  : process.env.NEXT_PUBLIC_RECEIPT_BASE_URL || 'http://localhost:8086';
+
+// ฟังก์ชันสำหรับการจัดการข้อผิดพลาดจาก API
+const handleApiError = (error, fallbackData = [], errorMessage = "API request failed") => {
+  console.error(errorMessage, error);
+  
+  // ถ้าเป็น error จาก axios ให้แสดงรายละเอียดเพิ่มเติม
+  if (error.response) {
+    // คำขอสำเร็จแต่ server ส่งสถานะ error กลับมา
+    console.error('Error response:', error.response.status, error.response.data);
+  } else if (error.request) {
+    // คำขอถูกส่งแต่ไม่ได้รับการตอบกลับ
+    console.error('No response received:', error.request);
+  }
+  
+  return fallbackData;
+};
 
 /**
- * Fetch inventory data for PO generation
- * @returns {Promise<Array>} Array of inventory items
+ * Fetch inventory stock data
+ * @returns {Promise<Array>} Array of inventory items with stock information
  */
 export const fetchInventoryData = async () => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock inventory data');
-    return mockPOService.fetchInventoryData();
-  }
-  
   try {
-    const response = await axios.get(`${INVENTORY_API_URL}/api/inventory-po`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching inventory data:", error);
-    console.log('Falling back to mock inventory data');
-    return mockPOService.fetchInventoryData();
-  }
-};
-
-/**
- * Fetch sales data for specified date range
- * @param {Array<Date>} dates Array of dates to fetch sales for
- * @returns {Promise<Object>} Sales data by day
- */
-export const fetchSalesData = async (dates) => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock sales data');
-    return mockPOService.fetchSalesData(dates);
-  }
-  
-  try {
-    // Convert dates to ISO string format for API
-    const dateParams = dates.map(date => date.toISOString()).join(',');
-    
-    const response = await axios.get(`${PO_API_URL}/api/sales/days`, {
-      params: { 
-        startDate: dates[0].toISOString(),
-        endDate: dates[dates.length - 1].toISOString()
-      }
+    console.log(`Fetching inventory data from: ${INVENTORY_API_URL}/api/item-stock`);
+    const response = await axios.get(`${INVENTORY_API_URL}/api/item-stock`, {
+      timeout: 10000 // เพิ่ม timeout เพื่อป้องกันการรอนานเกินไป
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching sales data:", error);
-    console.log('Falling back to mock sales data');
-    return mockPOService.fetchSalesData(dates);
+    // แทนที่จะ throw error ให้ return ข้อมูลเปล่าและ log error
+    return handleApiError(error, [], "Error fetching inventory data");
   }
 };
 
 /**
- * Fetch store stock levels for specified items
- * @param {Array<string>} itemIds Array of item IDs
- * @returns {Promise<Object>} Stock levels by store
+ * Fetch sales data by day for a specific date range
+ * @param {string} startDate - Start date (YYYY-MM-DD format)
+ * @param {string} endDate - End date (YYYY-MM-DD format)
+ * @returns {Promise<Array>} - Sales data by day
  */
-export const fetchStoreStocks = async (itemIds) => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock store stocks');
-    return mockPOService.fetchStoreStocks(itemIds);
-  }
-  
+export const fetchSalesByDay = async (startDate, endDate) => {
   try {
-    const response = await axios.get(`${INVENTORY_API_URL}/api/store-stocks`, {
-      params: { item_ids: itemIds.join(',') }
+    console.log(`Fetching sales data from: ${RECEIPT_API_URL}/api/sales/days with range:`, startDate, 'to', endDate);
+    
+    // แก้ไขให้ใช้ RECEIPT_API_URL แทน SALES_API_URL และส่งพารามิเตอร์ในรูปแบบที่ถูกต้อง
+    const response = await axios.get(`${RECEIPT_API_URL}/api/sales/days`, {
+      params: {
+        startDate: startDate,
+        endDate: endDate
+      },
+      timeout: 10000
+    });
+    
+    return response.data;
+  } catch (error) {
+    // ถ้าเกิดข้อผิดพลาด ส่งข้อมูลเปล่ากลับไป
+    return handleApiError(error, [], "Error fetching sales data");
+  }
+};
+
+/**
+ * Save buffer settings for items
+ * @param {Array} bufferSettings - Buffer settings for items
+ * @returns {Promise<Object>} - Response message
+ */
+export const saveBufferSettings = async (bufferSettings) => {
+  try {
+    console.log(`Saving buffer settings to: ${PO_API_URL}/api/po/buffers`, bufferSettings);
+    const response = await axios.post(`${PO_API_URL}/api/po/buffers`, bufferSettings, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching store stocks:", error);
-    console.log('Falling back to mock store stocks');
-    return mockPOService.fetchStoreStocks(itemIds);
+    return handleApiError(error, { success: false, message: "Failed to save buffer settings" }, "Error saving buffer settings");
   }
 };
 
 /**
- * Save buffer quantities for items
- * @param {Array<Object>} items Items with buffer quantities
- * @returns {Promise<Object>} Save result
+ * Create a new purchase order
+ * @param {Object} poData - Purchase order data
+ * @returns {Promise<Object>} - Created PO data
  */
-export const saveBufferQuantities = async (items) => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock buffer quantities save');
-    return mockPOService.saveBufferQuantities(items);
-  }
-  
+export const createPO = async (poData) => {
   try {
-    const bufferData = items.map(item => ({
-      item_id: item.id,
-      buffer: item.buffer || 0
-    }));
-    
-    const response = await axios.post(`${PO_API_URL}/api/buffer-quantities`, bufferData);
+    console.log(`Creating PO at: ${PO_API_URL}/api/po/create`, poData);
+    const response = await axios.post(`${PO_API_URL}/api/po/create`, poData, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    });
     return response.data;
   } catch (error) {
-    console.error("Error saving buffer quantities:", error);
-    console.log('Falling back to mock buffer quantities save');
-    return mockPOService.saveBufferQuantities(items);
+    return handleApiError(error, { success: false, message: "Failed to create PO" }, "Error creating PO");
   }
 };
 
 /**
- * Send LINE notification for purchase order
- * @param {Object} notificationData Notification data
- * @returns {Promise<Object>} Notification result
+ * Send LINE notification about a purchase order
+ * @param {Object} notificationData - Notification data
+ * @returns {Promise<Object>} - Response message
  */
 export const sendLineNotification = async (notificationData) => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock LINE notification');
-    return mockPOService.sendLineNotification(notificationData);
-  }
-  
   try {
-    const response = await axios.post(`${PO_API_URL}/api/notify/line`, notificationData);
+    console.log(`Sending Line notification to: ${PO_API_URL}/api/po/notify`, notificationData);
+    const response = await axios.post(`${PO_API_URL}/api/po/notify`, notificationData, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    });
     return response.data;
   } catch (error) {
-    console.error("Error sending LINE notification:", error);
-    console.log('Falling back to mock LINE notification');
-    return mockPOService.sendLineNotification(notificationData);
+    return handleApiError(error, { success: false, message: "Failed to send notification" }, "Error sending LINE notification");
   }
 };
 
 /**
- * Generate purchase order
- * @param {Object} purchaseOrderData Purchase order data
- * @returns {Promise<Object>} Generated purchase order
+ * Fetch buffer settings for items
+ * @param {Array} itemIds - Array of item IDs
+ * @returns {Promise<Object>} - Buffer settings by item ID
  */
-export const generatePurchaseOrder = async (purchaseOrderData) => {
-  if (USE_MOCK_SERVICE) {
-    console.log('Using mock purchase order generation');
-    return mockPOService.generatePurchaseOrder(purchaseOrderData);
+export const fetchBufferSettings = async (itemIds) => {
+  if (!itemIds || itemIds.length === 0) {
+    return {};
   }
   
   try {
-    const response = await axios.post(`${PO_API_URL}/api/purchase-orders`, purchaseOrderData);
+    console.log(`Fetching buffer settings from: ${PO_API_URL}/api/po/buffers/batch with ${itemIds.length} items`);
+    
+    // แก้ไขวิธีการส่ง itemIds แบบที่ URL ไม่ยาวเกินไป
+    // ใช้ POST แทน GET เพื่อส่ง itemIds เป็น request body
+    const response = await axios.post(`${PO_API_URL}/api/po/buffers/batch`, 
+      { item_ids: itemIds },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error generating purchase order:", error);
-    console.log('Falling back to mock purchase order generation');
-    return mockPOService.generatePurchaseOrder(purchaseOrderData);
+    // ถ้าเกิดข้อผิดพลาด ให้ส่งข้อมูลเปล่ากลับไป
+    console.error("Error fetching buffer settings:", error);
+    return {};
   }
 };

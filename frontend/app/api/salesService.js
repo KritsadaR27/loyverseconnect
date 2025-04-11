@@ -5,6 +5,10 @@ const isServer = typeof window === "undefined";
 const SALES_API_URL = isServer
     ? process.env.SALES_API_URL
     : process.env.NEXT_PUBLIC_SALE_BASE_URL;
+const RECEIPT_API_URL = isServer
+    ? process.env.const.RECEIPT_API_URL = isServer
+    : process.env.NEXT_PUBLIC_RECEIPT_BASE_URL;
+
 // const SALES_API_URL = process.env.NEXT_PUBLIC_SALE_BASE_URL;
 
 export const fetchSalesByItem = async (offset = 0, pageSize = 100) => {
@@ -21,7 +25,7 @@ export const fetchSalesByItem = async (offset = 0, pageSize = 100) => {
 
 export const fetchSalesByDay = async (startDate, endDate) => {
     try {
-        const response = await axios.get(`${SALES_API_URL}/api/sales/days`, {
+        const response = await axios.get(`${RECEIPT_API_URL}/api/sales/days`, {
             params: {
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),

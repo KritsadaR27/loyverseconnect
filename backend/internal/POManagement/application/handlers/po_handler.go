@@ -298,3 +298,40 @@ func (h *POHandler) SendLineNotification(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "LINE notification sent successfully"})
 }
+
+// GetBufferSettingsBatch จัดการคำขอสำหรับดึงข้อมูล buffer settings จำนวนมาก
+func (h *POHandler) GetBufferSettingsBatch(w http.ResponseWriter, r *http.Request) {
+	// ตรวจสอบวิธี HTTP
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// แยกวิเคราะห์คำขอ
+	var req struct {
+		ItemIDs []string `json:"item_ids"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.ItemIDs) == 0 {
+		// ส่งกลับ map ว่างหากไม่มี item IDs
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]int{})
+		return
+	}
+
+	// ดึงข้อมูล buffer settings
+	bufferSettings, err := h.poService.GetBufferSettingsBatch(r.Context(), req.ItemIDs)
+	if err != nil {
+		http.Error(w, "Failed to get buffer settings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// ส่งผลตอบกลับ
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(bufferSettings)
+}

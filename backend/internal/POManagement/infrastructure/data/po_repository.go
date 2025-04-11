@@ -610,3 +610,48 @@ func (r *PurchaseOrderRepository) GetBufferSettings(ctx context.Context, itemIDs
 
 	return bufferSettings, nil
 }
+
+// ใช้ฟังก์ชัน GetBufferSettingsBatch รับ item IDs จาก request body เพื่อหลีกเลี่ยงปัญหา URL ยาวเกินไป
+func (r *PurchaseOrderRepository) GetBufferSettingsBatch(ctx context.Context, itemIDs []string) (map[string]int, error) {
+	if len(itemIDs) == 0 {
+		return make(map[string]int), nil
+	}
+
+	// สร้าง placeholders และ arguments สำหรับ IN query
+	placeholders := make([]string, len(itemIDs))
+	args := make([]interface{}, len(itemIDs))
+	for i, id := range itemIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	// ดึงข้อมูล buffer settings จากฐานข้อมูล
+	query := fmt.Sprintf(`
+        SELECT item_id, reserve_quantity
+        FROM buffer_settings
+        WHERE item_id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get buffer settings: %w", err)
+	}
+	defer rows.Close()
+
+	// สร้าง map เก็บผลลัพธ์
+	bufferSettings := make(map[string]int)
+	for rows.Next() {
+		var itemID string
+		var reserve int
+		if err := rows.Scan(&itemID, &reserve); err != nil {
+			return nil, fmt.Errorf("failed to scan buffer setting: %w", err)
+		}
+		bufferSettings[itemID] = reserve
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating buffer settings: %w", err)
+	}
+
+	return bufferSettings, nil
+}

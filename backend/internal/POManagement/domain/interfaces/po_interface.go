@@ -26,6 +26,7 @@ type PurchaseOrderRepository interface {
 	// การจัดการยอดเผื่อ
 	SaveBufferSettings(ctx context.Context, settings []models.BufferSettings) error
 	GetBufferSettings(ctx context.Context, itemIDs []string) (map[string]int, error)
+	GetBufferSettingsBatch(ctx context.Context, itemIDs []string) (map[string]int, error)
 }
 
 // InventoryService กำหนด interface สำหรับเชื่อมต่อกับระบบ Inventory

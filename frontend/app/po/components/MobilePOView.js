@@ -10,42 +10,33 @@ const MobilePOView = ({
   items,
   storeStocks,
   targetCoverageDate,
+  setTargetCoverageDate,
   futureDates,
   handleBufferChange,
   handleOrderQuantityChange,
   editingBuffers,
 }) => {
   // คำนวณระดับของสต็อก (สีแดง/เหลือง/เขียว)
-  const getStockLevelIndicator = (currentStock, targetStock) => {
-    const ratio = currentStock / targetStock;
-    if (ratio < 0.3) return 'bg-red-100 text-red-800';
-    if (ratio < 0.7) return 'bg-yellow-100 text-yellow-800';
+  const getStockLevelIndicator = (value) => {
+    if (value < 0) return 'bg-red-100 text-red-800';
+    if (value < 20) return 'bg-yellow-100 text-yellow-800';
     return 'bg-green-100 text-green-800';
   };
 
   return (
     <div className="space-y-4">
       {items.map((item) => {
-        const suggestedQuantity = Math.max(0, 
-          (item.dailySales[targetCoverageDate.toDateString()] || 0) - 
-          item.currentStock + 
-          (item.buffer || 0)
-        );
-        
         return (
           <Card key={item.id} className="w-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex justify-between items-center">
                 <div>
                   <span>{item.name}</span>
-                  <span className="text-xs text-gray-500 block">{item.sku}</span>
+                  <span className="text-xs text-gray-500 block">{item.id}</span>
                 </div>
                 <Badge 
                   variant="outline"
-                  className={getStockLevelIndicator(
-                    item.currentStock, 
-                    item.dailySales[targetCoverageDate.toDateString()] || 0
-                  )}
+                  className={getStockLevelIndicator(item.currentStock)}
                 >
                   สต็อกรวม: {formatNumber(item.currentStock)}
                 </Badge>
@@ -69,19 +60,43 @@ const MobilePOView = ({
                         ))}
                       </div>
                       
-                      <h4 className="font-medium mt-3">ยอดขายย้อนหลัง:</h4>
+                      <h4 className="font-medium mt-3">ยอดขายและสต็อกคงเหลือ:</h4>
                       <div className="grid grid-cols-3 gap-1">
-                        {futureDates.map((date) => (
-                          <div 
-                            key={date.toISOString()} 
-                            className={`flex flex-col p-1 rounded ${
-                              date.toDateString() === targetCoverageDate?.toDateString() ? 'bg-blue-50' : ''
-                            }`}
-                          >
-                            <span className="text-xs">{formatDate(date, 'dd/MM')}</span>
-                            <span className="font-medium">{formatNumber(item.dailySales[date.toDateString()] || 0)}</span>
-                          </div>
-                        ))}
+                        {futureDates.map((date, index) => {
+                          const dateStr = date.toISOString().split('T')[0];
+                          const dailySale = item.dailySales[dateStr] || 0;
+                          
+                          // คำนวณยอดขายสะสม
+                          let accumulatedSales = 0;
+                          for (let i = 0; i <= index; i++) {
+                            const dateKey = futureDates[i].toISOString().split('T')[0];
+                            accumulatedSales += (item.dailySales[dateKey] || 0);
+                          }
+                          
+                          // คำนวณสต็อกคงเหลือ
+                          const remainingStock = item.currentStock - accumulatedSales;
+                          
+                          const isTargetDate = targetCoverageDate && 
+                            date.toISOString().split('T')[0] === targetCoverageDate.toISOString().split('T')[0];
+                            
+                          return (
+                            <div 
+                              key={date.toISOString()} 
+                              className={`flex flex-col p-2 rounded border ${
+                                isTargetDate ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
+                              }`}
+                              onClick={() => setTargetCoverageDate(date)}
+                            >
+                              <span className="text-xs">{formatDate(date, 'dd/MM')}</span>
+                              <span className="text-xs text-red-600">
+                                {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
+                              </span>
+                              <span className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
+                                {formatNumber(remainingStock)}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </AccordionContent>
@@ -104,7 +119,7 @@ const MobilePOView = ({
                 <div className="flex flex-col items-center">
                   <label className="text-xs mb-1">ยอดแนะนำ</label>
                   <div className="font-medium text-center h-10 flex items-center justify-center border rounded p-2 bg-gray-50">
-                    {formatNumber(suggestedQuantity)}
+                    {formatNumber(item.suggestedOrderQuantity)}
                   </div>
                 </div>
                 
@@ -116,7 +131,7 @@ const MobilePOView = ({
                     value={item.orderQuantity || 0}
                     onChange={(e) => handleOrderQuantityChange(item.id, parseInt(e.target.value) || 0)}
                     className={`w-full text-center ${
-                      (item.orderQuantity || 0) !== suggestedQuantity ? 'bg-yellow-50 border-yellow-300' : ''
+                      (item.orderQuantity || 0) !== item.suggestedOrderQuantity ? 'bg-yellow-50 border-yellow-300' : ''
                     }`}
                   />
                 </div>
