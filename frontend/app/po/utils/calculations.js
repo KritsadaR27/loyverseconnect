@@ -1,13 +1,13 @@
-// utils/calculations.js
+// app/po/utils/calculations.js
 /**
- * ประมวลผลข้อมูลสินค้าร่วมกับข้อมูลยอดขาย
- * @param {Array} inventoryData ข้อมูลสต็อกสินค้า
- * @param {Object} salesData ข้อมูลยอดขายตามวัน
- * @returns {Array} ข้อมูลสินค้าที่ประมวลผลแล้ว
+ * Process item data with sales data
+ * @param {Array} inventoryData Inventory stock data
+ * @param {Object} salesData Sales data by day
+ * @returns {Array} Processed items with sales data
  */
 export const processItemsWithSalesData = (inventoryData, salesData) => {
     return inventoryData.map(item => {
-      // สร้าง map ของยอดขายตามวัน
+      // Create map of sales by day
       const dailySales = {};
       
       if (salesData && salesData.days) {
@@ -28,10 +28,10 @@ export const processItemsWithSalesData = (inventoryData, salesData) => {
   };
   
   /**
-   * คำนวณยอดสั่งซื้อแนะนำ
-   * @param {Object} item ข้อมูลสินค้า
-   * @param {Date} targetDate วันที่ต้องการให้พอขาย
-   * @returns {number} ยอดสั่งซื้อแนะนำ
+   * Calculate suggested order quantity
+   * @param {Object} item Item data
+   * @param {Date} targetDate Target date for coverage
+   * @returns {number} Suggested order quantity
    */
   export const calculateSuggestedOrderQuantity = (item, targetDate) => {
     if (!item || !targetDate) return 0;
@@ -39,17 +39,17 @@ export const processItemsWithSalesData = (inventoryData, salesData) => {
     const dateKey = targetDate.toDateString();
     const projectedSales = item.dailySales[dateKey] || 0;
     
-    // ยอดสั่งซื้อแนะนำ = ยอดขายในวันเป้าหมาย - สต็อกปัจจุบัน + ยอดเผื่อ
+    // Suggested quantity = target date sales - current stock + buffer
     let suggestedQuantity = projectedSales - item.currentStock + (item.buffer || 0);
     
-    // กรณีไม่จำเป็นต้องสั่งเพิ่ม
+    // No need to order if suggested quantity is negative
     return Math.max(0, suggestedQuantity);
   };
   
   /**
-   * จัดกลุ่มสินค้าตามซัพพลายเออร์
-   * @param {Array} items รายการสินค้า
-   * @returns {Object} สินค้าที่จัดกลุ่มตามซัพพลายเออร์
+   * Group items by supplier
+   * @param {Array} items Item list
+   * @returns {Object} Items grouped by supplier
    */
   export const groupItemsBySupplier = (items) => {
     return items.reduce((grouped, item) => {
@@ -75,10 +75,10 @@ export const processItemsWithSalesData = (inventoryData, salesData) => {
   };
   
   /**
-   * สร้างข้อความสำหรับส่งไลน์
-   * @param {Array} items รายการสินค้า
-   * @param {Date} deliveryDate วันที่รับสินค้า
-   * @returns {string} ข้อความสำหรับส่งไลน์
+   * Generate LINE message for order notification
+   * @param {Array} items Order items
+   * @param {Date} deliveryDate Delivery date
+   * @returns {string} Formatted LINE message
    */
   export const generateLineMessage = (items, deliveryDate) => {
     const orderItems = items.filter(item => item.orderQuantity > 0);
@@ -89,7 +89,7 @@ export const processItemsWithSalesData = (inventoryData, salesData) => {
     
     let message = `แจ้งรายการสั่งซื้อสินค้า (${deliveryDateStr})\n\n`;
     
-    // กลุ่มตามซัพพลายเออร์
+    // Group by supplier
     const groupedBySupplier = groupItemsBySupplier(orderItems);
     
     Object.entries(groupedBySupplier).forEach(([supplierId, supplierData]) => {
@@ -108,25 +108,12 @@ export const processItemsWithSalesData = (inventoryData, salesData) => {
   };
   
   /**
-   * คำนวณมูลค่ารวมของการสั่งซื้อ
-   * @param {Array} items รายการสินค้า
-   * @returns {number} มูลค่ารวม
+   * Calculate total order value
+   * @param {Array} items Order items
+   * @returns {number} Total order value
    */
   export const calculateTotalOrderValue = (items) => {
     return items.reduce((total, item) => {
       return total + (item.orderQuantity * (item.unit_price || 0));
     }, 0);
-  };
-  
-  /**
-   * ฟอร์แมตจำนวนเงิน
-   * @param {number} value จำนวนเงิน
-   * @returns {string} จำนวนเงินที่ฟอร์แมตแล้ว
-   */
-  export const formatCurrency = (value) => {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      minimumFractionDigits: 2
-    }).format(value);
   };

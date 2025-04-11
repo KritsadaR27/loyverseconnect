@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "moment-timezone": "^0.5.46"
+    "moment-timezone": "^0.5.46",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4"

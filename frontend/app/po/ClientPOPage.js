@@ -8,7 +8,8 @@ import POTable from './components/POTable';
 import MobilePOView from './components/MobilePOView';
 import POFooter from './components/POFooter';
 import usePO from './hooks/usePO';
-import { Skeleton } from '@/components/ui/skeleton';
+import Alert from '../../components/Alert'; // นำเข้า Alert component ที่มีอยู่
+
 
 const ClientPOPage = () => {
   const { 
@@ -28,7 +29,10 @@ const ClientPOPage = () => {
     handleCoverageDateChange,
     handleSaveBuffers,
     handleSendLineNotification,
-    handleGeneratePO
+    handleGeneratePO,
+    alert,
+    setAlert
+
   } = usePO();
   
   const [isMobile, setIsMobile] = useState(false);
@@ -37,10 +41,10 @@ const ClientPOPage = () => {
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     
-    // เซ็ตค่าเริ่มต้น
+    // Set initial value
     handleResize();
     
-    // เพิ่ม event listener
+    // Add event listener
     window.addEventListener("resize", handleResize);
     
     return () => window.removeEventListener("resize", handleResize);

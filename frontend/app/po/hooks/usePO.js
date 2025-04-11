@@ -1,4 +1,4 @@
-// hooks/usePO.js
+// app/po/hooks/usePO.js
 import { useState, useEffect, useCallback } from 'react';
 import { 
   fetchInventoryData, 
@@ -15,7 +15,7 @@ import {
   groupItemsBySupplier,
   calculateTotalOrderValue 
 } from '@/app/po/utils/calculations';
-import { toast } from '@/components/ui/use-toast';
+
 
 const usePO = (initialData = {}) => {
   const [items, setItems] = useState(initialData.items || []);
@@ -26,13 +26,15 @@ const usePO = (initialData = {}) => {
   const [storeStocks, setStoreStocks] = useState({});
   const [editingBuffers, setEditingBuffers] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
+  const [alert, setAlert] = useState(null); // เพิ่ม state สำหรับ alert
+
   
-  // สร้างวันที่สำหรับการคาดการณ์ล่วงหน้า
+  // Create dates for future projections
   useEffect(() => {
     const currentDate = new Date(deliveryDate);
     const futureProjectionDates = [];
     
-    // สร้างวันที่ล่วงหน้าเพื่อคาดการณ์
+    // Create future dates for projection
     for (let i = 0; i < 5; i++) {
       const date = new Date(currentDate);
       date.setDate(date.getDate() + i);
@@ -41,46 +43,48 @@ const usePO = (initialData = {}) => {
     
     setFutureDates(futureProjectionDates);
     
-    // ตั้งค่าวันที่เป้าหมายเริ่มต้น (วันที่ลงของ + 1)
+    // Set default target date (delivery date + 1)
     if (!targetCoverageDate || targetCoverageDate < currentDate) {
       const defaultTarget = new Date(currentDate);
       defaultTarget.setDate(defaultTarget.getDate() + 1);
       setTargetCoverageDate(defaultTarget);
     }
-  }, [deliveryDate]);
+  }, [deliveryDate, targetCoverageDate]);
   
-  // โหลดข้อมูลสต็อกและยอดขาย
+  // Load stock and sales data
   useEffect(() => {
     const loadData = async () => {
       if (futureDates.length === 0) return;
       
       setLoading(true);
       try {
-        // ดึงข้อมูลสต็อกและยอดขายพร้อมกัน
+        // Fetch inventory and sales data in parallel
         const [inventoryData, salesData] = await Promise.all([
           fetchInventoryData(),
           fetchSalesData(futureDates)
         ]);
         
-        // แปลงข้อมูลให้อยู่ในรูปแบบที่ใช้งานได้
+        // Process data into usable format
         const processedItems = processItemsWithSalesData(inventoryData, salesData);
         setItems(processedItems);
         
-        // ดึงข้อมูลสต็อกตามสาขา
+        // Fetch store stock data
         const itemIds = processedItems.map(item => item.id);
         const storeStocksData = await fetchStoreStocks(itemIds);
         setStoreStocks(storeStocksData);
         
-        // คำนวณยอดสั่งซื้อแนะนำเริ่มต้น
+        // Calculate suggested order quantities based on target date
         if (targetCoverageDate) {
           updateSuggestedOrderQuantities(processedItems, targetCoverageDate);
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        toast({
-          title: "เกิดข้อผิดพลาด",
-          description: "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
-          variant: "destructive",
+        setAlert({
+            message: "เกิดข้อผิดพลาด",
+            type: "error",
+            description: "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+            variant: "destructive",
+         
         });
       } finally {
         setLoading(false);
@@ -90,14 +94,14 @@ const usePO = (initialData = {}) => {
     loadData();
   }, [futureDates]);
   
-  // อัพเดทยอดสั่งซื้อแนะนำเมื่อเปลี่ยนวันที่
+  // Update suggested order quantities when target date changes
   useEffect(() => {
     if (targetCoverageDate && items.length > 0) {
       updateSuggestedOrderQuantities(items, targetCoverageDate);
     }
   }, [targetCoverageDate]);
   
-  // ฟังก์ชันอัพเดทยอดสั่งซื้อแนะนำตามวันที่
+  // Function to update suggested order quantities based on date
   const updateSuggestedOrderQuantities = (itemsToUpdate, date) => {
     const updatedItems = itemsToUpdate.map(item => {
       const suggestedQuantity = calculateSuggestedOrderQuantity(item, date);
@@ -110,7 +114,7 @@ const usePO = (initialData = {}) => {
     setItems(updatedItems);
   };
   
-  // ฟังก์ชันอัพเดทยอดเผื่อ
+  // Function to update buffer quantities
   const handleBufferChange = useCallback((itemId, value) => {
     setItems(prevItems => 
       prevItems.map(item => {
@@ -120,7 +124,7 @@ const usePO = (initialData = {}) => {
             buffer: value
           };
           
-          // คำนวณยอดสั่งซื้อแนะนำใหม่
+          // Recalculate suggested order quantity
           if (targetCoverageDate) {
             updatedItem.orderQuantity = calculateSuggestedOrderQuantity(updatedItem, targetCoverageDate);
           }
@@ -132,7 +136,7 @@ const usePO = (initialData = {}) => {
     );
   }, [targetCoverageDate]);
   
-  // ฟังก์ชันอัพเดทยอดสั่งซื้อ
+  // Function to update order quantities
   const handleOrderQuantityChange = useCallback((itemId, value) => {
     setItems(prevItems => 
       prevItems.map(item => {
@@ -147,38 +151,38 @@ const usePO = (initialData = {}) => {
     );
   }, []);
   
-  // ฟังก์ชันเมื่อเปลี่ยนวันที่ต้องการให้พอขาย
+  // Function to handle coverage date change
   const handleCoverageDateChange = useCallback((date) => {
     setTargetCoverageDate(date);
   }, []);
   
-  // ฟังก์ชันบันทึกยอดเผื่อ
+  // Function to save buffer quantities
   const handleSaveBuffers = useCallback(async () => {
     setProcessingAction(true);
     try {
       await saveBufferQuantities(items);
       
-      toast({
-        title: "บันทึกสำเร็จ",
+      setAlert({
+        message: "บันทึกสำเร็จ",
         description: "บันทึกยอดเผื่อเรียบร้อยแล้ว",
-        variant: "default",
+        type: "success",
       });
       
-      // อัพเดทสถานะการแก้ไข
+      // Update editing status
       setEditingBuffers(false);
     } catch (error) {
       console.error("Error saving buffer quantities:", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
+      message({
+        message: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถบันทึกยอดเผื่อได้ กรุณาลองใหม่อีกครั้ง",
-        variant: "destructive",
+        type: "error",
       });
     } finally {
       setProcessingAction(false);
     }
   }, [items]);
   
-  // ฟังก์ชันส่งไลน์แจ้งเตือน
+  // Function to send Line notification
   const handleSendLineNotification = useCallback(async (lineData) => {
     setProcessingAction(true);
     try {
@@ -190,19 +194,19 @@ const usePO = (initialData = {}) => {
         groupIds: lineData.groupIds || []
       });
       
-      toast({
-        title: "ส่งข้อความสำเร็จ",
+      setAlert({ 
+        message: "ส่งข้อความสำเร็จ",
         description: "ส่งแจ้งเตือนทางไลน์เรียบร้อยแล้ว",
-        variant: "default",
+        type: "success",
       });
       
       return true;
     } catch (error) {
       console.error("Error sending Line notification:", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
+      setAlert({ 
+        message: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถส่งแจ้งเตือนทางไลน์ได้ กรุณาลองใหม่อีกครั้ง",
-        variant: "destructive",
+        type: "success",
       });
       return false;
     } finally {
@@ -210,11 +214,11 @@ const usePO = (initialData = {}) => {
     }
   }, [items, deliveryDate]);
   
-  // ฟังก์ชันออกใบรับของ
+  // Function to generate purchase order
   const handleGeneratePO = useCallback(async (poData) => {
     setProcessingAction(true);
     try {
-      // กรองเฉพาะสินค้าที่มีการสั่งซื้อและตรงกับซัพพลายเออร์
+      // Filter items that have order quantities and match supplier
       const filteredItems = items.filter(
         item => item.orderQuantity > 0 && item.supplier_id === poData.supplierId
       );
@@ -243,19 +247,19 @@ const usePO = (initialData = {}) => {
       
       const result = await generatePurchaseOrder(purchaseOrderData);
       
-      toast({
-        title: "สร้างใบรับของสำเร็จ",
+      setAlert({ 
+        message: "สร้างใบรับของสำเร็จ",
         description: `สร้างใบรับของเลขที่ ${result.po_number} เรียบร้อยแล้ว`,
-        variant: "default",
+        type: "success"
       });
       
       return true;
     } catch (error) {
       console.error("Error generating purchase order:", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
+      setAlert({ 
+        message: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถสร้างใบรับของได้ กรุณาลองใหม่อีกครั้ง",
-        variant: "destructive",
+    type: "success",
       });
       return false;
     } finally {

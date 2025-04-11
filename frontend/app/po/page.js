@@ -7,8 +7,7 @@ export const metadata = {
   import ClientPOPage from './ClientPOPage';
   
   export default function POPage() {
-    // ในส่วนนี้สามารถเพิ่มการเตรียมข้อมูลเริ่มต้นจาก server ได้ แต่ในที่นี้จะใช้ Client fetching
-  
+    // Server components can prepare initial data here if needed
     return (
       <ClientPOPage />
     );
