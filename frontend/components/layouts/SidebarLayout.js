@@ -17,7 +17,7 @@ const SidebarLayout = ({ children, headerTitle, actionBar, onScroll }) => {
                         {actionBar}
                     </header>
                     {/* Page Content */}
-                    <div className="flex-1 overflow-hidden bg-gray-200">
+                    <div className="flex-1 overflow-hidden bg-gray-100">
                     <DynamicHeightWrapper headerTitle={headerTitle} actionBar={actionBar} onScroll={onScroll}>
 
                         {children}

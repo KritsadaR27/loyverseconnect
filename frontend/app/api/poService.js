@@ -13,27 +13,23 @@ const INVENTORY_API_URL = isServer
 // เปลี่ยนจาก SALES_API_URL เป็น RECEIPT_API_URL เพื่อดึงข้อมูลยอดขาย
 const RECEIPT_API_URL = isServer
   ? process.env.RECEIPT_API_URL
-  : process.env.NEXT_PUBLIC_RECEIPT_BASE_URL || 'http://localhost:8086';
+  : process.env.NEXT_PUBLIC_RECEIPT_BASE_URL || 'http://localhost:8084';
 
-  /**
+/**
  * เช็คว่าสามารถติดต่อกับ API ได้หรือไม่
  * @param {string} url - URL ที่ต้องการเช็ค
  * @returns {Promise<boolean>} - true ถ้าติดต่อได้, false ถ้าติดต่อไม่ได้
  */
 const checkApiAvailability = async (url) => {
-    try {
-      // ใช้ HEAD request เพื่อเช็คการเข้าถึง API โดยไม่ต้องดึงข้อมูล
-      await axios.head(url, { timeout: 2000 });
-      return true;
-    } catch (error) {
-      console.warn(`API at ${url} is not available:`, error.message);
-      return false;
-    }
-  };
-// สร้าง mock API URL สำหรับทดสอบเมื่อ API หลักไม่ทำงาน
-// const MOCK_API_URL = isServer
-//   ? process.env.MOCK_API_URL
-//   : process.env.NEXT_PUBLIC_MOCK_API_URL || 'http://localhost:3000/api';
+  try {
+    // ใช้ HEAD request เพื่อเช็คการเข้าถึง API โดยไม่ต้องดึงข้อมูล
+    await axios.head(url, { timeout: 2000 });
+    return true;
+  } catch (error) {
+    console.warn(`API at ${url} is not available:`, error.message);
+    return false;
+  }
+};
 
 // ฟังก์ชันสำหรับการจัดการข้อผิดพลาดจาก API
 const handleApiError = (error, fallbackData = [], errorMessage = "API request failed") => {
@@ -75,27 +71,63 @@ export const fetchInventoryData = async () => {
  * @returns {Promise<Array>} - Sales data by day
  */
 export const fetchSalesByDay = async (startDate, endDate) => {
-    try {
-      console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
-      
-      // Make sure to use the ISO format that the API expects
-      const response = await axios.get(`${RECEIPT_API_URL}/api/sales/days`, {
-        params: {
-          startDate,
-          endDate
-        },
-        timeout: 15000 // Increase timeout to 15 seconds
-      });
-      
-      console.log('Sales data received:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching sales data:', error);
-      
-      // Return empty array instead of throwing error so the app continues to work
+  try {
+    console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
+    
+    // Make sure the URL points to the correct API endpoint
+    const url = `${RECEIPT_API_URL}/api/sales/days`;
+    console.log(`Complete URL: ${url}`);
+    
+    // Log the request parameters for debugging
+    console.log('Request params:', { startDate, endDate });
+    
+    // Make sure to use the ISO format that the API expects
+    const response = await axios.get(url, {
+      params: {
+        startDate,
+        endDate
+      },
+      timeout: 15000 // Increase timeout to 15 seconds
+    });
+    
+    console.log('Sales data response status:', response.status);
+    console.log('Sales data received:', response.data);
+    
+    // Validate the response data
+    if (!Array.isArray(response.data)) {
+      console.warn('Sales data is not an array:', response.data);
       return [];
     }
-  };
+    
+    // Map the response to include item_id if it's missing
+    const mappedData = response.data.map(item => {
+      // Ensure each item has an item_id, extract from item_name if needed
+      if (!item.item_id && item.item_name) {
+        // Try to extract item_id from item_name (assuming format like "P101")
+        const match = item.item_name.match(/^(P\d+)/);
+        if (match) {
+          return { ...item, item_id: match[1] };
+        }
+      }
+      return item;
+    });
+    
+    return mappedData;
+  } catch (error) {
+    console.error('Error fetching sales data:', error);
+    
+    // Check if connection can be established to the API server
+    const isApiAvailable = await checkApiAvailability(RECEIPT_API_URL);
+    if (!isApiAvailable) {
+      console.warn('Sales API server appears to be down or unreachable');
+      // Provide mock sales data structure for development
+      return [];
+    }
+    
+    // Return empty array instead of throwing error so the app continues to work
+    return [];
+  }
+};
 
 /**
  * Save buffer settings for items with improved error handling
@@ -103,47 +135,47 @@ export const fetchSalesByDay = async (startDate, endDate) => {
  * @returns {Promise<Object>} - Response message
  */
 export const saveBufferSettings = async (bufferSettings) => {
-    try {
-      console.log(`Saving buffer settings for ${bufferSettings.length} items:`, bufferSettings);
-      
-      // Try to save to the API
-      const response = await axios.post(
-        `${PO_API_URL}/api/po/buffers`, 
-        bufferSettings, 
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 8000
-        }
-      );
-      
-      console.log('Buffer settings saved successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error saving buffer settings:", error);
-      
-      // Handle various error types
-      if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
-        // Network connection error
-        console.warn("Network connection error. API server may be down.");
-        
-        // Still return success to allow the user to continue
-        return { 
-          success: true, 
-          message: "Buffer settings saved locally. Will sync when connection is restored.",
-          offline: true
-        };
+  try {
+    console.log(`Saving buffer settings for ${bufferSettings.length} items:`, bufferSettings);
+    
+    // Try to save to the API
+    const response = await axios.post(
+      `${PO_API_URL}/api/po/buffers`, 
+      bufferSettings, 
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 8000
       }
+    );
+    
+    console.log('Buffer settings saved successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error saving buffer settings:", error);
+    
+    // Handle various error types
+    if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
+      // Network connection error
+      console.warn("Network connection error. API server may be down.");
       
-      // Return error info
+      // Still return success to allow the user to continue
       return { 
-        success: false, 
-        message: `Failed to save buffer settings: ${error.message}`,
-        error: error.message
+        success: true, 
+        message: "Buffer settings saved locally. Will sync when connection is restored.",
+        offline: true
       };
     }
-  };
+    
+    // Return error info
+    return { 
+      success: false, 
+      message: `Failed to save buffer settings: ${error.message}`,
+      error: error.message
+    };
+  }
+};
 
 /**
  * Create a new purchase order
@@ -184,7 +216,6 @@ export const sendLineNotification = async (notificationData) => {
     return handleApiError(error, { success: false, message: "Failed to send notification" }, "Error sending LINE notification");
   }
 };
-// แก้ไขฟังก์ชัน fetchBufferSettings ใน frontend/app/api/poService.js
 
 /**
  * Fetch buffer settings for items with improved error handling

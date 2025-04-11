@@ -89,8 +89,13 @@ const POTable = ({
                     </div>
                   </td>
                   {dateColumns.map((col, colIndex) => {
-                    const dailySale = item.dailySales[col.dateStr] || 0;
-                    
+                      const dateStr = col.dateStr;
+
+// เปลี่ยนเป็นตรวจสอบทุกวันที่มีในข้อมูล
+                  const dailySale = Object.keys(item.dailySales || {}).includes(dateStr) 
+                    ? item.dailySales[dateStr] 
+                    : 0;                    console.log(`Item ${item.name} sale on ${dateStr}:`, dailySale, item.dailySales);
+
                     // Accumulate sales up to this date
                     let accumulatedSales = 0;
                     for (let i = 0; i <= colIndex; i++) {
