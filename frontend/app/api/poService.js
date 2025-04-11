@@ -184,6 +184,7 @@ export const sendLineNotification = async (notificationData) => {
     return handleApiError(error, { success: false, message: "Failed to send notification" }, "Error sending LINE notification");
   }
 };
+// แก้ไขฟังก์ชัน fetchBufferSettings ใน frontend/app/api/poService.js
 
 /**
  * Fetch buffer settings for items with improved error handling
@@ -191,38 +192,37 @@ export const sendLineNotification = async (notificationData) => {
  * @returns {Promise<Object>} - Buffer settings by item ID
  */
 export const fetchBufferSettings = async (itemIds) => {
-    if (!itemIds || itemIds.length === 0) {
-      return {};
-    }
+  if (!itemIds || itemIds.length === 0) {
+    return {};
+  }
+  
+  try {
+    console.log(`Fetching buffer settings for ${itemIds.length} items`);
     
-    try {
-      console.log(`Fetching buffer settings for ${itemIds.length} items`);
-      
-      // Attempt to fetch from API
-      const response = await axios.post(
-        `${PO_API_URL}/api/po/buffers/batch`, 
-        { item_ids: itemIds },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          // Reduce timeout to fail faster if server is down
-          timeout: 5000
-        }
-      );
-      
-      console.log('Buffer settings fetched successfully');
-      return response.data;
-    } catch (error) {
-      console.warn("Error fetching buffer settings:", error);
-      
-      // Create default buffer settings (10 for each item)
-      const defaultSettings = {};
-      itemIds.forEach(id => {
-        defaultSettings[id] = 10;
-      });
-      
-      console.log('Using default buffer settings due to connection error');
-      return defaultSettings;
-    }
-  };
+    // ปรับรูปแบบข้อมูลที่ส่งไปให้ตรงกับที่ handler backend คาดหวัง
+    const response = await axios.post(
+      `${PO_API_URL}/api/po/buffers/batch`, 
+      { item_ids: itemIds },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      }
+    );
+    
+    console.log('Buffer settings fetched successfully');
+    return response.data || {};
+  } catch (error) {
+    console.warn("Error fetching buffer settings:", error);
+    
+    // ใช้ค่า default ถ้าเกิด error
+    const defaultSettings = {};
+    itemIds.forEach(id => {
+      defaultSettings[id] = 10;
+    });
+    
+    console.log('Using default buffer settings due to connection error');
+    return defaultSettings;
+  }
+};

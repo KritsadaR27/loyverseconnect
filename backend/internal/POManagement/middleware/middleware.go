@@ -2,9 +2,13 @@
 package middleware
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -50,17 +54,34 @@ func Recovery(next http.Handler) http.Handler {
 }
 
 // CORS middleware สำหรับจัดการ Cross-Origin Resource Sharing
+// แก้ไข CORS middleware ในไฟล์ middleware.go
+
+// CORS middleware สำหรับจัดการ Cross-Origin Resource Sharing
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// ตั้งค่า headers สำหรับ CORS
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", "*") // ควรจำกัดเฉพาะโดเมนที่อนุญาตในโปรดักชัน
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
+		w.Header().Set("Access-Control-Max-Age", "3600") // Cache preflight request for 1 hour
 
-		// จัดการ preflight requests
-		if r.Method == "OPTIONS" {
+		// ตรวจสอบว่าเป็น OPTIONS request (preflight) หรือไม่
+		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
+		}
+
+		// บันทึก log สำหรับคำขอ API
+		if strings.Contains(r.URL.Path, "/api/po/buffers/batch") {
+			body, _ := io.ReadAll(r.Body)
+			// สำรองข้อมูลใน body เพื่อใช้ต่อ
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+			fmt.Printf("[CORS] Request to %s: Method=%s, Content-Type=%s, Body=%s\n",
+				r.URL.Path,
+				r.Method,
+				r.Header.Get("Content-Type"),
+				string(body))
 		}
 
 		next.ServeHTTP(w, r)

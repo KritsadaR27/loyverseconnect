@@ -8,7 +8,8 @@ import {
   TrashIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-  BellIcon
+  BellIcon,
+  ChatBubbleLeftRightIcon
 } from "@heroicons/react/24/outline";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import Alert from "../../../components/Alert";
@@ -30,6 +31,7 @@ const LineGroupsListPage = () => {
   const [registerForm, setRegisterForm] = useState(null);
   const [recentMessages, setRecentMessages] = useState({});
   const [showMessages, setShowMessages] = useState(null);
+  const [groupNames, setGroupNames] = useState({}); // เพิ่ม state สำหรับเก็บชื่อกลุ่ม
 
   // Fetch all LINE groups
   useEffect(() => {
@@ -107,7 +109,17 @@ const LineGroupsListPage = () => {
     }
   };
 
-  const handleRegisterGroup = async (groupId, groupName) => {
+  const handleRegisterGroup = async (groupId) => {
+    const groupName = groupNames[groupId];
+    
+    if (!groupName) {
+      setAlert({
+        type: "error",
+        message: "Group name is required",
+      });
+      return;
+    }
+    
     try {
       setIsLoading(true);
       const newGroup = await registerLineGroup(groupId, groupName);
@@ -196,8 +208,7 @@ const LineGroupsListPage = () => {
     } else {
       try {
         setIsLoading(true);
-        const messages = await fetchRecentMessages(groupId); // เรียก API
-        console.log("Fetched messages:", messages); // เพิ่ม log เพื่อตรวจสอบข้อมูล
+        const messages = await fetchRecentMessages(groupId);
         setRecentMessages((prev) => ({ ...prev, [groupId]: messages }));
         setShowMessages(groupId);
       } catch (error) {
@@ -216,8 +227,15 @@ const LineGroupsListPage = () => {
     setShowMessages(null);
   };
 
+  const handleGroupNameChange = (groupId, name) => {
+    setGroupNames({
+      ...groupNames,
+      [groupId]: name
+    });
+  };
+
   const ActionBar = () => (
-    <div className="flex items-center justify-between py-1.5 rounded-md">
+    <div className="flex justify-end py-2 px-6">
       <button
         onClick={handleCreateNew}
         className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
@@ -241,7 +259,7 @@ const LineGroupsListPage = () => {
       {/* Delete Confirmation Modal */}
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white  rounded-lg shadow-lg max-w-md mx-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
             <div className="flex items-center text-red-600 mb-4">
               <ExclamationCircleIcon className="w-6 h-6 mr-2" />
               <h3 className="text-lg font-semibold">Confirm Deletion</h3>
@@ -342,7 +360,7 @@ const LineGroupsListPage = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
-                Recent Messages - {groups.find(g => g.id === showMessages)?.name}
+                Recent Messages - {groups.find(g => g.id === showMessages)?.name || "Unregistered Group"}
               </h3>
               <button onClick={closeMessages} className="text-gray-500 hover:text-gray-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,10 +374,10 @@ const LineGroupsListPage = () => {
                 recentMessages[showMessages].map((msg, idx) => (
                   <div key={idx} className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{msg.sender || "Unknown Sender"}</span> {/* ตรวจสอบ sender */}
-                      <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "Unknown Time"}</span> {/* ตรวจสอบ timestamp */}
+                      <span>{msg.sender || "Unknown Sender"}</span>
+                      <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "Unknown Time"}</span>
                     </div>
-                    <p className="text-gray-800 text-sm">{msg.content || "No Content"}</p> {/* ตรวจสอบ content */}
+                    <p className="text-gray-800 text-sm">{msg.content || "No Content"}</p>
                   </div>
                 ))
               ) : (
@@ -372,153 +390,147 @@ const LineGroupsListPage = () => {
         </div>
       )}
 
-      <div>
-        {isLoading && groups.length === 0 ? (
+      <div className="mx-6">
+        {isLoading && groups.length === 0 && unregisteredGroups.length === 0 ? (
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <>
-            {/* Unregistered Groups Section */}
-            {(unregisteredGroups || []).length > 0 && (
-              <div className="mb-8">
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <ExclamationCircleIcon className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-yellow-700">
-                        We found {unregisteredGroups.length} new LINE group(s) that can be registered.
-                      </p>
-                    </div>
+            {/* Notification Area */}
+            {unregisteredGroups.length > 0 && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 mt-6 rounded">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <ExclamationCircleIcon className="h-5 w-5 text-yellow-400" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      We found {unregisteredGroups.length} new LINE group(s) that can be registered.
+                    </p>
                   </div>
                 </div>
-                
-                <h2 className="text-lg font-semibold mb-2">Unregistered LINE Groups</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {unregisteredGroups.map((group) => (
-                        <tr key={group.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {group.id}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <input
-                              type="text"
-                              placeholder="Enter group name"
-                              className="border border-gray-300 rounded px-2 py-1 mr-2"
-                              onChange={(e) => group.tempName = e.target.value}
-                            />
-                            <button
-                              onClick={() => handleRegisterGroup(group.id, group.tempName)}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-                              disabled={!group.tempName}
-                            >
-                              Register
-                            </button>
-                            <button
-                              onClick={() => handleViewMessages(group.id)} // ปุ่มสำหรับดูข้อความล่าสุด
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 ml-2"
-                            >
-                              View Messages
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              </div>
+            )}
+
+            {/* Unregistered Groups Section */}
+            {unregisteredGroups.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">Unregistered LINE Groups</h2>
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                  <div className="bg-blue-50 py-3 px-6">
+                    <div className="grid grid-cols-2">
+                      <div className="text-sm font-semibold text-gray-600">GROUP ID</div>
+                      <div className="text-sm font-semibold text-gray-600">ACTIONS</div>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {unregisteredGroups.map((group) => (
+                      <div key={group.id} className="grid grid-cols-2 py-4 px-6 items-center">
+                        <div className="text-sm font-medium text-blue-600 truncate">
+                          {group.id}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            placeholder="Enter group name"
+                            className="border border-gray-300 rounded px-3 py-2 text-sm w-40"
+                            onChange={(e) => handleGroupNameChange(group.id, e.target.value)}
+                            value={groupNames[group.id] || ""}
+                          />
+                          <button
+                            onClick={() => handleRegisterGroup(group.id)}
+                            className="px-3 py-2 bg-blue-100 text-blue-700 rounded text-sm font-medium hover:bg-blue-200 transition"
+                            disabled={!groupNames[group.id]}
+                          >
+                            Register
+                          </button>
+                          <button
+                            onClick={() => handleViewMessages(group.id)}
+                            className="px-3 py-2 bg-blue-100 text-blue-700 rounded text-sm font-medium hover:bg-blue-200 transition"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Registered Groups Section */}
-            <h2 className="text-lg font-semibold mb-2">Registered LINE Groups</h2>
-            {groups.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BellIcon className="h-8 w-8 text-gray-500" />
+            <div>
+              <h2 className="text-xl font-bold mb-4">Registered LINE Groups</h2>
+              {groups.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-200">
+                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BellIcon className="h-8 w-8 text-gray-500" />
+                  </div>
+                  <p className="text-gray-500 mb-4">No LINE groups registered yet</p>
+                  <button
+                    onClick={handleCreateNew}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                  >
+                    Register your first LINE group
+                  </button>
                 </div>
-                <p className="text-gray-500 mb-4">No LINE groups registered yet</p>
-                <button
-                  onClick={handleCreateNew}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                >
-                  Register your first LINE group
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                  <div className="bg-blue-50 py-3 px-6">
+                    <div className="grid grid-cols-12">
+                      <div className="col-span-2 text-sm font-semibold text-gray-600">NAME</div>
+                      <div className="col-span-3 text-sm font-semibold text-gray-600">ID</div>
+                      <div className="col-span-4 text-sm font-semibold text-gray-600">DESCRIPTION</div>
+                      <div className="col-span-1 text-sm font-semibold text-gray-600">STATUS</div>
+                      <div className="col-span-2 text-sm font-semibold text-gray-600">ACTIONS</div>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-gray-200">
                     {groups.map((group) => (
-                      <tr key={group.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">{group.name}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {group.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {group.description || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <div key={group.id} className="grid grid-cols-12 py-4 px-6 items-center">
+                        <div className="col-span-2 font-medium text-gray-900">{group.name}</div>
+                        <div className="col-span-3 text-sm text-gray-500 truncate">{group.id}</div>
+                        <div className="col-span-4 text-sm text-gray-500">{group.description || "-"}</div>
+                        <div className="col-span-1">
                           <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                             Active
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-3">
-                            <button
-                              onClick={() => handleViewMessages(group.id)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="View Recent Messages"
-                              disabled={isLoading}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleEdit(group)}
-                              className="text-indigo-600 hover:text-indigo-900"
-                              title="Edit"
-                              disabled={isLoading}
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => confirmDelete(group)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Delete"
-                              disabled={isLoading}
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="col-span-2 flex space-x-3">
+                          <button
+                            onClick={() => handleViewMessages(group.id)}
+                            className="text-blue-600 hover:text-blue-900 rounded-full p-1 hover:bg-blue-50"
+                            title="View Recent Messages"
+                          >
+                            <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleEdit(group)}
+                            className="text-indigo-600 hover:text-indigo-900 rounded-full p-1 hover:bg-blue-50"
+                            title="Edit"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(group)}
+                            className="text-red-600 hover:text-red-900 rounded-full p-1 hover:bg-blue-50"
+                            title="Delete"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  </div>
+                  {groups.length > 0 && (
+                    <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500">
+                      Showing 1-{groups.length} of {groups.length} items
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

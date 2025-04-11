@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -299,7 +300,9 @@ func (h *POHandler) SendLineNotification(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(map[string]string{"message": "LINE notification sent successfully"})
 }
 
-// GetBufferSettingsBatch จัดการคำขอสำหรับดึงข้อมูล buffer settings จำนวนมาก
+// แก้ไข GetBufferSettingsBatch handler ในไฟล์ po_handler.go
+
+// GetBufferSettingsBatch จัดการคำขอข้อมูลสำหรับดึงข้อมูล buffer settings จำนวนมาก
 func (h *POHandler) GetBufferSettingsBatch(w http.ResponseWriter, r *http.Request) {
 	// ตรวจสอบวิธี HTTP
 	if r.Method != http.MethodPost {
@@ -313,7 +316,7 @@ func (h *POHandler) GetBufferSettingsBatch(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -331,7 +334,13 @@ func (h *POHandler) GetBufferSettingsBatch(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// เพิ่ม log เพื่อตรวจสอบข้อมูลที่ส่งกลับ
+	fmt.Printf("Buffer settings for %d items: %+v\n", len(req.ItemIDs), bufferSettings)
+
 	// ส่งผลตอบกลับ
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bufferSettings)
+	if err := json.NewEncoder(w).Encode(bufferSettings); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

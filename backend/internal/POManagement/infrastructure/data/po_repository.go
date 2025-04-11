@@ -612,6 +612,10 @@ func (r *PurchaseOrderRepository) GetBufferSettings(ctx context.Context, itemIDs
 }
 
 // ใช้ฟังก์ชัน GetBufferSettingsBatch รับ item IDs จาก request body เพื่อหลีกเลี่ยงปัญหา URL ยาวเกินไป
+
+// แก้ไขฟังก์ชัน GetBufferSettingsBatch ใน po_repository.go
+
+// GetBufferSettingsBatch ดึงข้อมูล buffer settings สำหรับ item IDs จำนวนมาก
 func (r *PurchaseOrderRepository) GetBufferSettingsBatch(ctx context.Context, itemIDs []string) (map[string]int, error) {
 	if len(itemIDs) == 0 {
 		return make(map[string]int), nil
@@ -627,10 +631,10 @@ func (r *PurchaseOrderRepository) GetBufferSettingsBatch(ctx context.Context, it
 
 	// ดึงข้อมูล buffer settings จากฐานข้อมูล
 	query := fmt.Sprintf(`
-        SELECT item_id, reserve_quantity
-        FROM buffer_settings
-        WHERE item_id IN (%s)
-    `, strings.Join(placeholders, ","))
+		SELECT item_id, reserve_quantity
+		FROM buffer_settings
+		WHERE item_id IN (%s)
+	`, strings.Join(placeholders, ","))
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -652,6 +656,9 @@ func (r *PurchaseOrderRepository) GetBufferSettingsBatch(ctx context.Context, it
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating buffer settings: %w", err)
 	}
+
+	// เพิ่ม log เพื่อตรวจสอบข้อมูลที่จะส่งกลับ
+	fmt.Printf("Found buffer settings for %d items out of %d requested\n", len(bufferSettings), len(itemIDs))
 
 	return bufferSettings, nil
 }

@@ -267,9 +267,32 @@ func (s *POService) GetSalesByDay(ctx context.Context, startDate, endDate time.T
 	return s.salesService.GetSalesByDay(ctx, startDate, endDate)
 }
 
-// internal/POManagement/application/services/po_service.go
+// แก้ไขฟังก์ชัน GetBufferSettingsBatch ใน po_service.go
 
 // GetBufferSettingsBatch ดึงข้อมูล buffer settings สำหรับ item IDs จำนวนมาก
 func (s *POService) GetBufferSettingsBatch(ctx context.Context, itemIDs []string) (map[string]int, error) {
-	return s.poRepo.GetBufferSettingsBatch(ctx, itemIDs)
+	// เพิ่ม log เพื่อตรวจสอบการรับข้อมูล
+	fmt.Printf("GetBufferSettingsBatch: Received %d item IDs\n", len(itemIDs))
+
+	// ดึงข้อมูล buffer settings จาก repository
+	bufferSettings, err := s.poRepo.GetBufferSettingsBatch(ctx, itemIDs)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching buffer settings: %w", err)
+	}
+
+	// เพิ่ม default buffer สำหรับ item ที่ไม่มีข้อมูลใน database
+	result := make(map[string]int)
+	for _, itemID := range itemIDs {
+		// ถ้ามีข้อมูลใน buffer settings ใช้ค่านั้น, ถ้าไม่มีใช้ค่า default = 10
+		if buffer, ok := bufferSettings[itemID]; ok {
+			result[itemID] = buffer
+		} else {
+			result[itemID] = 10 // ค่า default buffer
+		}
+	}
+
+	// เพิ่ม log สำหรับตรวจสอบผลลัพธ์
+	fmt.Printf("GetBufferSettingsBatch: Returning buffer settings for %d items\n", len(result))
+
+	return result, nil
 }
