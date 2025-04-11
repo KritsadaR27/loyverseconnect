@@ -36,7 +36,10 @@ const SendLineDialog = ({
   setLineMessage,
   lineNote,
   setLineNote,
-  processingAction
+  processingAction,
+  suppliers,
+  selectedSupplier,
+  setSelectedSupplier
 }) => (
   <Dialog open={open} onOpenChange={onClose}>
     <DialogContent className="sm:max-w-md">
@@ -45,6 +48,26 @@ const SendLineDialog = ({
         <p className="text-sm text-gray-500 mt-1">เลือกกลุ่มไลน์และข้อความที่ต้องการส่ง</p>
       </DialogHeader>
       <div className="space-y-3 mt-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">ซัพพลายเออร์</label>
+          <select
+            className="w-full border rounded p-2 text-sm"
+            value={selectedSupplier}
+            onChange={(e) => setSelectedSupplier(e.target.value)}
+          >
+            <option value="">-- ทุกซัพพลายเออร์ --</option>
+            {suppliers.map(supplier => (
+              <option key={supplier} value={supplier}>
+                {supplier}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            {selectedSupplier 
+              ? 'จะส่งเฉพาะรายการของซัพพลายเออร์ที่เลือก' 
+              : 'จะส่งแยกเป็นข้อความสำหรับแต่ละซัพพลายเออร์'}
+          </p>
+        </div>
         <div>
           <label className="text-sm font-medium mb-1 block">ข้อความ</label>
           <textarea
@@ -130,6 +153,11 @@ const CreatePODialog = ({
               </option>
             ))}
           </select>
+          <p className="text-xs text-gray-500 mt-1">
+            {selectedSupplier 
+              ? 'จะสร้างใบสั่งซื้อเฉพาะสำหรับซัพพลายเออร์ที่เลือก' 
+              : 'จะสร้างใบสั่งซื้อแยกตามซัพพลายเออร์'}
+          </p>
         </div>
       </div>
       <DialogFooter className="mt-4">
@@ -186,18 +214,11 @@ const POActionBar = ({
   selectedSupplier,
   setSelectedSupplier,
   // Items for supplier selection
-  items = [],
+  suppliers = [],
   // Disabled state
   disabled = false,
   processingAction,
 }) => {
-  // Extract unique suppliers from items
-  const suppliers = [...new Set(
-    (Array.isArray(items) ? items : [])
-      .filter(item => item.supplier)
-      .map(item => item.supplier)
-  )];
-
   return (
     <div className="flex flex-col gap-3 bg-white p-4 rounded-lg border shadow-sm">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
@@ -344,6 +365,9 @@ const POActionBar = ({
         lineNote={lineNote}
         setLineNote={setLineNote}
         processingAction={processingAction}
+        suppliers={suppliers}
+        selectedSupplier={selectedSupplier}
+        setSelectedSupplier={setSelectedSupplier}
       />
       
       {/* Create PO Dialog */}

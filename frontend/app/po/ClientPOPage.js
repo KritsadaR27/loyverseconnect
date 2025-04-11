@@ -17,6 +17,7 @@ const Skeleton = ({ className }) => (
 const ClientPOPage = () => {
   const { 
     items,
+    groupedItems,
     deliveryDate,
     setDeliveryDate,
     targetCoverageDate,
@@ -69,6 +70,9 @@ const ClientPOPage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   
+  // ดึงรายชื่อซัพพลายเออร์ทั้งหมดจาก groupedItems
+  const suppliers = Object.keys(groupedItems);
+  
   return (
     <SidebarLayout
       headerTitle="ระบบสั่งซื้อสินค้า (PO Management)"
@@ -101,7 +105,7 @@ const ClientPOPage = () => {
           selectedSupplier={selectedSupplier}
           setSelectedSupplier={setSelectedSupplier}
           // Items for supplier selection
-          items={items}
+          suppliers={suppliers}
           // Disabled state
           disabled={loading || processingAction}
           processingAction={processingAction}
@@ -127,7 +131,7 @@ const ClientPOPage = () => {
           </div>
         ) : (
           <>
-            {items.length === 0 ? (
+            {Object.keys(groupedItems).length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-3xl mb-2">📦</div>
                 <h3 className="text-lg font-medium mb-2">ไม่พบข้อมูลสินค้า</h3>
@@ -151,9 +155,10 @@ const ClientPOPage = () => {
                 {isMobile ? (
                   <MobilePOView
                     items={items}
+                    groupedItems={groupedItems}
                     storeStocks={storeStocks}
                     targetCoverageDate={targetCoverageDate}
-                    setTargetCoverageDate={setTargetCoverageDate} // เพิ่ม prop
+                    setTargetCoverageDate={setTargetCoverageDate}
                     futureDates={futureDates}
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
@@ -162,10 +167,11 @@ const ClientPOPage = () => {
                 ) : (
                   <POTable
                     items={items}
+                    groupedItems={groupedItems}
                     storeStocks={storeStocks}
                     futureDates={futureDates}
                     targetCoverageDate={targetCoverageDate}
-                    setTargetCoverageDate={setTargetCoverageDate} // เพิ่ม prop
+                    setTargetCoverageDate={setTargetCoverageDate}
                     handleBufferChange={handleBufferChange}
                     handleOrderQuantityChange={handleOrderQuantityChange}
                     editingBuffers={editingBuffers}

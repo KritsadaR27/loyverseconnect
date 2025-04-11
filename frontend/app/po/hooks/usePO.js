@@ -16,13 +16,42 @@ const formatDateForAPI = (date) => {
   // ให้แน่ใจว่าเป็น Date object
   const dateObj = new Date(date);
   
-  // สร้างรูปแบบ YYYY-MM-DD
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
+  // สร้างรูปแบบ ISO ที่มีข้อมูล timezone (เช่น 2025-03-31T17:00:00.000Z)
+  return dateObj.toISOString();
 };
+
+// ฟังก์ชันสำหรับตัดรหัสสินค้าและแปลงเป็นรูปแบบที่ต้องการ
+const formatItemName = (itemName) => {
+  if (!itemName) return '';
+  
+  // แยกชื่อสินค้าและรหัส ID ยาว
+  const parts = itemName.split(' ');
+  const productId = parts[0]; // รหัสสินค้า (เช่น P101)
+  
+  // ตัดส่วนรหัส ID ยาวออก
+  return parts.filter(part => !part.includes('-')).join(' ');
+};
+
+// ฟังก์ชันสำหรับดึงรหัสสินค้าสั้น (เช่น P101)
+const extractProductCode = (itemName) => {
+  if (!itemName) return '';
+  
+  // กรณีที่ชื่อสินค้าเริ่มต้นด้วย P ตามด้วยตัวเลข (เช่น P101)
+  const match = itemName.match(/^(P\d+)/);
+  return match ? match[1] : '';
+};
+
+// รายชื่อซัพพลายเออร์ที่ต้องการเรียงลำดับ
+const supplierOrder = [
+  'หมูลุงรวย', 
+  'จัมโบ้', 
+  'ลูกชิ้น', 
+  'อั่ว', 
+  'เนื้อริบอาย', 
+  'เนื้อโคขุน', 
+  'แหนมเล็ก', 
+  'แหนมใหญ่'
+];
 
 const usePO = () => {
   const [items, setItems] = useState([]);
@@ -42,6 +71,7 @@ const usePO = () => {
   const [lineNote, setLineNote] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [salesData, setSalesData] = useState([]);
+  const [groupedItems, setGroupedItems] = useState({});
   
   // Create future dates for projection when delivery date changes
   useEffect(() => {
@@ -69,35 +99,6 @@ const usePO = () => {
     generateFutureDates();
   }, [deliveryDate]);
 
-  // ฟังก์ชันสำหรับการสร้างข้อมูลตัวอย่างในกรณีที่ไม่มีข้อมูลจริง
-  const generateMockData = () => {
-    // สร้างข้อมูลสินค้าตัวอย่าง
-    const sampleItems = [
-      { id: 'P101', name: 'หมูปั้มตด ไม่เน็ด', currentStock: 322, supplier: 'ซัพพลายเออร์ A', category: 'เนื้อหมู' },
-      { id: 'P102', name: 'หมูแดง', currentStock: 180, supplier: 'ซัพพลายเออร์ A', category: 'เนื้อหมู' },
-      { id: 'P103', name: 'หมูชิ้น', currentStock: 205, supplier: 'ซัพพลายเออร์ B', category: 'เนื้อหมู' },
-      { id: 'P104', name: 'เนื้อวากิว', currentStock: 140, supplier: 'ซัพพลายเออร์ C', category: 'เนื้อวัว' },
-      { id: 'P105', name: 'ลูกชิ้นหมู', currentStock: 250, supplier: 'ซัพพลายเออร์ D', category: 'ลูกชิ้น' }
-    ];
-    
-    // สร้างข้อมูลยอดขายตัวอย่าง
-    const nowDate = new Date();
-    const sampleSales = futureDates.map((date, index) => {
-      // สร้างยอดขายที่แตกต่างกันในแต่ละวัน
-      const dateStr = formatDateForAPI(date);
-      return sampleItems.map(item => ({
-        date: dateStr,
-        item_id: item.id,
-        quantity: 50 + (index * 25) + Math.floor(Math.random() * 30) // เพิ่มยอดขายในแต่ละวัน
-      }));
-    }).flat();
-    
-    return {
-      items: sampleItems,
-      sales: sampleSales
-    };
-  };
-
   // Load inventory and sales data
   useEffect(() => {
     const loadData = async () => {
@@ -111,11 +112,11 @@ const usePO = () => {
         let inventoryData = await fetchInventoryData();
         console.log('Inventory data loaded:', inventoryData);
         
-        // ถ้าไม่มีข้อมูลจริง ให้ใช้ข้อมูลตัวอย่าง
         if (!inventoryData || inventoryData.length === 0) {
-          console.warn('No real inventory data available, using mock data');
-          const mockData = generateMockData();
-          inventoryData = mockData.items;
+          console.warn('No inventory data available');
+          setLoading(false);
+          setError(new Error('ไม่พบข้อมูลสินค้าในระบบ'));
+          return;
         }
         
         // 2. Calculate date range for sales data
@@ -124,53 +125,91 @@ const usePO = () => {
         
         const endDateObj = targetCoverageDate || futureDates[2];
         
-        // 3. Fetch sales data - ส่งในรูปแบบที่ถูกต้อง
+        // 3. Fetch sales data - ส่งในรูปแบบที่ถูกต้อง (ISO string พร้อม timezone)
+        // ปรับปรุงให้เวลาที่ส่งเป็น evening time (17:00:00) และ end time (16:59:59.999)
+        // เพื่อให้ครอบคลุมทั้งวันในเขตเวลาไทย
+        const startDateISO = new Date(oneWeekBefore);
+        startDateISO.setHours(17, 0, 0, 0); // 17:00:00 UTC = 00:00 GMT+7
+        
+        const endDateISO = new Date(endDateObj);
+        endDateISO.setHours(16, 59, 59, 999); // 16:59:59.999 UTC = 23:59:59.999 GMT+7
+        
         let salesDataResponse = await fetchSalesByDay(
-          formatDateForAPI(oneWeekBefore), 
-          formatDateForAPI(endDateObj)
+          startDateISO.toISOString(),
+          endDateISO.toISOString()
         );
         
         console.log('Sales data loaded:', salesDataResponse);
-        
-        // ถ้าไม่มีข้อมูลจริง ให้ใช้ข้อมูลตัวอย่าง
-        if (!salesDataResponse || salesDataResponse.length === 0) {
-          console.warn('No real sales data available, using mock data');
-          const mockData = generateMockData();
-          salesDataResponse = mockData.sales;
-        }
-        
         setSalesData(salesDataResponse);
         
         // 4. Process inventory data
-        const processedItems = inventoryData.map(item => {
-          // Initialize with inventory data
-          return {
-            id: item.id || item.item_id,
-            name: item.name || item.item_name,
-            sku: item.id || item.item_id, // Using item_id as SKU if not available
-            currentStock: item.currentStock || item.in_stock,
-            supplier: item.supplier || item.supplier_name,
-            category: item.category || item.category_name,
-            buffer: 0, // Default buffer to 0, will be updated later
-            dailySales: {}, // Will be populated below
-            stockByStore: item.stockByStore || item.stock_by_store || [],
-            orderQuantity: 0,
-            suggestedOrderQuantity: 0
-          };
+        // กรอง stores ที่ไม่ต้องการออก
+        const filteredInventoryData = inventoryData.filter(item => 
+          !item.store_name.includes("รถส่งของ") && 
+          !item.store_name.includes("อื่นๆ")
+        );
+        
+        // สร้าง map เพื่อรวมข้อมูลสินค้าเดียวกันจากหลายสาขา
+        const itemsMap = new Map();
+        
+        filteredInventoryData.forEach(item => {
+          const itemId = item.item_id;
+          const formattedItemName = formatItemName(item.item_name);
+          const productCode = extractProductCode(item.item_name);
+          
+          // ถ้ามีสินค้านี้แล้วในแมพ ให้เพิ่มยอดสต็อก
+          if (itemsMap.has(itemId)) {
+            const existingItem = itemsMap.get(itemId);
+            existingItem.currentStock += item.in_stock;
+            
+            // เก็บข้อมูลสต็อกตามสาขา
+            if (!existingItem.stockByStore) {
+              existingItem.stockByStore = [];
+            }
+            
+            existingItem.stockByStore.push({
+              store_name: item.store_name,
+              in_stock: item.in_stock
+            });
+          } else {
+            // สร้างข้อมูลสินค้าใหม่
+            const newItem = {
+              id: itemId,
+              name: formattedItemName,
+              code: productCode,
+              currentStock: item.in_stock || 0,
+              supplier: item.supplier_name,
+              category: item.category_name,
+              buffer: 0, // จะถูกอัปเดตในภายหลัง
+              dailySales: {},
+              stockByStore: [{
+                store_name: item.store_name,
+                in_stock: item.in_stock
+              }],
+              orderQuantity: 0,
+              suggestedOrderQuantity: 0
+            };
+            
+            itemsMap.set(itemId, newItem);
+          }
         });
         
-        // 5. Process sales data into the items
-        if (salesDataResponse && Array.isArray(salesDataResponse)) {
-          salesDataResponse.forEach(sale => {
-            const dateStr = typeof sale.date === 'string' ? sale.date : formatDateForAPI(new Date(sale.date));
-            
-            // Find the item and add the sale
-            const item = processedItems.find(i => i.id === sale.item_id);
-            if (item) {
-              item.dailySales[dateStr] = sale.quantity;
-            }
-          });
-        }
+        // แปลงแมพเป็นอาร์เรย์
+        const processedItems = Array.from(itemsMap.values());
+        
+        // 5. Process store stocks
+        const storeStocksObj = {};
+        processedItems.forEach(item => {
+          storeStocksObj[item.id] = {};
+          
+          if (Array.isArray(item.stockByStore)) {
+            item.stockByStore.forEach(store => {
+              const storeName = store.store_name;
+              const quantity = store.in_stock || 0;
+              storeStocksObj[item.id][storeName] = quantity;
+            });
+          }
+        });
         
         // 6. Fetch buffer settings or use default
         try {
@@ -181,32 +220,60 @@ const usePO = () => {
           processedItems.forEach(item => {
             item.buffer = bufferSettings[item.id] || 10; // default to 10 if not found
           });
+          console.log("Successfully applied buffer settings to items");
         } catch (bufferError) {
-          console.warn('Error fetching buffer settings:', bufferError);
+          console.warn('Error fetching buffer settings, using default values:', bufferError);
           // ถ้าไม่สามารถดึง buffer ได้ ใช้ค่าเริ่มต้น
           processedItems.forEach(item => {
             item.buffer = 10; // default buffer value
           });
         }
         
-        // 7. Process store stocks
-        const storeStocksObj = {};
-        processedItems.forEach(item => {
-          storeStocksObj[item.id] = {};
-          
-          if (Array.isArray(item.stockByStore)) {
-            item.stockByStore.forEach(store => {
-              const storeName = store.store_name || store.storeName;
-              const quantity = store.quantity || store.in_stock || 0;
-              storeStocksObj[item.id][storeName] = quantity;
-            });
+        // 7. Process sales data into the items
+        if (salesDataResponse && Array.isArray(salesDataResponse)) {
+          salesDataResponse.forEach(sale => {
+            const dateStr = typeof sale.sale_date === 'string' ? sale.sale_date : formatDateForAPI(new Date(sale.sale_date));
+            
+            // Find the item and add the sale
+            const item = processedItems.find(i => i.id === sale.item_id);
+            if (item) {
+              item.dailySales[dateStr] = sale.total_quantity;
+            }
+          });
+        }
+        
+        // 8. Group items by supplier
+        const groupedBySupplier = processedItems.reduce((groups, item) => {
+          const supplier = item.supplier || 'ไม่ระบุซัพพลายเออร์';
+          if (!groups[supplier]) {
+            groups[supplier] = [];
+          }
+          groups[supplier].push(item);
+          return groups;
+        }, {});
+        
+        // 9. Sort suppliers according to predefined order
+        const sortedGroups = {};
+        
+        // First add suppliers in the predefined order
+        supplierOrder.forEach(supplier => {
+          if (groupedBySupplier[supplier]) {
+            sortedGroups[supplier] = groupedBySupplier[supplier];
           }
         });
         
+        // Then add any other suppliers
+        Object.keys(groupedBySupplier).forEach(supplier => {
+          if (!supplierOrder.includes(supplier)) {
+            sortedGroups[supplier] = groupedBySupplier[supplier];
+          }
+        });
+        
+        setGroupedItems(sortedGroups);
         setItems(processedItems);
         setStoreStocks(storeStocksObj);
         
-        // 8. Calculate projected sales and suggestions
+        // 10. Calculate projected sales and suggestions
         if (targetCoverageDate) {
           calculateProjectedSales(processedItems, targetCoverageDate);
         }
@@ -218,16 +285,6 @@ const usePO = () => {
           type: "error",
           description: err.message
         });
-        
-        // ถ้าเกิดข้อผิดพลาด ให้แสดงข้อมูลตัวอย่างแทน
-        const mockData = generateMockData();
-        setItems(mockData.items.map(item => ({
-          ...item,
-          dailySales: {},
-          buffer: 10,
-          orderQuantity: 0,
-          suggestedOrderQuantity: 0
-        })));
       } finally {
         setLoading(false);
       }
@@ -246,11 +303,13 @@ const usePO = () => {
   // Calculate projected sales and suggested order quantities
   const calculateProjectedSales = (itemsToCalculate, targetDate) => {
     // ทำให้แน่ใจว่า targetDate อยู่ในรูปแบบที่ถูกต้อง
-    const targetDateStr = formatDateForAPI(targetDate);
+            // ใช้วันที่ (เฉพาะ YYYY-MM-DD) โดยตัดเวลาออก
+        const targetDateStr = formatDateForAPI(targetDate).split('T')[0];
     
     // Sort dates in ascending order for accumulation
+    // เราต้องการเฉพาะส่วนวันที่ (YYYY-MM-DD) สำหรับใช้เป็น key
     const sortedDates = futureDates
-      .map(date => formatDateForAPI(date))
+      .map(date => formatDateForAPI(date).split('T')[0])
       .sort();
     
     // Clone items to avoid mutations while calculating
@@ -294,6 +353,18 @@ const usePO = () => {
     });
     
     setItems(updatedItems);
+    
+    // Update grouped items too
+    const updatedGroupedItems = {};
+    
+    Object.keys(groupedItems).forEach(supplier => {
+      updatedGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
+        const updatedItem = updatedItems.find(item => item.id === groupItem.id);
+        return updatedItem || groupItem;
+      });
+    });
+    
+    setGroupedItems(updatedGroupedItems);
   };
   
   // Update buffer quantities
@@ -327,7 +398,42 @@ const usePO = () => {
         return item;
       })
     );
-  }, [targetCoverageDate]);
+    
+    // Update in grouped items too
+    setGroupedItems(prevGrouped => {
+      const newGrouped = {};
+      Object.keys(prevGrouped).forEach(supplier => {
+        newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+          if (groupItem.id === itemId) {
+            const updatedItem = {
+              ...groupItem,
+              buffer: value
+            };
+            
+            // Recalculate suggested quantity if target date exists
+            if (targetCoverageDate) {
+              const targetDateStr = formatDateForAPI(targetCoverageDate);
+              const projectedStock = groupItem.projectedStock || {};
+              
+              let suggestedQuantity = 0;
+              if (projectedStock[targetDateStr] < 0) {
+                suggestedQuantity = Math.abs(projectedStock[targetDateStr]) + value;
+              } else if (projectedStock[targetDateStr] < value) {
+                suggestedQuantity = value - projectedStock[targetDateStr];
+              }
+              
+              updatedItem.suggestedOrderQuantity = Math.ceil(suggestedQuantity);
+              updatedItem.orderQuantity = Math.ceil(suggestedQuantity);
+            }
+            
+            return updatedItem;
+          }
+          return groupItem;
+        });
+      });
+      return newGrouped;
+    });
+  }, [targetCoverageDate, groupedItems]);
   
   // Update order quantities
   const handleOrderQuantityChange = useCallback((itemId, value) => {
@@ -342,6 +448,23 @@ const usePO = () => {
         return item;
       })
     );
+    
+    // Update in grouped items too
+    setGroupedItems(prevGrouped => {
+      const newGrouped = {};
+      Object.keys(prevGrouped).forEach(supplier => {
+        newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+          if (groupItem.id === itemId) {
+            return {
+              ...groupItem,
+              orderQuantity: value
+            };
+          }
+          return groupItem;
+        });
+      });
+      return newGrouped;
+    });
   }, []);
   
   // Save buffer settings
@@ -354,14 +477,23 @@ const usePO = () => {
         reserve_quantity: item.buffer || 0
       }));
       
-      await saveBufferSettings(bufferSettings);
+      const result = await saveBufferSettings(bufferSettings);
       
-      setAlert({
-        message: "บันทึกยอดเผื่อสำเร็จ",
-        type: "success"
-      });
-      
-      setEditingBuffers(false);
+      if (result.success) {
+        setAlert({
+          message: result.offline 
+            ? "บันทึกยอดเผื่อสำเร็จ (โหมดออฟไลน์)" 
+            : "บันทึกยอดเผื่อสำเร็จ",
+          type: "success",
+          description: result.offline 
+            ? "ข้อมูลจะถูกซิงค์เมื่อมีการเชื่อมต่ออินเทอร์เน็ต" 
+            : undefined
+        });
+        
+        setEditingBuffers(false);
+      } else {
+        throw new Error(result.message || "ไม่สามารถบันทึกได้");
+      }
     } catch (err) {
       console.error("Error saving buffer settings:", err);
       setAlert({
@@ -374,39 +506,39 @@ const usePO = () => {
     }
   }, [items]);
   
+  // Generate LINE notification by supplier
+  const generateSupplierMessage = (supplier, supplierItems) => {
+    const itemsWithQty = supplierItems.filter(item => item.orderQuantity > 0);
+    
+    if (itemsWithQty.length === 0) return '';
+    
+    let message = `**${supplier}**\n`;
+    itemsWithQty.forEach((item, idx) => {
+      message += `${idx + 1}. ${item.code ? `${item.code} ` : ''}${item.name} จำนวน ${item.orderQuantity} ชิ้น\n`;
+    });
+    
+    return message + '\n';
+  };
+  
   // Open LINE notification dialog
   const handleOpenSendLineDialog = useCallback(() => {
     // Generate default message if empty
     if (!lineMessage) {
-      const itemsWithQty = items.filter(item => item.orderQuantity > 0);
+      let message = `รายการสั่งซื้อสินค้า วันที่ ${deliveryDate.toLocaleDateString('th-TH')}\n\n`;
       
-      if (itemsWithQty.length > 0) {
-        let message = `รายการสั่งซื้อสินค้า วันที่ ${deliveryDate.toLocaleDateString('th-TH')}\n\n`;
-        
-        // Group by supplier
-        const supplierGroups = {};
-        itemsWithQty.forEach(item => {
-          if (!supplierGroups[item.supplier]) {
-            supplierGroups[item.supplier] = [];
-          }
-          supplierGroups[item.supplier].push(item);
-        });
-        
-        // Generate message by supplier
-        Object.entries(supplierGroups).forEach(([supplier, items]) => {
-          message += `**${supplier}**\n`;
-          items.forEach((item, idx) => {
-            message += `${idx + 1}. ${item.name} จำนวน ${item.orderQuantity} ชิ้น\n`;
-          });
-          message += '\n';
-        });
-        
-        setLineMessage(message);
-      }
+      // Generate message by supplier
+      Object.entries(groupedItems).forEach(([supplier, supplierItems]) => {
+        const supplierMessage = generateSupplierMessage(supplier, supplierItems);
+        if (supplierMessage) {
+          message += supplierMessage;
+        }
+      });
+      
+      setLineMessage(message);
     }
     
     setShowSendLineDialog(true);
-  }, [items, deliveryDate, lineMessage]);
+  }, [groupedItems, deliveryDate, lineMessage]);
   
   // Close LINE notification dialog
   const handleCloseSendLineDialog = useCallback(() => {
@@ -417,35 +549,81 @@ const usePO = () => {
   const handleSendLineNotification = useCallback(async () => {
     setProcessingAction(true);
     try {
-      // Prepare notification data for API
-      const notificationData = {
-        group_ids: lineGroups,
-        po: {
-          supplier_name: "รายการรวม",
-          po_number: `PO-${formatDateForAPI(new Date())}`,
-          delivery_date: formatDateForAPI(deliveryDate),
-          total_amount: items.reduce((total, item) => 
-            total + (item.orderQuantity * (item.unit_price || 0)), 0),
-          items: items
-            .filter(item => item.orderQuantity > 0)
-            .map(item => ({
-              item_name: item.name,
+      if (selectedSupplier) {
+        // ส่งเฉพาะซัพพลายเออร์ที่เลือก
+        const supplierItems = groupedItems[selectedSupplier] || [];
+        const itemsToSend = supplierItems.filter(item => item.orderQuantity > 0);
+        
+        if (itemsToSend.length === 0) {
+          throw new Error(`ไม่มีรายการสั่งซื้อสำหรับ ${selectedSupplier}`);
+        }
+        
+        // Prepare notification data for API
+        const notificationData = {
+          group_ids: lineGroups,
+          po: {
+            supplier_name: selectedSupplier,
+            po_number: `PO-${formatDateForAPI(new Date())}`,
+            delivery_date: formatDateForAPI(deliveryDate),
+            total_amount: itemsToSend.reduce((total, item) => 
+              total + (item.orderQuantity * (item.unit_price || 0)), 0),
+            items: itemsToSend.map(item => ({
+              item_name: `${item.code} ${item.name}`.trim(),
               quantity: item.orderQuantity
             }))
+          }
+        };
+        
+        // Override default message if custom message is provided
+        if (lineMessage) {
+          notificationData.custom_message = lineMessage;
         }
-      };
-      
-      // Override default message if custom message is provided
-      if (lineMessage) {
-        notificationData.custom_message = lineMessage;
+        
+        // Add note if provided
+        if (lineNote) {
+          notificationData.note = lineNote;
+        }
+        
+        await sendLineNotification(notificationData);
+      } else {
+        // ส่งแยกตามซัพพลายเออร์
+        for (const [supplier, supplierItems] of Object.entries(groupedItems)) {
+          const itemsToSend = supplierItems.filter(item => item.orderQuantity > 0);
+          
+          if (itemsToSend.length === 0) continue;
+          
+          // สร้างข้อความเฉพาะสำหรับซัพพลายเออร์นี้
+          let supplierMessage = `รายการสั่งซื้อสินค้า ${supplier} วันที่ ${deliveryDate.toLocaleDateString('th-TH')}\n\n`;
+          
+          itemsToSend.forEach((item, idx) => {
+            supplierMessage += `${idx + 1}. ${item.code ? `${item.code} ` : ''}${item.name} จำนวน ${item.orderQuantity} ชิ้น\n`;
+          });
+          
+          // Prepare notification data for API
+          const notificationData = {
+            group_ids: lineGroups,
+            po: {
+              supplier_name: supplier,
+              po_number: `PO-${formatDateForAPI(new Date())}-${supplier}`,
+              delivery_date: formatDateForAPI(deliveryDate),
+              total_amount: itemsToSend.reduce((total, item) => 
+                total + (item.orderQuantity * (item.unit_price || 0)), 0),
+              items: itemsToSend.map(item => ({
+                item_name: `${item.code} ${item.name}`.trim(),
+                quantity: item.orderQuantity
+              }))
+            },
+            custom_message: supplierMessage
+          };
+          
+          // Add note if provided
+          if (lineNote) {
+            notificationData.note = lineNote;
+          }
+          
+          await sendLineNotification(notificationData);
+        }
       }
-      
-      // Add note if provided
-      if (lineNote) {
-        notificationData.note = lineNote;
-      }
-      
-      await sendLineNotification(notificationData);
       
       setAlert({
         message: "ส่งแจ้งเตือน LINE สำเร็จ",
@@ -463,7 +641,7 @@ const usePO = () => {
     } finally {
       setProcessingAction(false);
     }
-  }, [items, deliveryDate, lineGroups, lineMessage, lineNote]);
+  }, [items, deliveryDate, lineGroups, lineMessage, lineNote, selectedSupplier, groupedItems]);
   
   // Open create PO dialog
   const handleOpenCreatePODialog = useCallback(() => {
@@ -479,57 +657,104 @@ const usePO = () => {
   const handleCreatePO = useCallback(async () => {
     setProcessingAction(true);
     try {
-      // Filter items with order quantities
-      const itemsToOrder = items
-        .filter(item => 
-          item.orderQuantity > 0 && 
-          (!selectedSupplier || item.supplier === selectedSupplier)
-        )
-        .map(item => ({
-          item_id: item.id,
-          item_name: item.name,
-          quantity: item.orderQuantity,
-          suggested_quantity: item.suggestedOrderQuantity,
-          unit_price: item.unit_price || 0,
-          total_price: item.orderQuantity * (item.unit_price || 0),
-          buffer: item.buffer || 0,
-          current_stock: item.currentStock || 0,
-          projected_stock: (item.currentStock || 0) - (item.buffer || 0)
-        }));
-      
-      if (itemsToOrder.length === 0) {
-        throw new Error("ไม่มีรายการสั่งซื้อที่เลือก");
+      if (selectedSupplier) {
+        // สร้าง PO เฉพาะซัพพลายเออร์ที่เลือก
+        const supplierItems = groupedItems[selectedSupplier] || [];
+        const itemsToOrder = supplierItems
+          .filter(item => item.orderQuantity > 0)
+          .map(item => ({
+            item_id: item.id,
+            item_name: `${item.code} ${item.name}`.trim(),
+            quantity: item.orderQuantity,
+            suggested_quantity: item.suggestedOrderQuantity,
+            unit_price: item.unit_price || 0,
+            total_price: item.orderQuantity * (item.unit_price || 0),
+            buffer: item.buffer || 0,
+            current_stock: item.currentStock || 0,
+            projected_stock: (item.currentStock || 0) - (item.buffer || 0)
+          }));
+        
+        if (itemsToOrder.length === 0) {
+          throw new Error(`ไม่มีรายการสั่งซื้อสำหรับ ${selectedSupplier}`);
+        }
+        
+        // Calculate total amount
+        const totalAmount = itemsToOrder.reduce(
+          (total, item) => total + item.total_price, 0
+        );
+        
+        // Create PO data for API
+        const poData = {
+          supplier_id: selectedSupplier,
+          supplier_name: selectedSupplier,
+          status: "pending",
+          delivery_date: formatDateForAPI(deliveryDate),
+          target_coverage_date: formatDateForAPI(targetCoverageDate || deliveryDate),
+          total_amount: totalAmount,
+          items: itemsToOrder,
+          notes: "",
+          created_by: "system"
+        };
+        
+        const createdPO = await createPO(poData);
+        
+        setAlert({
+          message: `สร้างใบสั่งซื้อสำหรับ ${selectedSupplier} สำเร็จ`,
+          type: "success",
+          description: `เลขที่ใบสั่งซื้อ: ${createdPO.po_number || 'PO-TEMP'}`
+        });
+      } else {
+        // สร้าง PO แยกตามซัพพลายเออร์
+        let successCount = 0;
+        
+        for (const [supplier, supplierItems] of Object.entries(groupedItems)) {
+          const itemsToOrder = supplierItems
+            .filter(item => item.orderQuantity > 0)
+            .map(item => ({
+              item_id: item.id,
+              item_name: `${item.code} ${item.name}`.trim(),
+              quantity: item.orderQuantity,
+              suggested_quantity: item.suggestedOrderQuantity,
+              unit_price: item.unit_price || 0,
+              total_price: item.orderQuantity * (item.unit_price || 0),
+              buffer: item.buffer || 0,
+              current_stock: item.currentStock || 0,
+              projected_stock: (item.currentStock || 0) - (item.buffer || 0)
+            }));
+          
+          if (itemsToOrder.length === 0) continue;
+          
+          // Calculate total amount
+          const totalAmount = itemsToOrder.reduce(
+            (total, item) => total + item.total_price, 0
+          );
+          
+          // Create PO data for API
+          const poData = {
+            supplier_id: supplier,
+            supplier_name: supplier,
+            status: "pending",
+            delivery_date: formatDateForAPI(deliveryDate),
+            target_coverage_date: formatDateForAPI(targetCoverageDate || deliveryDate),
+            total_amount: totalAmount,
+            items: itemsToOrder,
+            notes: "",
+            created_by: "system"
+          };
+          
+          await createPO(poData);
+          successCount++;
+        }
+        
+        if (successCount > 0) {
+          setAlert({
+            message: `สร้างใบสั่งซื้อสำเร็จ ${successCount} ใบ`,
+            type: "success"
+          });
+        } else {
+          throw new Error("ไม่มีรายการสั่งซื้อที่เลือก");
+        }
       }
-      
-      // Determine supplier
-      const supplierName = selectedSupplier || 
-        (itemsToOrder.length > 0 ? itemsToOrder[0].supplier : "รายการรวม");
-      
-      // Calculate total amount
-      const totalAmount = itemsToOrder.reduce(
-        (total, item) => total + item.total_price, 0
-      );
-      
-      // Create PO data for API
-      const poData = {
-        supplier_id: selectedSupplier || "default",
-        supplier_name: supplierName,
-        status: "pending",
-        delivery_date: formatDateForAPI(deliveryDate),
-        target_coverage_date: formatDateForAPI(targetCoverageDate || deliveryDate),
-        total_amount: totalAmount,
-        items: itemsToOrder,
-        notes: "",
-        created_by: "system"
-      };
-      
-      const createdPO = await createPO(poData);
-      
-      setAlert({
-        message: "สร้างใบสั่งซื้อสำเร็จ",
-        type: "success",
-        description: `เลขที่ใบสั่งซื้อ: ${createdPO.po_number || 'PO-TEMP'}`
-      });
       
       setShowCreatePODialog(false);
     } catch (err) {
@@ -542,10 +767,11 @@ const usePO = () => {
     } finally {
       setProcessingAction(false);
     }
-  }, [items, selectedSupplier, deliveryDate, targetCoverageDate]);
+  }, [groupedItems, selectedSupplier, deliveryDate, targetCoverageDate]);
   
   return {
     items,
+    groupedItems,
     deliveryDate,
     setDeliveryDate,
     targetCoverageDate,

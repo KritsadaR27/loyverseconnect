@@ -3,10 +3,11 @@ import { formatNumber, formatDate } from '@/lib/utils';
 
 const POTable = ({
   items,
+  groupedItems,
   storeStocks,
   futureDates,
   targetCoverageDate,
-  setTargetCoverageDate, // เพิ่ม prop นี้
+  setTargetCoverageDate,
   handleBufferChange,
   handleOrderQuantityChange,
   editingBuffers,
@@ -32,9 +33,10 @@ const POTable = ({
   return (
     <div className="overflow-x-auto rounded-md border">
       <table className="min-w-full border-collapse">
+        {/* Table Headers */}
         <thead className="bg-slate-50">
           <tr>
-            <th className="p-2 text-left border">รหัส/รายการ</th>
+            <th className="p-2 text-left border sticky left-0 bg-slate-50 z-20">รหัส/รายการ</th>
             <th className="p-2 text-center border">สต็อกรวม</th>
             {dateColumns.map((col) => (
               <th
@@ -55,89 +57,101 @@ const POTable = ({
             <th className="p-2 text-center border">สั่ง <span className="text-xs text-gray-500">(ชิ้น)</span></th>
           </tr>
         </thead>
+
+        {/* Table Body with Supplier Groups */}
         <tbody>
-          {items.map((item) => {
-            return (
-              <tr key={item.id} className="border-t hover:bg-gray-50">
-                <td className="p-2 border">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-xs text-gray-500">{item.id}</span>
-                  </div>
-                </td>
-                <td className="p-2 text-center border">
-                  <div
-                    className={`inline-block px-2 py-1 rounded text-sm font-medium ${getStockLevelIndicator(item.currentStock)}`}
-                    title={Object.entries(storeStocks[item.id] || {})
-                      .map(([storeName, qty]) => `${storeName}: ${formatNumber(qty)}`)
-                      .join('\n')}
-                  >
-                    {formatNumber(item.currentStock)}
-                  </div>
-                </td>
-                {dateColumns.map((col, colIndex) => {
-                  const dailySale = item.dailySales[col.dateStr] || 0;
-                  
-                  // Accumulate sales up to this date
-                  let accumulatedSales = 0;
-                  for (let i = 0; i <= colIndex; i++) {
-                    accumulatedSales += (item.dailySales[dateColumns[i].dateStr] || 0);
-                  }
-                  
-                  // Calculate remaining stock
-                  const remainingStock = Math.round(item.currentStock - accumulatedSales);
-                  
-                  return (
-                    <td
-                      key={`${item.id}-${col.date.toISOString()}`}
-                      className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
-                      onClick={() => setTargetCoverageDate(col.date)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="flex flex-col gap-1">
-                        <div className="text-xs text-red-600">
-                          {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
-                        </div>
-                        <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
-                          {formatNumber(remainingStock)}
-                        </div>
-                      </div>
-                    </td>
-                  );
-                })}
-                <td className="p-2 text-center border">
-                  <input
-                    type="number"
-                    min="0"
-                    value={item.buffer || 0}
-                    onChange={(e) =>
-                      handleBufferChange(item.id, parseInt(e.target.value) || 0)
-                    }
-                    className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
-                    disabled={!editingBuffers}
-                  />
-                </td>
-                <td className="p-2 text-center border font-medium">
-                  {formatNumber(item.suggestedOrderQuantity)}
-                </td>
-                <td className="p-2 text-center border">
-                  <input
-                    type="number"
-                    min="0"
-                    value={item.orderQuantity || 0}
-                    onChange={(e) =>
-                      handleOrderQuantityChange(item.id, parseInt(e.target.value) || 0)
-                    }
-                    className={`w-20 mx-auto text-center border rounded px-1 py-1 text-sm ${
-                      (item.orderQuantity || 0) !== item.suggestedOrderQuantity
-                        ? 'bg-yellow-50 border-yellow-300'
-                        : ''
-                    }`}
-                  />
+          {Object.entries(groupedItems).map(([supplier, supplierItems]) => (
+            <React.Fragment key={supplier}>
+              {/* Supplier Header Row */}
+              <tr className="bg-blue-100">
+                <td colSpan={7 + dateColumns.length} className="p-2 font-bold">
+                  {supplier}
                 </td>
               </tr>
-            );
-          })}
+
+              {/* Item Rows */}
+              {supplierItems.map((item) => (
+                <tr key={item.id} className="border-t hover:bg-gray-50">
+                  <td className="p-2 border sticky left-0 bg-white z-10">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs text-gray-500">{item.code}</span>
+                    </div>
+                  </td>
+                  <td className="p-2 text-center border">
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-sm font-medium ${getStockLevelIndicator(item.currentStock)}`}
+                      title={Object.entries(storeStocks[item.id] || {})
+                        .map(([storeName, qty]) => `${storeName}: ${formatNumber(qty)}`)
+                        .join('\n')}
+                    >
+                      {formatNumber(item.currentStock)}
+                    </div>
+                  </td>
+                  {dateColumns.map((col, colIndex) => {
+                    const dailySale = item.dailySales[col.dateStr] || 0;
+                    
+                    // Accumulate sales up to this date
+                    let accumulatedSales = 0;
+                    for (let i = 0; i <= colIndex; i++) {
+                      accumulatedSales += (item.dailySales[dateColumns[i].dateStr] || 0);
+                    }
+                    
+                    // Calculate remaining stock
+                    const remainingStock = Math.round(item.currentStock - accumulatedSales);
+                    
+                    return (
+                      <td
+                        key={`${item.id}-${col.date.toISOString()}`}
+                        className={`p-2 text-center border ${col.isTarget ? 'bg-blue-50' : ''}`}
+                        onClick={() => setTargetCoverageDate(col.date)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="text-xs text-red-600">
+                            {dailySale > 0 ? `- ${formatNumber(dailySale)}` : '0'}
+                          </div>
+                          <div className={`font-medium ${remainingStock < 0 ? 'text-red-600' : ''}`}>
+                            {formatNumber(remainingStock)}
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="p-2 text-center border">
+                    <input
+                      type="number"
+                      min="0"
+                      value={item.buffer || 0}
+                      onChange={(e) =>
+                        handleBufferChange(item.id, parseInt(e.target.value) || 0)
+                      }
+                      className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
+                      disabled={!editingBuffers}
+                    />
+                  </td>
+                  <td className="p-2 text-center border font-medium">
+                    {formatNumber(item.suggestedOrderQuantity)}
+                  </td>
+                  <td className="p-2 text-center border">
+                    <input
+                      type="number"
+                      min="0"
+                      value={item.orderQuantity || 0}
+                      onChange={(e) =>
+                        handleOrderQuantityChange(item.id, parseInt(e.target.value) || 0)
+                      }
+                      className={`w-20 mx-auto text-center border rounded px-1 py-1 text-sm ${
+                        (item.orderQuantity || 0) !== item.suggestedOrderQuantity
+                          ? 'bg-yellow-50 border-yellow-300'
+                          : ''
+                      }`}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </React.Fragment>
+          ))}
         </tbody>
       </table>
     </div>
