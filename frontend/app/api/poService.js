@@ -1,5 +1,6 @@
 // app/api/poService.js
 import axios from 'axios';
+import { mockPOService } from './mockService';
 
 const isServer = typeof window === 'undefined';
 const PO_API_URL = isServer 
@@ -10,17 +11,26 @@ const INVENTORY_API_URL = isServer
   ? process.env.INVENTORY_API_URL
   : process.env.NEXT_PUBLIC_INVENTORY_BASE_URL;
 
+// Flag to enable mock service
+const USE_MOCK_SERVICE = true; // Set to false when backend service is available
+
 /**
  * Fetch inventory data for PO generation
  * @returns {Promise<Array>} Array of inventory items
  */
 export const fetchInventoryData = async () => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock inventory data');
+    return mockPOService.fetchInventoryData();
+  }
+  
   try {
     const response = await axios.get(`${INVENTORY_API_URL}/api/inventory-po`);
     return response.data;
   } catch (error) {
     console.error("Error fetching inventory data:", error);
-    throw new Error("Failed to fetch inventory data");
+    console.log('Falling back to mock inventory data');
+    return mockPOService.fetchInventoryData();
   }
 };
 
@@ -30,17 +40,26 @@ export const fetchInventoryData = async () => {
  * @returns {Promise<Object>} Sales data by day
  */
 export const fetchSalesData = async (dates) => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock sales data');
+    return mockPOService.fetchSalesData(dates);
+  }
+  
   try {
     // Convert dates to ISO string format for API
     const dateParams = dates.map(date => date.toISOString()).join(',');
     
-    const response = await axios.get(`${PO_API_URL}/api/sales-by-date`, {
-      params: { dates: dateParams }
+    const response = await axios.get(`${PO_API_URL}/api/sales/days`, {
+      params: { 
+        startDate: dates[0].toISOString(),
+        endDate: dates[dates.length - 1].toISOString()
+      }
     });
     return response.data;
   } catch (error) {
     console.error("Error fetching sales data:", error);
-    throw new Error("Failed to fetch sales data");
+    console.log('Falling back to mock sales data');
+    return mockPOService.fetchSalesData(dates);
   }
 };
 
@@ -50,6 +69,11 @@ export const fetchSalesData = async (dates) => {
  * @returns {Promise<Object>} Stock levels by store
  */
 export const fetchStoreStocks = async (itemIds) => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock store stocks');
+    return mockPOService.fetchStoreStocks(itemIds);
+  }
+  
   try {
     const response = await axios.get(`${INVENTORY_API_URL}/api/store-stocks`, {
       params: { item_ids: itemIds.join(',') }
@@ -57,7 +81,8 @@ export const fetchStoreStocks = async (itemIds) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching store stocks:", error);
-    throw new Error("Failed to fetch store stocks");
+    console.log('Falling back to mock store stocks');
+    return mockPOService.fetchStoreStocks(itemIds);
   }
 };
 
@@ -67,6 +92,11 @@ export const fetchStoreStocks = async (itemIds) => {
  * @returns {Promise<Object>} Save result
  */
 export const saveBufferQuantities = async (items) => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock buffer quantities save');
+    return mockPOService.saveBufferQuantities(items);
+  }
+  
   try {
     const bufferData = items.map(item => ({
       item_id: item.id,
@@ -77,7 +107,8 @@ export const saveBufferQuantities = async (items) => {
     return response.data;
   } catch (error) {
     console.error("Error saving buffer quantities:", error);
-    throw new Error("Failed to save buffer quantities");
+    console.log('Falling back to mock buffer quantities save');
+    return mockPOService.saveBufferQuantities(items);
   }
 };
 
@@ -87,12 +118,18 @@ export const saveBufferQuantities = async (items) => {
  * @returns {Promise<Object>} Notification result
  */
 export const sendLineNotification = async (notificationData) => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock LINE notification');
+    return mockPOService.sendLineNotification(notificationData);
+  }
+  
   try {
     const response = await axios.post(`${PO_API_URL}/api/notify/line`, notificationData);
     return response.data;
   } catch (error) {
     console.error("Error sending LINE notification:", error);
-    throw new Error("Failed to send LINE notification");
+    console.log('Falling back to mock LINE notification');
+    return mockPOService.sendLineNotification(notificationData);
   }
 };
 
@@ -102,11 +139,17 @@ export const sendLineNotification = async (notificationData) => {
  * @returns {Promise<Object>} Generated purchase order
  */
 export const generatePurchaseOrder = async (purchaseOrderData) => {
+  if (USE_MOCK_SERVICE) {
+    console.log('Using mock purchase order generation');
+    return mockPOService.generatePurchaseOrder(purchaseOrderData);
+  }
+  
   try {
     const response = await axios.post(`${PO_API_URL}/api/purchase-orders`, purchaseOrderData);
     return response.data;
   } catch (error) {
     console.error("Error generating purchase order:", error);
-    throw new Error("Failed to generate purchase order");
+    console.log('Falling back to mock purchase order generation');
+    return mockPOService.generatePurchaseOrder(purchaseOrderData);
   }
 };

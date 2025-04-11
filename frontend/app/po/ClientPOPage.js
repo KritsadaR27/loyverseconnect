@@ -10,6 +10,10 @@ import POFooter from './components/POFooter';
 import usePO from './hooks/usePO';
 import Alert from '../../components/Alert'; // นำเข้า Alert component ที่มีอยู่
 
+// Add placeholder components if they're not available
+const Skeleton = ({ className }) => (
+  <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
+);
 
 const ClientPOPage = () => {
   const { 
@@ -31,8 +35,8 @@ const ClientPOPage = () => {
     handleSendLineNotification,
     handleGeneratePO,
     alert,
-    setAlert
-
+    setAlert,
+    error
   } = usePO();
   
   const [isMobile, setIsMobile] = useState(false);
@@ -68,9 +72,21 @@ const ClientPOPage = () => {
       }
     >
       <div className="space-y-4 mt-2">
+        {/* Show alert if it exists */}
+        {alert && (
+          <Alert 
+            message={alert.message} 
+            type={alert.type} 
+            description={alert.description}
+            onClose={() => setAlert(null)} 
+          />
+        )}
+      
         {loading ? (
           <div className="space-y-4">
-           
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-[300px] w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : (
           <>
@@ -79,8 +95,19 @@ const ClientPOPage = () => {
                 <div className="text-3xl mb-2">📦</div>
                 <h3 className="text-lg font-medium mb-2">ไม่พบข้อมูลสินค้า</h3>
                 <p className="text-muted-foreground">
-                  ไม่พบรายการสินค้าที่ต้องสั่งซื้อ หรือระบบอาจมีปัญหาในการโหลดข้อมูล
+                  {error ? 
+                    "เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง" : 
+                    "ไม่พบรายการสินค้าที่ต้องสั่งซื้อ"
+                  }
                 </p>
+                {error && (
+                  <div className="mt-4 text-xs text-red-500 max-w-md mx-auto text-left">
+                    <p>รายละเอียดข้อผิดพลาด:</p>
+                    <pre className="mt-1 p-2 bg-red-50 rounded overflow-auto text-left">
+                      {error.message || JSON.stringify(error, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             ) : (
               <>

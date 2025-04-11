@@ -98,6 +98,42 @@ func (h *POHandler) CalculateSuggestedQuantities(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(items)
 }
 
+// Add this method to POHandler
+// GetSalesByDay handles the request to get sales data by day
+func (h *POHandler) GetSalesByDay(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameters
+	startDateStr := r.URL.Query().Get("startDate")
+	endDateStr := r.URL.Query().Get("endDate")
+
+	var startDate, endDate time.Time
+	var err error
+
+	// Parse start date
+	startDate, err = time.Parse(time.RFC3339, startDateStr)
+	if err != nil {
+		http.Error(w, "Invalid startDate format, should be RFC3339", http.StatusBadRequest)
+		return
+	}
+
+	// Parse end date
+	endDate, err = time.Parse(time.RFC3339, endDateStr)
+	if err != nil {
+		http.Error(w, "Invalid endDate format, should be RFC3339", http.StatusBadRequest)
+		return
+	}
+
+	// Get sales data from service
+	salesData, err := h.poService.GetSalesByDay(r.Context(), startDate, endDate)
+	if err != nil {
+		http.Error(w, "Failed to get sales data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(salesData)
+}
+
 // SaveBufferSettings บันทึกยอดเผื่อ
 func (h *POHandler) SaveBufferSettings(w http.ResponseWriter, r *http.Request) {
 	// ตรวจสอบวิธี HTTP

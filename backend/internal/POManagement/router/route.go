@@ -43,6 +43,6 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("/api/po/detail", poHandler.GetPOByID)
 	mux.HandleFunc("/api/po/list", poHandler.GetAllPOs)
 	mux.HandleFunc("/api/po/notify", poHandler.SendLineNotification)
-	mux.HandleFunc("/api/sales/days", poHandler.GetSalesByDays)
+	mux.HandleFunc("/api/sales/days", poHandler.GetSalesByDay)
 
 }
