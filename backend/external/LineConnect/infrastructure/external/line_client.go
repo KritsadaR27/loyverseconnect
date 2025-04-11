@@ -3,6 +3,7 @@ package external
 
 import (
 	"backend/external/LineConnect/domain/interfaces"
+	"fmt"
 	"log"
 
 	"github.com/line/line-bot-sdk-go/v7/linebot"
@@ -22,12 +23,22 @@ func NewLineClient(client *linebot.Client) interfaces.LineClient {
 
 // SendTextMessage sends a text message to a LINE group
 func (c *LineClientImpl) SendTextMessage(groupID, text string) error {
+	log.Printf("🚀 Sending LINE message | groupID: %s | text: %q", groupID, text)
+
+	if c.client == nil {
+		log.Println("❌ LINE client is nil")
+		return fmt.Errorf("LINE client not initialized")
+	}
+
 	message := linebot.NewTextMessage(text)
-	_, err := c.client.PushMessage(groupID, message).Do()
+
+	resp, err := c.client.PushMessage(groupID, message).Do()
 	if err != nil {
-		log.Printf("Failed to send text message to %s: %v", groupID, err)
+		log.Printf("❌ LINE PushMessage error to group %s: %v", groupID, err)
 		return err
 	}
+
+	log.Printf("✅ LINE response | Status: %d", resp.RequestID)
 	return nil
 }
 

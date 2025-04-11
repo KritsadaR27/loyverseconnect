@@ -12,15 +12,18 @@ import {
   ExclamationCircleIcon,
   CheckCircleIcon,
   ChatBubbleLeftRightIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ArrowPathIcon
 } from "@heroicons/react/24/outline";
 import SidebarLayout from "../../../components/layouts/SidebarLayout";
 import Alert from "../../../components/Alert";
 import { 
   fetchNotificationConfigs, 
   deleteNotificationConfig, 
-  runNotificationNow 
+  runNotificationNow,
+  fetchAirtableTables
 } from "../../api/airtableService";
+import { fetchLineGroups } from "../../api/lineService";
 
 const LineNotificationListPage = () => {
   const router = useRouter();
@@ -28,26 +31,49 @@ const LineNotificationListPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [tableMap, setTableMap] = useState({});
+  const [groupMap, setGroupMap] = useState({});
 
-  // Fetch all notification configs
+  // Fetch all notification configs, tables, and groups
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all data in parallel
+      const [notificationsData, tablesData, groupsData] = await Promise.all([
+        fetchNotificationConfigs(),
+        fetchAirtableTables(),
+        fetchLineGroups()
+      ]);
+      
+      // Create a map of table IDs to table names
+      const tableMapping = {};
+      tablesData.forEach(table => {
+        tableMapping[table.airtable_id] = table.name;
+      });
+      
+      // Create a map of group IDs to group names
+      const groupMapping = {};
+      groupsData.forEach(group => {
+        groupMapping[group.id] = group.name;
+      });
+      
+      setNotifications(notificationsData);
+      setTableMap(tableMapping);
+      setGroupMap(groupMapping);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setAlert({
+        type: "error",
+        message: "Failed to load notifications and reference data"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchNotificationConfigs();
-        setNotifications(data);
-      } catch (error) {
-        console.error("Error loading notifications:", error);
-        setAlert({
-          type: "error",
-          message: "Failed to load notifications"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadNotifications();
+    loadData();
   }, []);
 
   const handleCreateNew = () => {
@@ -108,6 +134,38 @@ const LineNotificationListPage = () => {
     }
   };
 
+  // New function to reload the notification scheduler on the server
+  const handleReloadScheduler = async () => {
+    try {
+      setIsLoading(true);
+      const apiUrl = process.env.NEXT_PUBLIC_AIRTABLE_CONNECT_URL || 'http://localhost:8086';
+      
+      const response = await fetch(`${apiUrl}/api/airtable/notifications/reload-scheduler`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to reload scheduler: ${response.status}`);
+      }
+      
+      // Reload the notifications list to show updated status
+      await loadData();
+      
+      setAlert({
+        type: "success",
+        message: "Notification scheduler reloaded successfully"
+      });
+    } catch (error) {
+      console.error("Error reloading scheduler:", error);
+      setAlert({
+        type: "error",
+        message: "Failed to reload notification scheduler"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatDateTime = (dateString) => {
     if (!dateString) return "Never";
     const date = new Date(dateString);
@@ -130,14 +188,35 @@ const LineNotificationListPage = () => {
     
     // Very basic cron description
     const parts = cronExpression.split(" ");
-    if (parts.length !== 5) return cronExpression;
+    if (parts.length !== 6 && parts.length !== 5) return cronExpression;
     
-    const [minute, hour, day, month, weekday] = parts;
-    
-    if (minute === "0" && hour !== "*" && day === "*" && month === "*" && weekday === "*") {
-      return `Daily at ${hour}:00`;
-    } else if (weekday !== "*" && day === "*") {
-      return `Weekly on days ${weekday} at ${hour}:${minute === "0" ? "00" : minute}`;
+    // For 6-field cron (with seconds)
+    if (parts.length === 6) {
+      const [second, minute, hour, day, month, weekday] = parts;
+      
+      if (second === "0" && minute !== "*" && hour !== "*" && day === "*" && month === "*" && weekday === "*") {
+        return `Daily at ${hour}:${minute.padStart(2, '0')}`;
+      } else if (second === "0" && minute !== "*" && hour !== "*" && day === "*" && month === "*" && weekday !== "*") {
+        if (weekday === "1-5") {
+          return `Weekdays at ${hour}:${minute.padStart(2, '0')}`;
+        } else {
+          return `Days ${weekday} at ${hour}:${minute.padStart(2, '0')}`;
+        }
+      }
+    } 
+    // For 5-field cron (standard)
+    else {
+      const [minute, hour, day, month, weekday] = parts;
+      
+      if (minute !== "*" && hour !== "*" && day === "*" && month === "*" && weekday === "*") {
+        return `Daily at ${hour}:${minute.padStart(2, '0')}`;
+      } else if (minute !== "*" && hour !== "*" && day === "*" && month === "*" && weekday !== "*") {
+        if (weekday === "1-5") {
+          return `Weekdays at ${hour}:${minute.padStart(2, '0')}`;
+        } else {
+          return `Days ${weekday} at ${hour}:${minute.padStart(2, '0')}`;
+        }
+      }
     }
     
     return cronExpression; // Fallback to showing the raw expression
@@ -162,15 +241,40 @@ const LineNotificationListPage = () => {
     }
   };
 
+  // Get table name from table ID
+  const getTableName = (tableId) => {
+    return tableMap[tableId] || tableId;
+  };
+
+  // Get group names from group IDs
+  const getGroupNames = (groupIds) => {
+    if (!groupIds || !Array.isArray(groupIds) || groupIds.length === 0) {
+      return "No groups selected";
+    }
+    
+    return groupIds.map(id => groupMap[id] || id).join(", ");
+  };
+
   const ActionBar = () => (
     <div className="flex items-center justify-between py-1.5 rounded-md">
-      <button
-        onClick={handleCreateNew}
-        className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
-      >
-        <PlusIcon className="w-5 h-5 mr-2" />
-        Create New Notification
-      </button>
+      <div className="flex space-x-2">
+        <button
+          onClick={handleCreateNew}
+          className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
+        >
+          <PlusIcon className="w-5 h-5 mr-2" />
+          Create New Notification
+        </button>
+        
+        <button
+          onClick={handleReloadScheduler}
+          className="flex items-center px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition"
+          disabled={isLoading}
+        >
+          <ArrowPathIcon className="w-5 h-5 mr-2" />
+          Reload Scheduler
+        </button>
+      </div>
     </div>
   );
 
@@ -238,6 +342,7 @@ const LineNotificationListPage = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-gray-500 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-gray-500 uppercase">Data Source</th>
+                  <th className="px-6 py-3 text-left text-gray-500 uppercase">Target Groups</th>
                   <th className="px-6 py-3 text-left text-gray-500 uppercase">Schedule</th>
                   <th className="px-6 py-3 text-left text-gray-500 uppercase">Last Run</th>
                   <th className="px-6 py-3 text-left text-gray-500 uppercase">Status</th>
@@ -254,8 +359,16 @@ const LineNotificationListPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{notification.table_id}</div>
+                      <div className="text-sm text-gray-900">{getTableName(notification.table_id)}</div>
                       <div className="text-sm text-gray-500">{notification.view_name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 max-w-xs truncate" title={getGroupNames(notification.group_ids)}>
+                        {getGroupNames(notification.group_ids)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {notification.group_ids?.length || 0} group(s)
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">

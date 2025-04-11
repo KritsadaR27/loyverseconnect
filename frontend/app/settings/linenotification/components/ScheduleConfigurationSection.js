@@ -3,12 +3,11 @@ import { PlusIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, InformationCircleI
 
 // Predefined cron schedules with user-friendly labels
 const CRON_PRESETS = [
-    { label: 'ทุกวัน 8 โมงเข้า', value: '0 8 * * *', description: 'Sends notification daily at 8:00 AM' },
-    { label: 'ทุกวัน เที่ยง', value: '0 12 * * *', description: 'Sends notification daily at 12:00 ' },
-    { label: 'ทุกวัน 6 โมงเย็น', value: '0 18 * * *', description: 'Sends notification daily at 18:00 ' },
-
-    { label: 'Every weekday at 8:00 AM', value: '0 8 * * 1-5', description: 'Sends notification Monday-Friday at 8:00 AM' },
-    { label: 'Every hour', value: '0 * * * *', description: 'Sends notification at the start of every hour' },
+    { label: 'ทุกวัน 8 โมงเช้า', value: '0 0 8 * * *', description: 'Sends notification daily at 8:00 AM' },
+    { label: 'ทุกวัน เที่ยง', value: '0 0 12 * * *', description: 'Sends notification daily at 12:00 PM' },
+    { label: 'ทุกวัน 6 โมงเย็น', value: '0 0 18 * * *', description: 'Sends notification daily at 6:00 PM' },
+    { label: 'Every weekday at 8:00 AM', value: '0 0 8 * * 1-5', description: 'Sends notification Monday-Friday at 8:00 AM' },
+    { label: 'Every hour', value: '0 0 * * * *', description: 'Sends notification at the start of every hour' },
     { label: 'Custom schedule', value: 'custom', description: 'Enter a custom cron expression' }
 ];
 
@@ -35,9 +34,9 @@ const ScheduleConfigurationSection = ({ config, setConfig, showScheduleSection, 
             
             // If it's a daily schedule, also update the notification time to match
             if (value.includes('* * *')) {
-                const match = value.match(/^(\d+) (\d+) \* \* \*/);
+                const match = value.match(/^(\d+) (\d+) (\d+) \* \* \*/);
                 if (match) {
-                    const [_, minutes, hours] = match;
+                    const [_, seconds, minutes, hours] = match;
                     const timeStr = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
                     setConfig(prev => ({
                         ...prev,
@@ -57,11 +56,13 @@ const ScheduleConfigurationSection = ({ config, setConfig, showScheduleSection, 
         const newTimes = [...config.notificationTimes];
         newTimes[index] = value;
         
-        // If this is the first time and we have a daily schedule, also update the cron expression
-        if (selectedPreset === 'custom' && index === 0 && 
-            (config.schedule.includes('* * *') || config.schedule.match(/^\d+ \d+ \* \* \*$/))) {
+        // Update the cron expression for the first time
+        if (index === 0) {
             const [hours, minutes] = value.split(':');
-            const newCron = `${minutes} ${hours} * * *`;
+            
+            // Make sure we use the 6-field cron format (with seconds)
+            const newCron = `0 ${minutes} ${hours} * * *`;
+            
             setConfig(prev => ({
                 ...prev,
                 notificationTimes: newTimes,
@@ -94,21 +95,57 @@ const ScheduleConfigurationSection = ({ config, setConfig, showScheduleSection, 
         if (!cronExpression) return "No schedule set";
         
         const parts = cronExpression.split(" ");
-        if (parts.length !== 5) return cronExpression;
         
-        const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-        
-        if (minute === "0" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-            return `Daily at ${hour}:${minute === "0" ? "00" : minute}`;
-        } else if (minute === "0" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek !== "*") {
-            if (dayOfWeek === "1-5") {
-                return `Weekdays at ${hour}:${minute === "0" ? "00" : minute}`;
-            } else {
-                return `On days ${dayOfWeek} at ${hour}:${minute === "0" ? "00" : minute}`;
+        // Handle 6-field cron (with seconds)
+        if (parts.length === 6) {
+            const [seconds, minutes, hours, dayOfMonth, month, dayOfWeek] = parts;
+            
+            if (seconds === "0" && minutes !== "*" && hours !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+                return `Daily at ${hours}:${minutes.padStart(2, '0')}`;
+            } else if (seconds === "0" && minutes !== "*" && hours !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek !== "*") {
+                if (dayOfWeek === "1-5") {
+                    return `Weekdays at ${hours}:${minutes.padStart(2, '0')}`;
+                } else {
+                    return `On days ${dayOfWeek} at ${hours}:${minutes.padStart(2, '0')}`;
+                }
+            }
+        } 
+        // Handle 5-field cron (standard)
+        else if (parts.length === 5) {
+            const [minutes, hours, dayOfMonth, month, dayOfWeek] = parts;
+            
+            if (minutes !== "*" && hours !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+                return `Daily at ${hours}:${minutes.padStart(2, '0')}`;
+            } else if (minutes !== "*" && hours !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek !== "*") {
+                if (dayOfWeek === "1-5") {
+                    return `Weekdays at ${hours}:${minutes.padStart(2, '0')}`;
+                } else {
+                    return `On days ${dayOfWeek} at ${hours}:${minutes.padStart(2, '0')}`;
+                }
             }
         }
         
         return cronExpression;
+    };
+
+    // Ensure cron expression is valid with 6 fields
+    const validateCronExpression = (cron) => {
+        if (!cron) return false;
+        
+        const parts = cron.split(" ");
+        
+        // If we have 5 fields, add the leading '0' for seconds
+        if (parts.length === 5) {
+            return `0 ${cron}`;
+        }
+        
+        // If we have 6 fields, return as-is
+        if (parts.length === 6) {
+            return cron;
+        }
+        
+        // Otherwise, default to a valid expression
+        return '0 0 0 * * *';
     };
 
     return (
@@ -173,7 +210,7 @@ const ScheduleConfigurationSection = ({ config, setConfig, showScheduleSection, 
                                 value={config.schedule || ''}
                                 onChange={handleCustomCronChange}
                                 className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="0 9 * * *"
+                                placeholder="0 0 9 * * *"
                             />
                             
                             <div className="text-sm text-gray-500 mt-1">
@@ -182,16 +219,19 @@ const ScheduleConfigurationSection = ({ config, setConfig, showScheduleSection, 
                             
                             {showCronHelp && (
                                 <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                    <h4 className="font-semibold text-blue-800 mb-1">Cron Expression Format</h4>
+                                    <h4 className="font-semibold text-blue-800 mb-1">Cron Expression Format (6-field)</h4>
                                     <p className="text-sm text-gray-600 mb-2">
-                                        <code className="bg-gray-100 px-1 rounded">minute hour day-of-month month day-of-week</code>
+                                        <code className="bg-gray-100 px-1 rounded">seconds minutes hours day-of-month month day-of-week</code>
                                     </p>
                                     <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
-                                        <li><code className="bg-gray-100 px-1 rounded">0 9 * * *</code> = Every day at 9:00 AM</li>
-                                        <li><code className="bg-gray-100 px-1 rounded">0 9 * * 1-5</code> = Every weekday at 9:00 AM</li>
-                                        <li><code className="bg-gray-100 px-1 rounded">0 */2 * * *</code> = Every 2 hours</li>
-                                        <li><code className="bg-gray-100 px-1 rounded">0 9 * * 1,3,5</code> = Monday, Wednesday, Friday at 9:00 AM</li>
+                                        <li><code className="bg-gray-100 px-1 rounded">0 0 9 * * *</code> = Every day at 9:00 AM</li>
+                                        <li><code className="bg-gray-100 px-1 rounded">0 0 9 * * 1-5</code> = Every weekday at 9:00 AM</li>
+                                        <li><code className="bg-gray-100 px-1 rounded">0 0 */2 * * *</code> = Every 2 hours</li>
+                                        <li><code className="bg-gray-100 px-1 rounded">0 0 9 * * 1,3,5</code> = Monday, Wednesday, Friday at 9:00 AM</li>
                                     </ul>
+                                    <div className="mt-2 text-sm font-medium text-red-600">
+                                        <p>Important: This system requires 6-field cron format with seconds!</p>
+                                    </div>
                                 </div>
                             )}
                         </div>

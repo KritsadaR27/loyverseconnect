@@ -60,9 +60,14 @@ func (s *NotificationScheduler) Stop() {
 	log.Println("Notification scheduler stopped")
 }
 
-// Reload โหลดการตั้งค่าการแจ้งเตือนใหม่
+// Reload โหลดการตั้งค่าการแจ้งเตือนใหม่ทั้งหมด
 func (s *NotificationScheduler) Reload() {
+	log.Println("Reloading notification scheduler...")
+
+	// หยุด cron ปัจจุบัน
 	s.cron.Stop()
+
+	// ล้าง job IDs ที่มีอยู่
 	s.jobIDs = make(map[int]cron.EntryID)
 
 	// โหลดการแจ้งเตือนที่ตั้งไว้
@@ -73,6 +78,7 @@ func (s *NotificationScheduler) Reload() {
 
 	// ลงทะเบียนงานในระบบ cron
 	for _, notification := range notifications {
+		log.Printf("🔄 Reloading schedule: %s for notification ID %d", notification.Schedule, notification.ID)
 		s.scheduleNotification(notification)
 	}
 

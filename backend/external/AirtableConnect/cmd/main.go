@@ -4,6 +4,7 @@ package main
 import (
 	"backend/external/AirtableConnect/application/services"
 	"backend/external/AirtableConnect/config"
+	"backend/external/AirtableConnect/domain/models"
 	"backend/external/AirtableConnect/infrastructure/data"
 	"backend/external/AirtableConnect/infrastructure/external"
 	"backend/external/AirtableConnect/infrastructure/scheduler"
@@ -63,8 +64,7 @@ func main() {
 
 	// Set up HTTP router
 	mux := http.NewServeMux()
-	router.RegisterRoutes(mux, db, airtableClient)
-
+	router.RegisterRoutes(mux, db, airtableClient, notificationScheduler)
 	// Apply middleware
 	handler := middleware.CORS(mux)
 
@@ -89,4 +89,30 @@ func main() {
 	// Wait for shutdown signal
 	<-stop
 	log.Println("Shutting down server...")
+
+	// Send scheduled notifications
+	schedules := []models.ScheduledNotification{
+		{
+			ID:             1,
+			TableID:        "table1",
+			ViewName:       "view1",
+			Fields:         []string{"Field1", "Field2"},
+			GroupIDs:       []string{"group1"},
+			HeaderTemplate: "Header: {{.Today}}",
+			BubbleTemplate: "Bubble: {{.Index}}",
+			FooterTemplate: "Footer: {{.Tomorrow}}",
+			Schedule:       "0 8 * * *", // ทุกวันเวลา 08:00
+			Active:         true,
+			EnableBubbles:  true,
+		},
+	}
+
+	errors := notificationService.SendScheduledNotifications(schedules)
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Printf("Error: %v", err)
+		}
+	} else {
+		log.Println("All scheduled notifications sent successfully!")
+	}
 }

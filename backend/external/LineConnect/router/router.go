@@ -92,12 +92,12 @@ func RegisterRoutes(r *mux.Router, db *sql.DB, lineBotClient *linebot.Client) {
 
 		for _, event := range events {
 			log.Printf("🔔 New LINE event: Type=%s, SourceType=%s", event.Type, event.Source.Type)
-			log.Printf("Event Source: %v", event.Source)
-			log.Printf("Event ReplyToken: %s", event.ReplyToken)
-			log.Printf("Event Timestamp: %s", event.Timestamp)
+			// log.Printf("Event Source: %v", event.Source)
+			// log.Printf("Event ReplyToken: %s", event.ReplyToken)
+			// log.Printf("Event Timestamp: %s", event.Timestamp)
 			log.Printf("Event Message: %v", event.Message)
-			log.Printf("Event Postback: %v", event.Postback)
-			log.Printf("Event Beacon: %v", event.Beacon)
+			// log.Printf("Event Postback: %v", event.Postback)
+			// log.Printf("Event Beacon: %v", event.Beacon)
 
 			// Record the group ID if the event is from a group
 			if event.Source.Type == linebot.EventSourceTypeGroup && event.Source.GroupID != "" {

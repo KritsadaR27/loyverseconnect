@@ -375,13 +375,15 @@ func (s *NotificationService) sendToLine(message string, groupIDs []string) erro
 
 // sendBubblesToLine sends messages as separate bubbles
 func (s *NotificationService) sendBubblesToLine(messages []string, groupIDs []string) error {
-
 	for _, msg := range messages {
 		req := LineMessageRequest{
 			Content:  msg,
 			GroupIDs: groupIDs,
 			Type:     "text",
 		}
+
+		// เพิ่ม log เพื่อแสดงข้อความที่กำลังจะถูกส่ง
+		log.Printf("🧾 Sending to LINE: %s", req.Content)
 
 		jsonData, err := json.Marshal(req)
 		if err != nil {

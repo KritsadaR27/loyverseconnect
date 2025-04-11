@@ -6,6 +6,7 @@ import (
 	"backend/external/AirtableConnect/application/services"
 	"backend/external/AirtableConnect/domain/interfaces"
 	"backend/external/AirtableConnect/domain/models"
+	"backend/external/AirtableConnect/infrastructure/scheduler"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -16,13 +17,19 @@ import (
 type NotificationHandler struct {
 	notificationService *services.NotificationService
 	notificationRepo    interfaces.NotificationRepository
+	scheduler           *scheduler.NotificationScheduler
 }
 
 // NewNotificationHandler สร้าง instance ใหม่ของ NotificationHandler
-func NewNotificationHandler(notificationService *services.NotificationService, notificationRepo interfaces.NotificationRepository) *NotificationHandler {
+func NewNotificationHandler(
+	notificationService *services.NotificationService,
+	notificationRepo interfaces.NotificationRepository,
+	scheduler *scheduler.NotificationScheduler, // เพิ่มพารามิเตอร์นี้
+) *NotificationHandler {
 	return &NotificationHandler{
 		notificationService: notificationService,
 		notificationRepo:    notificationRepo,
+		scheduler:           scheduler,
 	}
 }
 
@@ -169,7 +176,10 @@ func (h *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http.
 		http.Error(w, "Notification created but failed to retrieve: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	// สั่ง Reload scheduler หลังจากบันทึกเสร็จ (เพิ่มบรรทัดนี้)
+	if h.scheduler != nil {
+		h.scheduler.Reload()
+	}
 	// ส่ง response กลับ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -290,6 +300,10 @@ func (h *NotificationHandler) UpdateNotification(w http.ResponseWriter, r *http.
 	if err != nil {
 		http.Error(w, "Failed to update notification: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// สั่ง Reload scheduler หลังจากบันทึกเสร็จ (เพิ่มบรรทัดนี้)
+	if h.scheduler != nil {
+		h.scheduler.Reload()
 	}
 
 	// ส่ง response กลับ

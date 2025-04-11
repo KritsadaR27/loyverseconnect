@@ -7,16 +7,18 @@ import (
 	"backend/external/AirtableConnect/config"
 	"backend/external/AirtableConnect/infrastructure/data"
 	"backend/external/AirtableConnect/infrastructure/external"
+	"backend/external/AirtableConnect/infrastructure/scheduler"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/mehanizm/airtable"
 )
 
 // RegisterRoutes sets up all routes for the Airtable Connect service
-func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Client) {
+func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Client, notificationScheduler *scheduler.NotificationScheduler) {
 	baseID, err := config.GetAirtableBaseID()
 	if err != nil {
 		panic(err)
@@ -38,7 +40,7 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 	notificationService := services.NewNotificationService(airtableClientImpl, notificationRepo, baseID, lineAPIURL)
 
 	syncHandler := handlers.NewSyncHandler(airtableService)
-	notificationHandler := handlers.NewNotificationHandler(notificationService, notificationRepo)
+	notificationHandler := handlers.NewNotificationHandler(notificationService, notificationRepo, notificationScheduler)
 
 	// Table & Sync Endpoints
 	mux.HandleFunc("/api/airtable/tables", func(w http.ResponseWriter, r *http.Request) {
@@ -210,5 +212,35 @@ func RegisterRoutes(mux *http.ServeMux, db *sql.DB, airtableClient *airtable.Cli
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{"views": views})
+	})
+
+	mux.HandleFunc("/api/airtable/notifications/reload-scheduler", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// Handle CORS preflight request
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// เรียกใช้ฟังก์ชัน Reload ของ scheduler
+		// ถ้ามี notificationScheduler เป็น global variable หรือถูกส่งผ่านเป็น parameter
+		notificationScheduler.Reload()
+
+		// Return response
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*") // แก้ไขปัญหา CORS
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":   true,
+			"message":   "Notification scheduler reloaded successfully",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
 	})
 }

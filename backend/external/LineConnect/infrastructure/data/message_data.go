@@ -23,7 +23,15 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 }
 
 // SaveMessage saves a new message to the database
+// SaveMessage saves a new message to the database
+// SaveMessage saves a new message to the database
 func (r *MessageRepository) SaveMessage(message models.Message) (int, error) {
+	// Convert group_ids to JSON
+	groupIDsJSON, err := json.Marshal(message.GroupIDs)
+	if err != nil {
+		return 0, fmt.Errorf("error marshaling group IDs: %v", err)
+	}
+
 	query := `
         INSERT INTO line_messages (content, group_ids, type, status, created_at, sender, timestamp)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -31,14 +39,14 @@ func (r *MessageRepository) SaveMessage(message models.Message) (int, error) {
     `
 
 	var id int
-	err := r.db.QueryRow(query,
+	err = r.db.QueryRow(query,
 		message.Content,
-		message.GroupIDs,
+		groupIDsJSON, // Use the JSON-marshaled data here
 		message.Type,
 		message.Status,
 		message.CreatedAt,
 		message.Sender,
-		message.Timestamp, // เพิ่ม timestamp
+		message.Timestamp,
 	).Scan(&id)
 
 	if err != nil {
