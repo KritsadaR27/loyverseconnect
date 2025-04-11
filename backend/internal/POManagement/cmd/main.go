@@ -1,153 +1,88 @@
+// internal/POManagement/cmd/main.go
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"backend/internal/POManagement/config"
+	"backend/internal/POManagement/middleware"
+	"backend/internal/POManagement/router"
+
+	_ "github.com/lib/pq"
 )
 
-// PurchaseOrder represents the purchase order data structure
-type PurchaseOrder struct {
-	ID          int      `json:"id"`
-	VendorID    int      `json:"vendor_id"`
-	OrderDate   string   `json:"order_date"`
-	TotalAmount float64  `json:"total_amount"`
-	Status      string   `json:"status"`
-	Items       []POItem `json:"items"`
-}
-
-// POItem represents an item in a purchase order
-type POItem struct {
-	ID         int     `json:"id"`
-	ProductID  int     `json:"product_id"`
-	Quantity   int     `json:"quantity"`
-	UnitPrice  float64 `json:"unit_price"`
-	TotalPrice float64 `json:"total_price"`
-}
-
-// In-memory database for demo purposes
-var purchaseOrders = []PurchaseOrder{
-	{
-		ID:          1,
-		VendorID:    101,
-		OrderDate:   "2025-04-01",
-		TotalAmount: 5000.00,
-		Status:      "pending",
-		Items: []POItem{
-			{ID: 1, ProductID: 5001, Quantity: 10, UnitPrice: 500.00, TotalPrice: 5000.00},
-		},
-	},
-}
-
 func main() {
-	// Define routes
-	http.HandleFunc("/po", handlePurchaseOrders)
-	http.HandleFunc("/po/", handlePurchaseOrderByID)
+	// ตั้งค่า logger
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.Println("Starting PO Management service...")
 
-	// Start server
-	port := 8080
-	fmt.Printf("Starting PO Management server on port %d...\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
-}
-
-func handlePurchaseOrders(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	switch r.Method {
-	case "GET":
-		// List all purchase orders
-		json.NewEncoder(w).Encode(purchaseOrders)
-
-	case "POST":
-		// Create new purchase order
-		var po PurchaseOrder
-		if err := json.NewDecoder(r.Body).Decode(&po); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// Set new ID (in real app, this would be handled by the database)
-		po.ID = len(purchaseOrders) + 1
-
-		// Calculate total price for each item and overall total
-		var totalAmount float64
-		for i := range po.Items {
-			po.Items[i].TotalPrice = float64(po.Items[i].Quantity) * po.Items[i].UnitPrice
-			totalAmount += po.Items[i].TotalPrice
-		}
-		po.TotalAmount = totalAmount
-
-		purchaseOrders = append(purchaseOrders, po)
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(po)
-
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func handlePurchaseOrderByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Extract ID from URL
-	idStr := strings.TrimPrefix(r.URL.Path, "/po/")
-	id, err := strconv.Atoi(idStr)
+	// เชื่อมต่อฐานข้อมูล
+	db, err := config.ConnectDB()
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
+	defer db.Close()
+
+	// ตรวจสอบการเชื่อมต่อฐานข้อมูล
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
+	}
+	log.Println("Connected to the database successfully")
+
+	// สร้าง HTTP router
+	mux := http.NewServeMux()
+	router.RegisterRoutes(mux, db)
+
+	// ใช้ middleware
+	handler := middleware.Chain(
+		mux,
+		middleware.Logging,
+		middleware.Recovery,
+		middleware.CORS,
+	)
+
+	// ตั้งค่า port และเริ่ม server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8088" // Default port for PO Management service
 	}
 
-	// Find purchase order by ID
-	var po *PurchaseOrder
-	for i := range purchaseOrders {
-		if purchaseOrders[i].ID == id {
-			po = &purchaseOrders[i]
-			break
-		}
+	// สร้าง HTTP server
+	server := &http.Server{
+		Addr:         ":" + port,
+		Handler:      handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	if po == nil {
-		http.Error(w, "Purchase order not found", http.StatusNotFound)
-		return
+	// เริ่ม server ในgoroutine
+	go func() {
+		log.Printf("Starting PO Management server on port %s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// รอสัญญาณปิดเซิร์ฟเวอร์
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// ปิดเซิร์ฟเวอร์อย่างสมบูรณ์
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server shutdown failed: %v", err)
 	}
 
-	switch r.Method {
-	case "GET":
-		json.NewEncoder(w).Encode(po)
-
-	case "PUT":
-		var updatedPO PurchaseOrder
-		if err := json.NewDecoder(r.Body).Decode(&updatedPO); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		updatedPO.ID = id // Ensure ID doesn't change
-
-		// Update purchase order
-		for i := range purchaseOrders {
-			if purchaseOrders[i].ID == id {
-				purchaseOrders[i] = updatedPO
-				break
-			}
-		}
-
-		json.NewEncoder(w).Encode(updatedPO)
-
-	case "DELETE":
-		// Remove purchase order
-		for i := range purchaseOrders {
-			if purchaseOrders[i].ID == id {
-				purchaseOrders = append(purchaseOrders[:i], purchaseOrders[i+1:]...)
-				break
-			}
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+	log.Println("Server stopped gracefully")
 }

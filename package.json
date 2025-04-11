@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "moment-timezone": "^0.5.46"
+  },
+  "devDependencies": {
+    "@shadcn/ui": "^0.0.4"
   }
 }
