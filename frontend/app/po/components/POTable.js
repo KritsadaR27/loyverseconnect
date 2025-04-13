@@ -1,3 +1,5 @@
+// frontend/app/po/components/POTable.js
+
 import React, { useMemo } from 'react';
 import { formatNumber } from '@/lib/utils';
 import { formatThaiDate, getThaiDay } from '@/app/utils/dateUtils';
@@ -7,6 +9,9 @@ import {
   ArrowDownTrayIcon as Save,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { OrderQuantityInput } from './OrderQuantityInput';
+import { BufferQuantityInput } from './BufferQuantityInput';
+
 
 const POTable = ({
   items,
@@ -221,14 +226,10 @@ const POTable = ({
                   })}
 
                   <td className="p-2 text-center border">
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.buffer || 0}
-                      onChange={(e) =>
-                        handleBufferChange(item.id, parseInt(e.target.value) || 0)
-                      }
-                      className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
+                    <BufferQuantityInput
+                      itemId={item.id}
+                      initialValue={item.buffer}
+                      onChange={handleBufferChange}
                       disabled={!editingBuffers}
                     />
                   </td>
@@ -238,18 +239,11 @@ const POTable = ({
                     </span>
                   </td>
                   <td className="p-2 text-center border">
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.orderQuantity || 0}
-                      onChange={(e) =>
-                        handleOrderQuantityChange(item.id, parseInt(e.target.value) || 0)
-                      }
-                      className={`w-20 mx-auto text-center border rounded px-1 py-1 text-sm ${
-                        (item.orderQuantity || 0) !== item.suggestedOrderQuantity
-                          ? 'bg-yellow-50 border-yellow-300'
-                          : ''
-                      }`}
+                    <OrderQuantityInput
+                      itemId={item.id}
+                      initialValue={item.orderQuantity}
+                      suggestedValue={item.suggestedOrderQuantity}
+                      onChange={handleOrderQuantityChange}
                     />
                   </td>
                 </tr>

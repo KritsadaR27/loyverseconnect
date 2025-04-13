@@ -209,7 +209,10 @@ const MobilePOView = ({
                       type="number"
                       min="0"
                       value={item.buffer || 0}
-                      onChange={(e) => handleBufferChange(item.id, parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        handleBufferChange(item.id, newValue);
+                      }}
                       className="w-full text-center"
                       disabled={!editingBuffers}
                     />
@@ -228,7 +231,10 @@ const MobilePOView = ({
                       type="number"
                       min="0"
                       value={item.orderQuantity || 0}
-                      onChange={(e) => handleOrderQuantityChange(item.id, parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        handleOrderQuantityChange(item.id, newValue);
+                      }}
                       className={`w-full text-center ${
                         (item.orderQuantity || 0) !== item.suggestedOrderQuantity ? 'bg-yellow-50 border-yellow-300' : ''
                       }`}

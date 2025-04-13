@@ -48,13 +48,13 @@ const ClientPOPage = () => {
     handleOpenCreatePODialog,
     handleCloseCreatePODialog,
     handleCreatePO,
-    selectedSupplier,
-    setSelectedSupplier,
+    selectedSuppliers, // เปลี่ยนจาก selectedSupplier เป็น selectedSuppliers
+    setSelectedSuppliers, // เปลี่ยนจาก setSelectedSupplier เป็น setSelectedSuppliers
     // Order quantity controls
     applyAllSuggestedQuantities,
     clearAllOrderQuantities,
     // Supplier filter
-    supplierFilter,
+    supplierFilters, // เปลี่ยนจาก supplierFilter เป็น supplierFilters
     handleSupplierFilterChange,
     // UI state
     alert,
@@ -109,15 +109,15 @@ const ClientPOPage = () => {
           handleOpenCreatePODialog={handleOpenCreatePODialog}
           handleCloseCreatePODialog={handleCloseCreatePODialog}
           handleCreatePO={handleCreatePO}
-          selectedSupplier={selectedSupplier}
-          setSelectedSupplier={setSelectedSupplier}
+          selectedSuppliers={selectedSuppliers}
+          setSelectedSuppliers={setSelectedSuppliers}
           // Items for supplier selection
           suppliers={suppliers}
           // Order quantity controls
           applyAllSuggestedQuantities={applyAllSuggestedQuantities}
           clearAllOrderQuantities={clearAllOrderQuantities}
           // Supplier filter
-          supplierFilter={supplierFilter}
+          supplierFilters={supplierFilters}
           handleSupplierFilterChange={handleSupplierFilterChange}
           // Disabled state
           disabled={loading || processingAction}

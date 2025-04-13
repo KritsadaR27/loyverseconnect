@@ -243,7 +243,7 @@ const usePO = () => {
     
     generateFutureDates();
   }, [deliveryDate, targetCoverageDate]);
-
+  
   // Load inventory data
   useEffect(() => {
     // Prevent multiple loads
@@ -739,13 +739,23 @@ useEffect(() => {
 }, [targetCoverageDate, items, loading, calculateProjectedSales, groupedItems]);
 
   // แก้ไขฟังก์ชันใน usePO.js
+  const bufferChangeTimeoutRef = useRef(null);
+  const isCalculatingRef = useRef(false);
+  
 
 // Update buffer quantities
 const handleBufferChange = useCallback((itemId, value) => {
+  console.log(`Updating buffer for item ${itemId} to ${value}`);
+  
   // แปลงค่าเป็นตัวเลข และใช้ 0 ถ้าไม่สามารถแปลงได้
   const numericValue = parseInt(value) || 0;
   
-  // อัปเดตค่าใน items โดยตรง
+  // ยกเลิก timeout เดิม (ถ้ามี) เพื่อป้องกันการคำนวณซ้ำซ้อน
+  if (bufferChangeTimeoutRef.current) {
+    clearTimeout(bufferChangeTimeoutRef.current);
+  }
+  
+  // อัพเดตค่า buffer ใน items ก่อนเลย เพื่อให้ UI แสดงค่าที่ผู้ใช้ป้อนล่าสุด
   setItems(prevItems => 
     prevItems.map(item => {
       if (item.id === itemId) {
@@ -758,7 +768,7 @@ const handleBufferChange = useCallback((itemId, value) => {
     })
   );
   
-  // อัปเดตใน groupedItems ด้วย
+  // อัพเดตค่าใน groupedItems ด้วย
   setGroupedItems(prevGrouped => {
     const newGrouped = {};
     Object.keys(prevGrouped).forEach(supplier => {
@@ -774,53 +784,109 @@ const handleBufferChange = useCallback((itemId, value) => {
     });
     return newGrouped;
   });
-  
-  // คำนวณยอดแนะนำใหม่หลังจากเปลี่ยนยอดเผื่อ
-  setTimeout(() => {
+
+  // ใช้ timeout ในการคำนวณยอดแนะนำใหม่เพื่อลดการ re-render บ่อยเกินไป
+  bufferChangeTimeoutRef.current = setTimeout(() => {
+    // ถ้ากำลังคำนวณอยู่แล้ว ให้เลื่อนไปทำทีหลัง
+    if (isCalculatingRef.current) {
+      return;
+    }
+    
+    isCalculatingRef.current = true;
+    
+    // คำนวณเฉพาะเมื่อมี targetCoverageDate
     if (targetCoverageDate) {
-      const processedItems = calculateProjectedSales(
-        items.map(item => item.id === itemId ? {...item, buffer: numericValue} : item),
-        targetCoverageDate
-      );
-      
-      // อัปเดตเฉพาะ item ที่เปลี่ยนแปลง
-      setItems(prevItems => 
-        prevItems.map(item => {
-          if (item.id === itemId) {
-            const updatedItem = processedItems.find(i => i.id === itemId);
-            if (updatedItem) {
+      try {
+        // หาข้อมูล item ที่จะอัพเดต
+        const itemToUpdate = items.find(item => item.id === itemId);
+        if (!itemToUpdate) {
+          console.warn(`Item with id ${itemId} not found`);
+          isCalculatingRef.current = false;
+          return;
+        }
+
+        // สร้าง item ใหม่พร้อมค่า buffer ที่อัพเดต
+        const updatedItem = {
+          ...itemToUpdate,
+          buffer: numericValue
+        };
+
+        // คำนวณสต็อกคงเหลือและยอดแนะนำ
+        const targetDateStr = targetCoverageDate.toISOString().split('T')[0];
+        
+        // หาค่า projectedStock ณ วันที่ targetCoverageDate
+        let projectedStock = updatedItem.currentStock;
+        
+        // ถ้ามีข้อมูลยอดขายในอดีต ใช้ในการคำนวณยอดขายในอนาคต
+        if (updatedItem.dailySales) {
+          // ใช้ยอดขายของวันที่ตรงกันในสัปดาห์ก่อน
+          const previousWeekDate = new Date(targetCoverageDate);
+          previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+          const previousWeekDateStr = previousWeekDate.toISOString().split('T')[0];
+          
+          // ใช้ยอดขายจากวันที่ตรงกันในสัปดาห์ก่อน หรือ 0 ถ้าไม่มีข้อมูล
+          const estimatedSales = updatedItem.dailySales[previousWeekDateStr] || 0;
+          
+          // หักยอดขายออกจากสต็อกปัจจุบัน
+          projectedStock -= estimatedSales;
+        }
+        
+        // คำนวณยอดแนะนำ
+        let suggestedQuantity = 0;
+        
+        // ถ้าสต็อกติดลบ ให้สั่งเพิ่มให้กลับเป็น 0
+        if (projectedStock < 0) {
+          suggestedQuantity = Math.abs(projectedStock);
+        }
+        
+        // บวกเพิ่มค่า buffer เสมอ
+        suggestedQuantity += numericValue;
+        
+        // อัพเดตค่าใน items
+        setItems(prevItems => 
+          prevItems.map(item => {
+            if (item.id === itemId) {
               return {
-                ...updatedItem,
-                buffer: numericValue // ยืนยันว่าใช้ค่า buffer ที่ป้อนใหม่
+                ...item,
+                buffer: numericValue,
+                suggestedOrderQuantity: suggestedQuantity,
+                projectedStock: { 
+                  ...(item.projectedStock || {}), 
+                  [targetDateStr]: projectedStock 
+                }
               };
             }
-          }
-          return item;
-        })
-      );
-      
-      // อัปเดตใน groupedItems ด้วย
-      setGroupedItems(prevGrouped => {
-        const newGrouped = {};
-        Object.keys(prevGrouped).forEach(supplier => {
-          newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
-            if (groupItem.id === itemId) {
-              const updatedItem = processedItems.find(i => i.id === itemId);
-              if (updatedItem) {
+            return item;
+          })
+        );
+        
+        // อัพเดตค่าใน groupedItems ด้วย
+        setGroupedItems(prevGrouped => {
+          const newGrouped = {};
+          Object.keys(prevGrouped).forEach(supplier => {
+            newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
+              if (groupItem.id === itemId) {
                 return {
-                  ...updatedItem,
-                  buffer: numericValue // ยืนยันว่าใช้ค่า buffer ที่ป้อนใหม่
+                  ...groupItem,
+                  buffer: numericValue,
+                  suggestedOrderQuantity: suggestedQuantity,
+                  projectedStock: { 
+                    ...(groupItem.projectedStock || {}), 
+                    [targetDateStr]: projectedStock 
+                  }
                 };
               }
-            }
-            return groupItem;
+              return groupItem;
+            });
           });
+          return newGrouped;
         });
-        return newGrouped;
-      });
+      } finally {
+        isCalculatingRef.current = false;
+      }
     }
-  }, 0);
-}, [items, targetCoverageDate, calculateProjectedSales]);
+  }, 300); // debounce 300ms
+}, [items, targetCoverageDate, setItems, setGroupedItems]);
 // ฟังก์ชันสำหรับเพิ่มในไฟล์ usePO.js
 
 // เพิ่มยอดสั่งเป็นยอดแนะนำทั้งหมด
