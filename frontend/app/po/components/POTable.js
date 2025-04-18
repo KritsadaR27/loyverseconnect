@@ -239,12 +239,13 @@ const POTable = ({
                     </span>
                   </td>
                   <td className="p-2 text-center border">
-                    <OrderQuantityInput
-                      itemId={item.id}
-                      initialValue={item.orderQuantity}
-                      suggestedValue={item.suggestedOrderQuantity}
-                      onChange={handleOrderQuantityChange}
-                    />
+                  <OrderQuantityInput
+                    itemId={item.id}
+                    value={item.orderQuantity}        // ✅ ใช้ value ตรง
+                    suggestedValue={item.suggestedOrderQuantity}
+                    onChange={handleOrderQuantityChange}
+                  />
+
                   </td>
                 </tr>
               ))}
