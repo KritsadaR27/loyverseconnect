@@ -177,7 +177,10 @@ const usePO = () => {
 
   
   const [items, setItems] = useState([]);
-  const [deliveryDate, setDeliveryDate] = useState(new Date());
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [deliveryDate, setDeliveryDate] = useState(tomorrow);
+
   const [targetCoverageDate, setTargetCoverageDate] = useState(null);
   const [futureDates, setFutureDates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -223,26 +226,42 @@ const usePO = () => {
     const generateFutureDates = () => {
       const dates = [];
       const current = new Date(deliveryDate);
-      
-      // Create 3 future dates starting from delivery date
+  
       for (let i = 0; i < 3; i++) {
         const date = new Date(current);
         date.setDate(date.getDate() + i);
         dates.push(date);
       }
-      
+  
       setFutureDates(dates);
-      
-      // Default target date to delivery date + 2 (third day)
-      if (!targetCoverageDate || targetCoverageDate < current) {
-        const defaultTarget = new Date(current);
-        defaultTarget.setDate(defaultTarget.getDate() + 2);
-        setTargetCoverageDate(defaultTarget);
-      }
+  
+      // ✅ ไม่ต้องเช็คเงื่อนไขแล้ว force reset ทุกครั้ง
+      const defaultTarget = new Date(current);
+      defaultTarget.setDate(defaultTarget.getDate() + 2);
+      setTargetCoverageDate(defaultTarget);
     };
-    
+  
     generateFutureDates();
-  }, [deliveryDate, targetCoverageDate]);
+  }, [deliveryDate]); // ❗ ตัด targetCoverageDate ออกจาก dependency
+  
+  
+  useEffect(() => {
+    if (items.length === 0 || loading || !targetCoverageDate || futureDates.length === 0) return;
+  
+    const updated = calculateProjectedSales(items, targetCoverageDate);
+    setItems(updated);
+  
+    // อัปเดต groupedItems ใหม่ด้วย
+    const updatedGrouped = {};
+    Object.keys(groupedItems).forEach(supplier => {
+      updatedGrouped[supplier] = groupedItems[supplier].map(groupItem => {
+        const updatedItem = updated.find(i => i.id === groupItem.id);
+        return updatedItem || groupItem;
+      });
+    });
+    setGroupedItems(updatedGrouped);
+  }, [futureDates, targetCoverageDate]);
+  
   
   // Load inventory data
   useEffect(() => {
