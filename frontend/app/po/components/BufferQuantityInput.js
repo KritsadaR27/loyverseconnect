@@ -26,6 +26,13 @@ export const BufferQuantityInput = React.memo(({
     const valueToSend = localValue === '' ? 0 : Number(localValue);
     onChange?.(itemId, valueToSend);
   };
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.target.blur(); // ใช้ blur เพื่อ trigger handleBlur ตามธรรมชาติ
+    }
+  };
 
   return (
     <input
@@ -34,6 +41,8 @@ export const BufferQuantityInput = React.memo(({
       value={localValue}
       onChange={handleChange}
       onBlur={handleBlur}
+      onKeyDown={handleKeyDown} // ✅ เพิ่มตรงนี้
+
       disabled={disabled}
       className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
     />
