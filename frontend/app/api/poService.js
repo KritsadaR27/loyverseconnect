@@ -53,7 +53,7 @@ const handleApiError = (error, fallbackData = [], errorMessage = "API request fa
  */
 export const fetchInventoryData = async () => {
   try {
-    console.log(`Fetching inventory data from: ${INVENTORY_API_URL}/api/item-stock`);
+    // console.log(`Fetching inventory data from: ${INVENTORY_API_URL}/api/item-stock`);
     const response = await axios.get(`${INVENTORY_API_URL}/api/item-stock`, {
       timeout: 10000 // เพิ่ม timeout เพื่อป้องกันการรอนานเกินไป
     });
@@ -74,14 +74,14 @@ export const fetchInventoryData = async () => {
 // แก้ไขฟังก์ชัน fetchSalesByDay ใน poService.js
 export const fetchSalesByDay = async (startDate, endDate) => {
   try {
-    console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
+    // console.log(`Fetching sales data with range: ${startDate} to ${endDate}`);
     
     // ปรับ URL ให้ชี้ไปยัง API endpoint ที่ถูกต้อง
     const url = `${RECEIPT_API_URL}/api/sales/days`;
-    console.log(`Complete URL: ${url}`);
+    // console.log(`Complete URL: ${url}`);
     
     // Log the request parameters for debugging
-    console.log('Request params:', { startDate, endDate });
+    // console.log('Request params:', { startDate, endDate });
     
     const response = await axios.get(url, {
       params: {
@@ -91,7 +91,7 @@ export const fetchSalesByDay = async (startDate, endDate) => {
       timeout: 15000 // Increase timeout to 15 seconds
     });
     
-    console.log('Sales data response status:', response.status);
+    // console.log('Sales data response status:', response.status);
     
     // Validate the response data
     if (!Array.isArray(response.data)) {
@@ -118,14 +118,14 @@ export const fetchSalesByDay = async (startDate, endDate) => {
         const match = enhancedItem.item_name.match(/^(P\d+)/);
         if (match) {
           enhancedItem.item_id = match[1];
-          console.log(`Extracted item_id ${enhancedItem.item_id} from ${enhancedItem.item_name}`);
+          // console.log(`Extracted item_id ${enhancedItem.item_id} from ${enhancedItem.item_name}`);
         }
       }
       
       return enhancedItem;
     });
     
-    console.log(`Enhanced ${enhancedData.length} sales records`);
+    // console.log(`Enhanced ${enhancedData.length} sales records`);
     return enhancedData;
   } catch (error) {
     console.error('Error fetching sales data:', error);
@@ -133,6 +133,11 @@ export const fetchSalesByDay = async (startDate, endDate) => {
   }
 }
 
+/**
+ * Save buffer settings for items with improved error handling
+ * @param {Array} bufferSettings - Buffer settings for items
+ * @returns {Promise<Object>} - Response message
+ */
 
 /**
  * Save buffer settings for items with improved error handling
@@ -141,7 +146,7 @@ export const fetchSalesByDay = async (startDate, endDate) => {
  */
 export const saveBufferSettings = async (bufferSettings) => {
   try {
-    console.log(`Saving buffer settings for ${bufferSettings.length} items:`, bufferSettings);
+    // console.log(`Saving buffer settings for ${bufferSettings.length} items:`, bufferSettings);
     
     // ตรวจสอบรูปแบบข้อมูลที่ถูกต้อง
     const formattedSettings = bufferSettings.map(item => ({
@@ -161,7 +166,7 @@ export const saveBufferSettings = async (bufferSettings) => {
       }
     );
     
-    console.log('Buffer settings saved successfully:', response.data);
+    // console.log('Buffer settings saved successfully:', response.data);
     return {
       success: true,
       message: "บันทึกยอดเผื่อสำเร็จ",
@@ -199,7 +204,7 @@ export const saveBufferSettings = async (bufferSettings) => {
  */
 export const createPO = async (poData) => {
   try {
-    console.log(`Creating PO at: ${PO_API_URL}/api/po/create`, poData);
+    // console.log(`Creating PO at: ${PO_API_URL}/api/po/create`, poData);
     const response = await axios.post(`${PO_API_URL}/api/po/create`, poData, {
       headers: {
         'Content-Type': 'application/json'
@@ -219,7 +224,7 @@ export const createPO = async (poData) => {
  */
 export const sendLineNotification = async (notificationData) => {
   try {
-    console.log(`Sending Line notification to: ${PO_API_URL}/api/po/notify`, notificationData);
+    // console.log(`Sending Line notification to: ${PO_API_URL}/api/po/notify`, notificationData);
     const response = await axios.post(`${PO_API_URL}/api/po/notify`, notificationData, {
       headers: {
         'Content-Type': 'application/json'
@@ -243,7 +248,7 @@ export const fetchBufferSettings = async (itemIds) => {
   }
   
   try {
-    console.log(`Fetching buffer settings for ${itemIds.length} items`);
+    // console.log(`Fetching buffer settings for ${itemIds.length} items`);
     
     // ปรับรูปแบบข้อมูลที่ส่งไปให้ตรงกับที่ handler backend คาดหวัง
     const response = await axios.post(
@@ -257,7 +262,7 @@ export const fetchBufferSettings = async (itemIds) => {
       }
     );
     
-    console.log('Buffer settings fetched successfully');
+    // console.log('Buffer settings fetched successfully');
     return response.data || {};
   } catch (error) {
     console.warn("Error fetching buffer settings:", error);
@@ -268,7 +273,7 @@ export const fetchBufferSettings = async (itemIds) => {
       defaultSettings[id] = 10;
     });
     
-    console.log('Using default buffer settings due to connection error');
+    // console.log('Using default buffer settings due to connection error');
     return defaultSettings;
   }
 };
