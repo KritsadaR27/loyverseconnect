@@ -1,34 +1,41 @@
-// frontend/app/po/components/QuantityInput.js
-
 import React, { useState, useEffect } from 'react';
 
-
-// Input สำหรับช่องยอดเผื่อ
 export const BufferQuantityInput = React.memo(({ 
   itemId, 
   initialValue, 
   onChange,
   disabled
 }) => {
-  const [value, setValue] = useState(initialValue || 0);
-  
-  // อัปเดตค่าเริ่มต้นเมื่อ props เปลี่ยน (เฉพาะเมื่อ initialValue เปลี่ยนเท่านั้น)
+  const [localValue, setLocalValue] = useState(initialValue);
+
+  // Sync ค่าเริ่มต้นจาก parent เมื่อเปลี่ยน
   useEffect(() => {
-    setValue(initialValue || 0);
+    setLocalValue(initialValue);
   }, [initialValue]);
-  
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setLocalValue('');
+    } else if (!isNaN(Number(val))) {
+      setLocalValue(Number(val));
+    }
+  };
+
+  const handleBlur = () => {
+    const valueToSend = localValue === '' ? 0 : Number(localValue);
+    onChange?.(itemId, valueToSend);
+  };
+
   return (
     <input
       type="number"
       min="0"
-      value={value}
-      onChange={(e) => {
-        const newVal = e.target.value === '' ? '' : Number(e.target.value);
-        setValue(newVal);
-        onChange(itemId, newVal === '' ? 0 : newVal);
-      }}
-      className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
       disabled={disabled}
+      className="w-20 mx-auto text-center border rounded px-1 py-1 text-sm"
     />
   );
 });

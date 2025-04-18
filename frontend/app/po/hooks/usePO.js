@@ -413,93 +413,60 @@ const usePO = () => {
   }, []); // โหลดข้อมูล inventory เพียงครั้งเดียวตอนเริ่มต้น
   
   // Load sales data when dates change or inventory loaded
+
   useEffect(() => {
-    // ถ้ายังไม่มีข้อมูลสินค้าหรือไม่มีวันที่ ให้ return
-    if (items.length === 0 || futureDates.length === 0 || !targetCoverageDate) return;
-    
-    // ถ้าโหลดข้อมูลยอดขายแล้ว ไม่ต้องโหลดใหม่
+    if (!isInventoryLoaded.current || futureDates.length === 0 || !targetCoverageDate) return;
     if (isSalesLoaded.current) return;
-    
+  
+    isSalesLoaded.current = true;
+  
     const loadSalesData = async () => {
       try {
-        // ย้อนหลัง 14 วันจากวันที่ส่งของ เพื่อให้มีข้อมูลพอในการคำนวณค่าเฉลี่ย
-        const startDateISO = new Date(deliveryDate);
-        startDateISO.setDate(startDateISO.getDate() - 14);
-        startDateISO.setHours(0, 0, 0, 0);
-        
-        // วันที่สิ้นสุดควรเป็นวันสุดท้ายในอนาคต หรืออย่างน้อยควรเป็นวันที่ต้องการให้พอขาย
-        const targetEndDate = targetCoverageDate || futureDates[futureDates.length - 1];
-        const endDateISO = new Date(targetEndDate);
-        endDateISO.setDate(endDateISO.getDate() + 1); // เพิ่ม 1 วันเพื่อให้ครอบคลุมจนถึงสิ้นวัน
-        endDateISO.setHours(23, 59, 59, 999);
-        
-        console.log(`Fetching sales data: ${startDateISO.toISOString()} to ${endDateISO.toISOString()}`);
-        
+        const startDate = new Date(deliveryDate);
+        startDate.setDate(startDate.getDate() - 14);
+        startDate.setHours(0, 0, 0, 0);
+  
+        const endDate = new Date(targetCoverageDate);
+        endDate.setDate(endDate.getDate() + 1);
+        endDate.setHours(23, 59, 59, 999);
+  
         const salesDataResponse = await fetchSalesByDay(
-          startDateISO.toISOString(),
-          endDateISO.toISOString()
+          startDate.toISOString(),
+          endDate.toISOString()
         );
-        
-        console.log('Sales data loaded, count:', salesDataResponse.length);
+  
         setSalesData(salesDataResponse);
-        
-        // แปลงข้อมูลยอดขายให้อยู่ในรูปแบบที่เหมาะสม
-        if (salesDataResponse && salesDataResponse.length > 0) {
-          const transformedSales = transformSalesData(salesDataResponse, items);
-          
-          // อัปเดตข้อมูลสินค้าด้วยยอดขาย
-          if (Object.keys(transformedSales).length > 0) {
-            const updatedItems = items.map(item => {
-              const itemSales = transformedSales[item.id] || transformedSales[item.code] || {};
-              
-              return {
-                ...item,
-                dailySales: itemSales.dailySales || {},
-              };
-            });
-            
-            setItems(updatedItems);
-            
-            // อัปเดต groupedItems
-            const newGroupedItems = {};
-            Object.keys(groupedItems).forEach(supplier => {
-              newGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
-                const updatedItem = updatedItems.find(item => item.id === groupItem.id);
-                return updatedItem || groupItem;
-              });
-            });
-            
-            setGroupedItems(newGroupedItems);
-            
-            // เมื่อมีข้อมูลยอดขายแล้ว ให้คำนวณใหม่
-            const processedItems = calculateProjectedSales(updatedItems, targetCoverageDate);
-            setItems(processedItems);
-            
-            // อัปเดต groupedItems ด้วยข้อมูลที่คำนวณแล้ว
-            const finalGroupedItems = {};
-            Object.keys(groupedItems).forEach(supplier => {
-              finalGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
-                const processedItem = processedItems.find(item => item.id === groupItem.id);
-                return processedItem || groupItem;
-              });
-            });
-            
-            setGroupedItems(finalGroupedItems);
-          }
-        }
-        
-        isSalesLoaded.current = true;
+  
+        const transformed = transformSalesData(salesDataResponse, items);
+        const updatedItems = items.map(item => {
+          const itemSales = transformed[item.id] || transformed[item.code] || {};
+          return {
+            ...item,
+            dailySales: itemSales.dailySales || {}
+          };
+        });
+  
+        const processedItems = calculateProjectedSales(updatedItems, targetCoverageDate);
+        setItems(processedItems);
+  
+        const newGrouped = {};
+        Object.keys(groupedItems).forEach(supplier => {
+          newGrouped[supplier] = groupedItems[supplier].map(groupItem => {
+            const updatedItem = processedItems.find(i => i.id === groupItem.id);
+            return updatedItem || groupItem;
+          });
+        });
+        setGroupedItems(newGrouped);
+  
       } catch (err) {
-        console.error("Error loading sales data:", err);
+        console.error('Error loading sales data:', err);
       } finally {
         setLoading(false);
       }
     };
-    
-    
-    loadSalesData();
-  }, [deliveryDate, items.length, futureDates, targetCoverageDate, groupedItems]);
   
+    loadSalesData();
+  }, [deliveryDate, futureDates, targetCoverageDate, groupedItems]);
   
 
 
@@ -596,147 +563,9 @@ const calculateProjectedSales = useCallback((itemsToCalculate, targetDate) => {
 
 
 
-// Load sales data when dates change or inventory loaded
-useEffect(() => {
-  // ถ้ายังไม่มีข้อมูลสินค้าหรือไม่มีวันที่ ให้ return
-  if (items.length === 0 || futureDates.length === 0 || !targetCoverageDate) return;
-  
- // Load sales data when dates change or inventory loaded
-const loadSalesData = async () => {
-  try {
-    // ย้อนหลัง 14 วันจากวันที่ส่งของ เพื่อให้แน่ใจว่ามีข้อมูลพอในการคำนวณ (7 วันของสัปดาห์ที่แล้ว + 7 วันของสัปดาห์ถัดไป)
-    const startDateISO = new Date(deliveryDate);
-    startDateISO.setDate(startDateISO.getDate() - 14);
-    startDateISO.setHours(0, 0, 0, 0);
-    
-    // วันที่สิ้นสุดควรเป็นวันที่มากกว่าวันที่ต้องการวางแผนถึง เพื่อให้มีข้อมูลครบถ้วน
-    const targetEndDate = new Date(targetCoverageDate);
-    targetEndDate.setDate(targetEndDate.getDate() + 1); // เพิ่ม 1 วันเพื่อให้ครอบคลุมจนถึงสิ้นวัน
-    
-    console.log(`Fetching sales data: ${startDateISO.toISOString()} to ${targetEndDate.toISOString()}`);
-    
-    const salesDataResponse = await fetchSalesByDay(
-      startDateISO.toISOString(),
-      targetEndDate.toISOString()
-    );
-    
-    console.log('Sales data loaded, count:', salesDataResponse.length);
-    setSalesData(salesDataResponse);
-    
-    // จัดกลุ่มข้อมูลยอดขายตาม item_id และวันที่
-    const salesByItemAndDate = {};
-    
-    salesDataResponse.forEach(sale => {
-      // ตรวจสอบว่ามี item_id หรือไม่
-      const itemId = sale.item_id || '';
-      // แยกเอาเฉพาะส่วนวันที่ (YYYY-MM-DD) จาก timestamp
-      const dateStr = sale.sale_date.split('T')[0]; 
-      // ปริมาณการขาย (จัดการค่า null/undefined)
-      const quantity = sale.total_quantity || 0;
-      
-      // สร้าง object สำหรับแต่ละสินค้าถ้ายังไม่มี
-      if (!salesByItemAndDate[itemId]) {
-        salesByItemAndDate[itemId] = {};
-      }
-      
-      // ถ้าวันนี้มีข้อมูลอยู่แล้ว ให้รวมยอด
-      salesByItemAndDate[itemId][dateStr] = (salesByItemAndDate[itemId][dateStr] || 0) + quantity;
-    });
-    
-    console.log('Sales data by item and date:', salesByItemAndDate);
-    
-    // พยายามแมทช์ข้อมูลยอดขายกับสินค้าที่มี
-    const updatedItems = items.map(item => {
-      // ค้นหาข้อมูลยอดขายจาก ID หลัก
-      let itemSales = salesByItemAndDate[item.id] || {};
-      
-      // ถ้าไม่พบข้อมูลจาก ID หลัก ให้ลองค้นหาด้วย code (P101, etc.)
-      if (Object.keys(itemSales).length === 0 && item.code) {
-        itemSales = salesByItemAndDate[item.code] || {};
-      }
-      
-      // พิมพ์ข้อมูลเพื่อตรวจสอบ
-      if (Object.keys(itemSales).length > 0) {
-        console.log(`Found sales data for ${item.name} (${item.id}):`, itemSales);
-      }
-      
-      return {
-        ...item,
-        dailySales: itemSales,
-      };
-    });
-    
-    setItems(updatedItems);
-    
-    // อัปเดต groupedItems
-    const newGroupedItems = {};
-    Object.keys(groupedItems).forEach(supplier => {
-      newGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
-        const updatedItem = updatedItems.find(item => item.id === groupItem.id);
-        return updatedItem || groupItem;
-      });
-    });
-    
-    setGroupedItems(newGroupedItems);
-    
-    // คำนวณยอดแนะนำและสต็อกคงเหลือตามวันที่
-    const processedItems = calculateProjectedSales(updatedItems, targetCoverageDate);
-    setItems(processedItems);
-    
-    // อัปเดต groupedItems ด้วยข้อมูลที่คำนวณแล้ว
-    const finalGroupedItems = {};
-    Object.keys(groupedItems).forEach(supplier => {
-      finalGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
-        const processedItem = processedItems.find(item => item.id === groupItem.id);
-        return processedItem || groupItem;
-      });
-    });
-    
-    setGroupedItems(finalGroupedItems);
-    
-    setLoading(false);
-  } catch (err) {
-    console.error("Error loading sales data:", err);
-    setLoading(false);
-  }
-};
-  
-  loadSalesData();
-}, [deliveryDate, items.length, futureDates, targetCoverageDate, groupedItems, calculateProjectedSales]);
 
-// แก้ไข useEffect สำหรับ target date changed
-// Update calculations when target date changes
-// แก้ไข useEffect สำหรับ target date changed
-useEffect(() => {
-  // ป้องกันการรัน useEffect นี้บ่อยเกินไป
-  if (!targetCoverageDate || items.length === 0 || loading) return;
-  
-  // ถ้ากำลังคำนวณอยู่ ไม่ต้องคำนวณซ้ำ
-  if (recalculationRef.current) return;
-  
-  recalculationRef.current = true;
-  const processedItems = calculateProjectedSales(items, targetCoverageDate);
-  
-  if (processedItems && processedItems.length > 0) {
-    setItems(processedItems);
-    
-    // Update grouped items
-    const newGroupedItems = {};
-    Object.keys(groupedItems).forEach(supplier => {
-      newGroupedItems[supplier] = groupedItems[supplier].map(groupItem => {
-        const updatedItem = processedItems.find(item => item.id === groupItem.id);
-        return updatedItem || groupItem;
-      });
-    });
-    
-    setGroupedItems(newGroupedItems);
-  }
-  
-  // Reset ref ให้สามารถคำนวณอีกครั้งในการ render ถัดไป
-  setTimeout(() => {
-    recalculationRef.current = false;
-  }, 100); // เพิ่มเวลาเป็น 100ms เพื่อให้มั่นใจว่า render เสร็จก่อน
-}, [targetCoverageDate, items, loading, calculateProjectedSales, groupedItems]);
+
+// คำนวณยอดขายที่คาดการณ์ไว้เมื่อมีการเปลี่ยนแปลงใน targetCoverageDate
 
   // แก้ไขฟังก์ชันใน usePO.js
   const bufferChangeTimeoutRef = useRef(null);
@@ -745,149 +574,32 @@ useEffect(() => {
 
 // Update buffer quantities
 const handleBufferChange = useCallback((itemId, value) => {
-  console.log(`Updating buffer for item ${itemId} to ${value}`);
-  
-  // แปลงค่าเป็นตัวเลข และใช้ 0 ถ้าไม่สามารถแปลงได้
   const numericValue = parseInt(value) || 0;
-  
-  // ยกเลิก timeout เดิม (ถ้ามี) เพื่อป้องกันการคำนวณซ้ำซ้อน
-  if (bufferChangeTimeoutRef.current) {
-    clearTimeout(bufferChangeTimeoutRef.current);
-  }
-  
-  // อัพเดตค่า buffer ใน items ก่อนเลย เพื่อให้ UI แสดงค่าที่ผู้ใช้ป้อนล่าสุด
-  setItems(prevItems => 
-    prevItems.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          buffer: numericValue
-        };
-      }
-      return item;
-    })
-  );
-  
-  // อัพเดตค่าใน groupedItems ด้วย
-  setGroupedItems(prevGrouped => {
-    const newGrouped = {};
-    Object.keys(prevGrouped).forEach(supplier => {
-      newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
-        if (groupItem.id === itemId) {
-          return {
-            ...groupItem,
-            buffer: numericValue
-          };
-        }
-        return groupItem;
-      });
-    });
-    return newGrouped;
+
+  // อัปเดต buffer ก่อน
+  const updatedItems = items.map(item => {
+    if (item.id === itemId) {
+      return { ...item, buffer: numericValue };
+    }
+    return item;
   });
 
-  // ใช้ timeout ในการคำนวณยอดแนะนำใหม่เพื่อลดการ re-render บ่อยเกินไป
-  bufferChangeTimeoutRef.current = setTimeout(() => {
-    // ถ้ากำลังคำนวณอยู่แล้ว ให้เลื่อนไปทำทีหลัง
-    if (isCalculatingRef.current) {
-      return;
-    }
-    
-    isCalculatingRef.current = true;
-    
-    // คำนวณเฉพาะเมื่อมี targetCoverageDate
-    if (targetCoverageDate) {
-      try {
-        // หาข้อมูล item ที่จะอัพเดต
-        const itemToUpdate = items.find(item => item.id === itemId);
-        if (!itemToUpdate) {
-          console.warn(`Item with id ${itemId} not found`);
-          isCalculatingRef.current = false;
-          return;
-        }
+  setItems(updatedItems);
 
-        // สร้าง item ใหม่พร้อมค่า buffer ที่อัพเดต
-        const updatedItem = {
-          ...itemToUpdate,
-          buffer: numericValue
-        };
+  // คำนวณใหม่ทุกแถว (ไม่ใช้ debounce)
+  const recalculatedItems = calculateProjectedSales(updatedItems, targetCoverageDate);
+  setItems(recalculatedItems);
 
-        // คำนวณสต็อกคงเหลือและยอดแนะนำ
-        const targetDateStr = targetCoverageDate.toISOString().split('T')[0];
-        
-        // หาค่า projectedStock ณ วันที่ targetCoverageDate
-        let projectedStock = updatedItem.currentStock;
-        
-        // ถ้ามีข้อมูลยอดขายในอดีต ใช้ในการคำนวณยอดขายในอนาคต
-        if (updatedItem.dailySales) {
-          // ใช้ยอดขายของวันที่ตรงกันในสัปดาห์ก่อน
-          const previousWeekDate = new Date(targetCoverageDate);
-          previousWeekDate.setDate(previousWeekDate.getDate() - 7);
-          const previousWeekDateStr = previousWeekDate.toISOString().split('T')[0];
-          
-          // ใช้ยอดขายจากวันที่ตรงกันในสัปดาห์ก่อน หรือ 0 ถ้าไม่มีข้อมูล
-          const estimatedSales = updatedItem.dailySales[previousWeekDateStr] || 0;
-          
-          // หักยอดขายออกจากสต็อกปัจจุบัน
-          projectedStock -= estimatedSales;
-        }
-        
-        // คำนวณยอดแนะนำ
-        let suggestedQuantity = 0;
-        
-        // ถ้าสต็อกติดลบ ให้สั่งเพิ่มให้กลับเป็น 0
-        if (projectedStock < 0) {
-          suggestedQuantity = Math.abs(projectedStock);
-        }
-        
-        // บวกเพิ่มค่า buffer เสมอ
-        suggestedQuantity += numericValue;
-        
-        // อัพเดตค่าใน items
-        setItems(prevItems => 
-          prevItems.map(item => {
-            if (item.id === itemId) {
-              return {
-                ...item,
-                buffer: numericValue,
-                suggestedOrderQuantity: suggestedQuantity,
-                projectedStock: { 
-                  ...(item.projectedStock || {}), 
-                  [targetDateStr]: projectedStock 
-                }
-              };
-            }
-            return item;
-          })
-        );
-        
-        // อัพเดตค่าใน groupedItems ด้วย
-        setGroupedItems(prevGrouped => {
-          const newGrouped = {};
-          Object.keys(prevGrouped).forEach(supplier => {
-            newGrouped[supplier] = prevGrouped[supplier].map(groupItem => {
-              if (groupItem.id === itemId) {
-                return {
-                  ...groupItem,
-                  buffer: numericValue,
-                  suggestedOrderQuantity: suggestedQuantity,
-                  projectedStock: { 
-                    ...(groupItem.projectedStock || {}), 
-                    [targetDateStr]: projectedStock 
-                  }
-                };
-              }
-              return groupItem;
-            });
-          });
-          return newGrouped;
-        });
-      } finally {
-        isCalculatingRef.current = false;
-      }
-    }
-  }, 300); // debounce 300ms
-}, [items, targetCoverageDate, setItems, setGroupedItems]);
-// ฟังก์ชันสำหรับเพิ่มในไฟล์ usePO.js
+  // อัปเดต groupedItems ตามใหม่
+  const newGrouped = {};
+  Object.keys(groupedItems).forEach(supplier => {
+    newGrouped[supplier] = groupedItems[supplier].map(groupItem => {
+      const updated = recalculatedItems.find(i => i.id === groupItem.id);
+      return updated || groupItem;
+    });
+  });
+  setGroupedItems(newGrouped);
+}, [items, targetCoverageDate, groupedItems, calculateProjectedSales]);
 
 // เพิ่มยอดสั่งเป็นยอดแนะนำทั้งหมด
 const applyAllSuggestedQuantities = useCallback(() => {
@@ -1291,13 +1003,7 @@ const handleSaveBuffers = useCallback(async () => {
     }
   }, [groupedItems, selectedSupplier, deliveryDate, targetCoverageDate]);
   
-  // Update calculations when target date changes
-  useEffect(() => {
-    // ให้คำนวณเฉพาะเมื่อเปลี่ยน targetCoverageDate และมีข้อมูลพร้อม
-    if (targetCoverageDate && items.length > 0 && !loading) {
-      calculateProjectedSales(items, targetCoverageDate);
-    }
-  }, [targetCoverageDate, items, loading, calculateProjectedSales]);
+
   // ส่งออกค่าและฟังก์ชันทั้งหมดที่ต้องใช้
   return {
     items,
@@ -1346,6 +1052,7 @@ const handleSaveBuffers = useCallback(async () => {
     error,
     // Sales data
     salesData
+    
   };
 };
 
